@@ -1,11 +1,18 @@
 package edu.kit.aifb.orel.db;
 
+import java.net.URI;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Iterator;
+import java.util.Set;
+
+import org.semanticweb.owl.apibinding.OWLManager;
+import org.semanticweb.owl.model.*;
+
 import com.mysql.jdbc.*;
 
 
@@ -83,6 +90,32 @@ public class BasicStore {
 		stmt.execute("DROP TABLE IF EXISTS subsomevalues");
 		stmt.execute("DROP TABLE IF EXISTS subpropertyof");
 	}
+
+	/**
+	 * Load the content of some ontology to the database.   
+	 * @param uristring
+	 */
+	public void loadOntology(String uristring) throws OWLOntologyCreationException {
+		OWLOntologyManager manager = OWLManager.createOWLOntologyManager();
+		URI physicalURI= URI.create(uristring);
+		OWLOntology ontology = manager.loadOntologyFromPhysicalURI(physicalURI);
+		java.util.Set<OWLLogicalAxiom> axiomset = ontology.getLogicalAxioms();
+		Iterator<OWLLogicalAxiom> axiomiterator = axiomset.iterator();
+		OWLLogicalAxiom axiom;
+		while(axiomiterator.hasNext()){
+			axiom = axiomiterator.next();
+			if (axiom.getAxiomType() == AxiomType.SUBCLASS) {
+				loadSubclassOf(((OWLSubClassAxiom) axiom).getSubClass(), ((OWLSubClassAxiom) axiom).getSuperClass());
+			} else if (axiom.getAxiomType() == AxiomType.EQUIVALENT_CLASSES) {
+				loadEquivalentClasses(((OWLEquivalentClassesAxiom)axiom).getDescriptions());
+			} else if (axiom.getAxiomType() == AxiomType.SUB_OBJECT_PROPERTY) {
+				loadSubpropertyOf(((OWLObjectSubPropertyAxiom) axiom).getSubProperty(), ((OWLObjectSubPropertyAxiom) axiom).getSuperProperty());
+			} else {
+				System.err.println("The following axiom is not supported: " + axiom + "\n");
+			}
+		}
+		manager.removeOntology(ontology.getURI());
+	}
 	
 	/**
 	 * Establish a connection to the database.
@@ -104,5 +137,17 @@ public class BasicStore {
         	System.err.println("Database driver not found:\n");
         	System.err.println(e.toString());
         }
+	}
+	
+	protected void loadSubclassOf(OWLDescription c1, OWLDescription c2) {
+		System.err.println("Calling subclass of.");
+	}
+	
+	protected void loadEquivalentClasses(Set<OWLDescription> descriptions) {
+		System.err.println("Calling equivalent classes.");
+	}
+	
+	protected void loadSubpropertyOf(OWLObjectPropertyExpression p1, OWLObjectPropertyExpression p2) {
+		System.err.println("Calling subproperty of.");
 	}
 }
