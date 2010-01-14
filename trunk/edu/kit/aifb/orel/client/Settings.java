@@ -1,7 +1,11 @@
 package edu.kit.aifb.orel.client;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Properties;
 
 /**
@@ -17,11 +21,14 @@ public class Settings {
 
 	/**
 	 * Load the configuration from a file.
-	 * TODO Implement simple file reading instead of using fixed values. 
 	 */
-	static public void load(String fileurl) throws IOException {
+	static public void load(String fileurl) throws IOException,URISyntaxException {
 		Properties props = new Properties();
-		InputStream configfile = Settings.class.getClassLoader().getResourceAsStream(fileurl);
+		URI fileuri = new URI(fileurl);
+		URI workingdir = new URI("file://" + System.getProperty("user.dir") + "/");
+		fileuri = workingdir.resolve(fileuri);
+		System.out.println("Trying to load configuration from " + fileuri + ".\n");
+		FileInputStream configfile = new FileInputStream(new File(fileuri));
 		if (configfile == null) throw new IOException("Config file '" + fileurl + "' not found.");
 		props.load(configfile);
 		Settings.dbuser = props.getProperty("dbuser","");

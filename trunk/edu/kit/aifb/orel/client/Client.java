@@ -54,7 +54,7 @@ public class Client {
 
 		try {
 			Settings.load(configfile);
-		} catch (IOException e) {
+		} catch (Exception e) {
 			System.err.println(e.toString());
 			return;
 		}
