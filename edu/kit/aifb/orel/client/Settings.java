@@ -27,10 +27,11 @@ public class Settings {
 		URI fileuri = new URI(fileurl);
 		URI workingdir = new URI("file://" + System.getProperty("user.dir") + "/");
 		fileuri = workingdir.resolve(fileuri);
-		System.out.println("Trying to load configuration from " + fileuri + ".\n");
+		System.out.println("Trying to load configuration from " + fileuri + ".");
 		FileInputStream configfile = new FileInputStream(new File(fileuri));
 		if (configfile == null) throw new IOException("Config file '" + fileurl + "' not found.");
 		props.load(configfile);
+		System.out.println("Configuration loaded.");
 		Settings.dbuser = props.getProperty("dbuser","");
 		Settings.dbpassword = props.getProperty("dbpassword","");
 		Settings.dbserver = props.getProperty("dbserver","");
