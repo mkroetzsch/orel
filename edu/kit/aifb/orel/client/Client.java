@@ -44,11 +44,11 @@ public class Client {
 		}
 
 		if ( operation.equals("") ) {
-			System.err.println("No operation given. Usage:\n orel.sh <command> -c <configfile> -i <inputfile>\n" +
+			System.out.println("No operation given. Usage:\n orel.sh <command> -c <configfile> -i <inputfile>\n" +
 					           " <command>    : one of \"load\", \"materialize\", \"init\", \"drop\"\n" +
 					           " <configfile> : URL of the configuration file\n" +
 					           " <inputfile>  : URL of the input ontology (if required for operation)\n");
-			System.err.println("Exiting.");
+			System.out.println("Exiting.");
 			return;
 		}
 
