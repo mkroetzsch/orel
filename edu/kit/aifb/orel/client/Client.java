@@ -68,20 +68,19 @@ public class Client {
 			if (operation.equals("init")) {
 				System.out.println("Initialising store ... ");
 				Client.store.initialize();
-				System.out.println("Done.\n");
-				return;
 			} else if (operation.equals("drop")) {
 				System.out.println("Deleting all database tables ...");
 				Thread.sleep(1000);
 				System.out.println("Press CTRL+C within the next 5 seconds to cancel!");
 				Thread.sleep(5000);
 				Client.store.drop();
-				System.out.println("Done.\n");
-				return;
 			} else if (operation.equals("load")) {
 				System.out.println("Loading ontology ...");
-				System.err.println("Operation not implemented yet");
-				return;
+				if (inputfile.equals("")) {
+					System.err.println("Please provide the URI of the input ontology using the parameter -i.");
+					return;
+				}
+				Client.store.loadOntology(inputfile);
 			} else if (operation.equals("materialize")) {
 				System.out.println("Materialising consequences ...");
 				System.err.println("Operation not implemented yet");
@@ -91,6 +90,7 @@ public class Client {
 			System.err.println(e.toString());
 			return;
 		}
+		System.out.println("Done.\n");
 	}
 	
 	
