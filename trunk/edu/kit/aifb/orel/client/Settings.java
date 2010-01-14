@@ -25,7 +25,8 @@ public class Settings {
 	static public void load(String fileurl) throws IOException,URISyntaxException {
 		Properties props = new Properties();
 		URI fileuri = new URI(fileurl);
-		URI workingdir = new URI("file://" + System.getProperty("user.dir") + "/");
+//		URI workingdir = new URI("file://" + System.getProperty("user.dir") + "/");
+		URI workingdir = new File(System.getProperty("user.dir")).toURI();
 		fileuri = workingdir.resolve(fileuri);
 		System.out.println("Trying to load configuration from " + fileuri + ".");
 		FileInputStream configfile = new FileInputStream(new File(fileuri));
