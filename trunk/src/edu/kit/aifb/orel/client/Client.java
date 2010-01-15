@@ -1,6 +1,11 @@
 package edu.kit.aifb.orel.client;
 
 import java.io.IOException;
+import java.net.URI;
+
+import org.semanticweb.owl.apibinding.OWLManager;
+import org.semanticweb.owl.model.OWLOntology;
+import org.semanticweb.owl.model.OWLOntologyManager;
 
 import edu.kit.aifb.orel.db.BasicStore;
 
@@ -87,7 +92,19 @@ public class Client {
 					System.err.println("Please provide the URI of the input ontology using the parameter -i.");
 					return;
 				}
-				Client.store.loadOntology(inputfile);
+				long loadsTime=System.currentTimeMillis();
+				OWLOntologyManager manager = OWLManager.createOWLOntologyManager();
+				//URI physicalURI=(new File(uristring)).toURI();
+				URI physicalURI= URI.create(inputfile);
+				OWLOntology ontology = manager.loadOntologyFromPhysicalURI(physicalURI);
+				long loadeTime=System.currentTimeMillis();
+				System.out.println("Ontology loaded in " + (loadeTime-loadsTime) + " ms.");
+				System.out.println("Storing ontology ...");
+				loadsTime=System.currentTimeMillis();
+				Client.store.loadOntology(ontology);
+				loadeTime=System.currentTimeMillis();
+				System.out.println("Ontology stored in " + (loadeTime-loadsTime) + " ms.");
+				manager.removeOntology(ontology.getURI());
 			} else if (operation.equals("materialize")) {
 				System.out.println("Materialising consequences ...");
 				System.err.println("Operation not implemented yet");
