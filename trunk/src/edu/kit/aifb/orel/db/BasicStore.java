@@ -4,6 +4,7 @@ import java.io.File;
 import java.net.URI;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Iterator;
@@ -47,13 +48,15 @@ public class BasicStore {
                 ", name VARCHAR(255), PRIMARY KEY (id), INDEX(name))");
 		stmt.execute("CREATE TABLE IF NOT EXISTS sco " +
 				"( s_id " + idfieldtype + 
-				", o_id " + idfieldtype + 
-				", INDEX(s_id), INDEX(o_id), PRIMARY KEY (s_id,o_id))");
+				", o_id " + idfieldtype +
+				", step INT" + 
+				", INDEX(step), INDEX(s_id), INDEX(o_id), PRIMARY KEY (s_id,o_id))");
 		stmt.execute("CREATE TABLE IF NOT EXISTS sv " +
 				"( s_id " + idfieldtype + 
                 ", p_id " + idfieldtype +
-                ", o_id " + idfieldtype + 
-                ", INDEX(s_id), INDEX(p_id,o_id), PRIMARY KEY (s_id,p_id,o_id) )");
+                ", o_id " + idfieldtype +
+                ", step INT" +
+                ", INDEX(step), INDEX(s_id), INDEX(p_id,o_id), PRIMARY KEY (s_id,p_id,o_id) )");
 		stmt.execute("CREATE TABLE IF NOT EXISTS subconjunctionof " +
 				"( s1_id " + idfieldtype + 
                 ", s2_id " + idfieldtype +
@@ -106,7 +109,7 @@ public class BasicStore {
 	
 	/**
 	 * Load the content of some ontology to the database.   
-	 * @param uristring
+	 * @param ontology
 	 */
 	public void loadOntology(OWLOntology ontology) throws SQLException {
 		java.util.Set<OWLLogicalAxiom> axiomset = ontology.getLogicalAxioms();
@@ -129,6 +132,33 @@ public class BasicStore {
 		}
 		bridge.close();
 		bridge = null;
+	}
+
+	/**
+	 * Compute all materialized statements on the database.  
+	 */
+	public void materialize() throws SQLException {
+		// use with (newindex, index-1, index-2)
+		PreparedStatement up1_1 = con.prepareStatement("INSERT IGNORE INTO sco (s_id, o_id, step) SELECT DISTINCT t1.s_id AS s_id, t2.o_id AS o_id, ? AS step FROM sco AS t1 INNER JOIN sco AS t2 ON t1.o_id=t2.s_id WHERE t1.step=? AND t2.step<=?");
+		// use with (newindex, index-1, index-1)
+		PreparedStatement up1_2 = con.prepareStatement("INSERT IGNORE INTO sco (s_id, o_id, step) SELECT DISTINCT t1.s_id AS s_id, t2.o_id AS o_id, ? AS step FROM sco AS t1 INNER JOIN sco AS t2 ON t1.o_id=t2.s_id WHERE t1.step<=? AND t2.step=?");
+		
+		int i = 1;
+		int affectedrows = 1;
+		while (affectedrows != 0 ) {
+			affectedrows = 0;
+			up1_1.setInt(1, i);
+			up1_1.setInt(2, i-1);
+			up1_1.setInt(3, i-2);
+			affectedrows = affectedrows + up1_1.executeUpdate();
+			up1_2.setInt(1, i);
+			up1_2.setInt(2, i-1);
+			up1_2.setInt(3, i-1);
+			affectedrows = affectedrows + up1_2.executeUpdate();
+			System.out.println("Updated " + affectedrows + " rows.");
+			i++;
+		}
+		
 	}
 
 	/**
