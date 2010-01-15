@@ -87,6 +87,21 @@ public class BasicStore {
 		stmt.execute("DROP TABLE IF EXISTS subsomevalues");
 		stmt.execute("DROP TABLE IF EXISTS subpropertyof");
 	}
+	
+	/**
+	 * Delete the contents of the database but do not drop the tables we created.
+	 * @throws SQLException
+	 */
+	public void clearDatabase() throws SQLException {
+		Statement stmt = con.createStatement();
+		stmt.execute("TRUNCATE TABLE ids");
+		stmt.execute("TRUNCATE TABLE sco");
+		stmt.execute("TRUNCATE TABLE sv");
+		stmt.execute("TRUNCATE TABLE subconjunctionof");
+		stmt.execute("TRUNCATE TABLE subpropertychain");
+		stmt.execute("TRUNCATE TABLE subsomevalues");
+		stmt.execute("TRUNCATE TABLE subpropertyof");
+	}
 
 	/**
 	 * Load the content of some ontology to the database.   
