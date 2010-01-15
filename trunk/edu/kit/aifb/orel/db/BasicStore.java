@@ -4,20 +4,13 @@ import java.io.File;
 import java.net.URI;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Set;
 
 import org.semanticweb.owl.apibinding.OWLManager;
 import org.semanticweb.owl.model.*;
-
-import com.mysql.jdbc.*;
-
-
 
 /**
  * Basic class to manage initialization, writing, and query answering from a
@@ -27,20 +20,7 @@ import com.mysql.jdbc.*;
  */
 public class BasicStore {
 	protected Connection con = null;
-	
-	// use prepared statements locally for batch updates and frequent reads
-	protected PreparedStatement idsinsert = null;
-	protected PreparedStatement scoinsert = null;
-	protected PreparedStatement svinsert = null;
-	protected PreparedStatement subconjunctionofinsert = null;
-	protected PreparedStatement subpropertyofinsert = null;
-	protected PreparedStatement subpropertychaininsert = null;
-	protected PreparedStatement subsomevaluesinsert = null;
-	protected PreparedStatement findid = null;
-	protected PreparedStatement makeid = null;
-	// cache ids locally
-	protected HashMap ids = null;
-	final protected int idcachesize = 100;
+
 	
 	/**
 	 * Constructor that also establishes a database connection, since this object cannot really work without a database.
@@ -113,20 +93,10 @@ public class BasicStore {
 	 */
 	public void loadOntology(String uristring) throws OWLOntologyCreationException,SQLException {
 		OWLOntologyManager manager = OWLManager.createOWLOntologyManager();
-		URI physicalURI=(new File(uristring)).toURI();
-//		URI physicalURI= URI.create(uristring);
+		//URI physicalURI=(new File(uristring)).toURI();
+		URI physicalURI= URI.create(uristring);
 		OWLOntology ontology = manager.loadOntologyFromPhysicalURI(physicalURI);
 		
-		idsinsert = con.prepareStatement("INSERT IGNORE INTO ids VALUES (?,?)");
-		scoinsert = con.prepareStatement("INSERT IGNORE INTO sco VALUES (?,?)");
-		svinsert = con.prepareStatement("INSERT IGNORE INTO sv VALUES (?,?,?)");
-		subconjunctionofinsert = con.prepareStatement("INSERT IGNORE INTO subconjunctionof VALUES (?,?,?)");
-		subpropertyofinsert = con.prepareStatement("INSERT IGNORE INTO subpropertyof VALUES (?,?)");
-		subpropertychaininsert = con.prepareStatement("INSERT IGNORE INTO subpropertychain VALUES (?,?,?)");
-		subsomevaluesinsert = con.prepareStatement("INSERT IGNORE INTO subsomevalues VALUES (?,?,?)");
-		findid = con.prepareStatement("SELECT id FROM ids WHERE name=? LIMIT 1");
-		makeid = con.prepareStatement("INSERT INTO ids VALUES (NULL,?)");
-		ids = new HashMap<String,Integer>(idcachesize);
 		java.util.Set<OWLLogicalAxiom> axiomset = ontology.getLogicalAxioms();
 		Iterator<OWLLogicalAxiom> axiomiterator = axiomset.iterator();
 		OWLLogicalAxiom axiom;
@@ -180,23 +150,5 @@ public class BasicStore {
 		//System.err.println("Calling subproperty of.");
 	}
 	
-	protected int getID(String description) throws SQLException {
-		int id = 0;
-		// TODO use our hash map as well for faster access
-		findid.setString(1, description);
-		ResultSet res = findid.executeQuery();
-		if (res.next()) {
-			id = res.getInt(1);
-		} else {
-			makeid.setString(1, description);
-			makeid.executeUpdate();
-			ResultSet keys = makeid.getGeneratedKeys();
-			if (keys.next()) {
-				id = keys.getInt(1);
-			} // else we are really out of luck, return 0
-			keys.close();
-		}
-		res.close();
-		return id;
-	}
+
 }
