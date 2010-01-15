@@ -62,6 +62,7 @@ public class Client {
 			System.err.println("Insufficient database configuration.\nPlease be sure to specify at leat 'dbname', dbuser' and 'dbserver' in your local configuration.");
 			return;
 		}
+
 		long sTime=System.currentTimeMillis();
 		try {
 			Client.store = new BasicStore(Settings.getDBServer(),Settings.getDBName(),Settings.getDBUser(),Settings.getDBPassword());
@@ -91,9 +92,7 @@ public class Client {
 			return;
 		}
 		long eTime=System.currentTimeMillis();
-		System.out.println("Done in "+(eTime-sTime)+" ms.\n");
+		System.out.println("Done in " + (eTime-sTime) + " ms.\n");
 	}
-	
-	
 
 }
