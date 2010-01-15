@@ -13,7 +13,7 @@ public class Client {
 	public static void main(String[] args) {
 		// parse command line arguments
 		// supported arguments:  
-		// <mode> -- one of "load", "materialize", "init"
+		// <mode> -- one of "load", "materialize", "init", "clear"
 		// -c <configfile> -- URL of configuration file
 		// -i <inputfile> -- URL of input ontology file
 		int i = 0;
@@ -36,7 +36,7 @@ public class Client {
 				}
 			} else if (arg.startsWith("-")) {
 				System.err.println("Unknown option " + arg);
-			} else if (arg.equals("load") || arg.equals("materialize") || arg.equals("init") || arg.equals("drop")) {
+			} else if (arg.equals("load") || arg.equals("materialize") || arg.equals("init") || arg.equals("drop") || arg.equals("clear")) {
 				operation = arg;
 			} else {
 				System.err.println("Unknown command " + arg);
@@ -72,9 +72,15 @@ public class Client {
 			} else if (operation.equals("drop")) {
 				System.out.println("Deleting all database tables ...");
 				Thread.sleep(1000);
-				System.out.println("Press CTRL+C within the next 5 seconds to cancel!");
+				System.out.println("(CTRL+C to abort within the next 5 seconds!)");
 				Thread.sleep(5000);
 				Client.store.drop();
+			} else if (operation.equals("clear")) {
+				System.out.println("Deleting all database content ...");
+				Thread.sleep(1000);
+				System.out.println("(CTRL+C to abort within the next 3 seconds!)");
+				Thread.sleep(3000);
+				Client.store.clearDatabase();
 			} else if (operation.equals("load")) {
 				System.out.println("Loading ontology ...");
 				if (inputfile.equals("")) {
