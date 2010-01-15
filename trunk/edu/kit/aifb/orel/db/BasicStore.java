@@ -143,15 +143,71 @@ public class BasicStore {
 
 	protected void loadSubclassOf(OWLDescription c1, OWLDescription c2) throws SQLException {
 		//System.err.println("Calling subclass of.");
-		//testing: getID(c1.toString());
+		int id1 = bridge.getID(c1);
+		int id2 = bridge.getID(c2);
+		bridge.insertIdsToTable("sco",id1,id2);
+		createBodyFacts(id1,c1);
+		createHeadFacts(id2,c2);
 	}
 
-	protected void loadEquivalentClasses(Set<OWLDescription> descriptions) {
-		//System.err.println("Calling equivalent classes.");
+	protected void loadEquivalentClasses(Set<OWLDescription> descriptions) throws SQLException {
+		Object[] descs = descriptions.toArray();
+		int j;
+		for(int i=0;i<descs.length;i++){
+			j=(i%(descs.length-1))+1;
+			loadSubclassOf((OWLDescription)descs[i],(OWLDescription)descs[j]);
+		}
 	}
 
 	protected void loadSubpropertyOf(OWLObjectPropertyExpression p1, OWLObjectPropertyExpression p2) {
 		//System.err.println("Calling subproperty of.");
+	}
+	
+	protected void createBodyFacts(int id, OWLDescription d) throws SQLException {
+		if (d instanceof OWLClass) {
+			// nothing to do here
+		} else if (d instanceof OWLObjectIntersectionOf) {
+			Set<OWLDescription> ops = ((OWLObjectIntersectionOf) d).getOperands();
+			Iterator<OWLDescription> opsit = ops.iterator();
+			// TODO maybe sort ops first to increase likeliness of finding the same sub-ops again
+			if (ops.size() == 2) {
+				OWLDescription op1 = opsit.next(), op2 = opsit.next();
+				int oid1 = bridge.getID(op1), oid2 = bridge.getID(op2);
+				bridge.insertIdsToTable("subconjunctionof",oid1,oid2,id);
+				createBodyFacts(oid1,op1);
+				createBodyFacts(oid2,op2);
+			} else { // recursion
+				// TODO
+			}
+		} else if (d instanceof OWLObjectSomeRestriction) {
+			int pid = bridge.getID(((OWLObjectSomeRestriction)d).getProperty());
+			OWLDescription filler = ((OWLObjectSomeRestriction)d).getFiller();
+			int sid = bridge.getID(filler);
+			bridge.insertIdsToTable("subsomevalues",pid,sid,id);
+			createBodyFacts(sid,filler);
+		} // TODO: add more description types
+	}
+
+	protected void createHeadFacts(int sid, OWLDescription d) throws SQLException {
+		if (d instanceof OWLClass) {
+			// nothing to do here
+		} else if (d instanceof OWLObjectIntersectionOf){
+			Iterator<OWLDescription> descit = ((OWLObjectIntersectionOf)d).getOperands().iterator();
+			OWLDescription desc;
+			int descid;
+			while (descit.hasNext()) {
+				desc = descit.next();
+				descid = bridge.getID(desc);
+				bridge.insertIdsToTable("sco",sid,descid);
+				createHeadFacts(descid,desc);
+			}
+		} else if (d instanceof OWLObjectSomeRestriction){
+			int pid = bridge.getID(((OWLObjectSomeRestriction)d).getProperty());
+			OWLDescription filler = ((OWLObjectSomeRestriction)d).getFiller();
+			int oid = bridge.getID(filler);
+			bridge.insertIdsToTable("sv",sid,pid,oid);
+			createHeadFacts(oid,filler);
+		}
 	}
 	
 
