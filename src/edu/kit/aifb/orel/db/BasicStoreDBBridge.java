@@ -92,9 +92,9 @@ public class BasicStoreDBBridge {
 	
 	protected PreparedStatement getPreparedInsertStatement(String tablename) throws SQLException {
 		if (tablename.equals("sco")) {
-			return con.prepareStatement("INSERT IGNORE INTO sco VALUES (?,?)");
+			return con.prepareStatement("INSERT IGNORE INTO sco VALUES (?,?,0)");
 		} else if (tablename.equals("sv")) {
-			return con.prepareStatement("INSERT IGNORE INTO sv VALUES (?,?,?)");
+			return con.prepareStatement("INSERT IGNORE INTO sv VALUES (?,?,?,0)");
 		} else if (tablename.equals("subconjunctionof")) {
 			return con.prepareStatement("INSERT IGNORE INTO subconjunctionof VALUES (?,?,?)");
 		} else if (tablename.equals("subpropertyof")) {
