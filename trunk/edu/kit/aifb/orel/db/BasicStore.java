@@ -20,6 +20,7 @@ import org.semanticweb.owl.model.*;
  */
 public class BasicStore {
 	protected Connection con = null;
+	protected BasicStoreDBBridge bridge = null;
 
 	
 	/**
@@ -100,6 +101,7 @@ public class BasicStore {
 		java.util.Set<OWLLogicalAxiom> axiomset = ontology.getLogicalAxioms();
 		Iterator<OWLLogicalAxiom> axiomiterator = axiomset.iterator();
 		OWLLogicalAxiom axiom;
+		bridge = new BasicStoreDBBridge(con);
 		while(axiomiterator.hasNext()){
 			axiom = axiomiterator.next();
 			if (axiom.getAxiomType() == AxiomType.SUBCLASS) {
@@ -112,6 +114,8 @@ public class BasicStore {
 				System.err.println("The following axiom is not supported: " + axiom + "\n");
 			}
 		}
+		bridge.close();
+		bridge = null;
 		manager.removeOntology(ontology.getURI());
 	}
 
