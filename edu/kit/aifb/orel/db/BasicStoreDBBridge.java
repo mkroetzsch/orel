@@ -33,6 +33,8 @@ public class BasicStoreDBBridge {
 	public BasicStoreDBBridge(Connection connection) {
 		con = connection;
 		ids = new HashMap<String,Integer>(idcachesize);
+		prepstmts = new HashMap<String,PreparedStatement>(idcachesize);
+		prepstmtsizes = new HashMap<String,Integer>(idcachesize);
 	}
 	
 	/**
