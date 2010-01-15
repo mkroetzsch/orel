@@ -20,7 +20,6 @@ public class Client {
 		// supported arguments:  
 		// <mode> -- one of "load", "materialize", "init", "clear"
 		// -c <configfile> -- URL of configuration file
-		// -i <inputfile> -- URL of input ontology file
 		int i = 0;
 		String arg;
 		String operation = "", inputfile = "", configfile = "./settings.cfg";
@@ -33,15 +32,16 @@ public class Client {
 				} else {
 					System.err.println(arg + " requires a filename of the configuration file");
 				}
-			} else if (arg.equals("-i") || arg.equals("--input")) {
+			} else if (arg.startsWith("-")) {
+				System.err.println("Unknown option " + arg);
+			} else if (arg.equals("load")) {
+				operation = arg;
 				if (i < args.length) {
 					inputfile = args[i++];
 				} else {
 					System.err.println(arg + " requires a filename of the input file");
 				}
-			} else if (arg.startsWith("-")) {
-				System.err.println("Unknown option " + arg);
-			} else if (arg.equals("load") || arg.equals("materialize") || arg.equals("init") || arg.equals("drop") || arg.equals("clear")) {
+			} else if (arg.equals("materialize") || arg.equals("init") || arg.equals("drop") || arg.equals("clear")) {
 				operation = arg;
 			} else {
 				System.err.println("Unknown command " + arg);
@@ -50,9 +50,9 @@ public class Client {
 
 		if ( operation.equals("") ) {
 			System.out.println("No operation given. Usage:\n orel.sh <command> -c <configfile> -i <inputfile>\n" +
-					           " <command>    : one of \"load\", \"materialize\", \"init\", \"drop\"\n" +
-					           " <configfile> : URL of the configuration file\n" +
-					           " <inputfile>  : URL of the input ontology (if required for operation)\n");
+					           " <command>       : one of \"load\", \"materialize\", \"init\", \"drop\"\n" +
+					           "                   where \"load\" must be followed by an input ontology URI\n" +
+					           " -c <configfile> : path to the configuration file\n");
 			System.out.println("Exiting.");
 			return;
 		}
@@ -107,8 +107,7 @@ public class Client {
 				manager.removeOntology(ontology.getURI());
 			} else if (operation.equals("materialize")) {
 				System.out.println("Materialising consequences ...");
-				System.err.println("Operation not implemented yet");
-				return;
+				Client.store.materialize();
 			}
 		} catch (Exception e) {
 			System.err.println(e.toString());
