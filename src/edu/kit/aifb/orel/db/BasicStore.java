@@ -103,17 +103,12 @@ public class BasicStore {
 		stmt.execute("TRUNCATE TABLE subsomevalues");
 		stmt.execute("TRUNCATE TABLE subpropertyof");
 	}
-
+	
 	/**
 	 * Load the content of some ontology to the database.   
 	 * @param uristring
 	 */
-	public void loadOntology(String uristring) throws OWLOntologyCreationException,SQLException {
-		OWLOntologyManager manager = OWLManager.createOWLOntologyManager();
-		//URI physicalURI=(new File(uristring)).toURI();
-		URI physicalURI= URI.create(uristring);
-		OWLOntology ontology = manager.loadOntologyFromPhysicalURI(physicalURI);
-		
+	public void loadOntology(OWLOntology ontology) throws SQLException {
 		java.util.Set<OWLLogicalAxiom> axiomset = ontology.getLogicalAxioms();
 		Iterator<OWLLogicalAxiom> axiomiterator = axiomset.iterator();
 		OWLLogicalAxiom axiom;
@@ -134,7 +129,6 @@ public class BasicStore {
 		}
 		bridge.close();
 		bridge = null;
-		manager.removeOntology(ontology.getURI());
 	}
 
 	/**
