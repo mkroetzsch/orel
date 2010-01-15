@@ -145,8 +145,11 @@ public class BasicStore {
 		// use with (newindex, index-1, index-2)
 		PreparedStatement rule1_1 = con.prepareStatement("INSERT IGNORE INTO sco (s_id, o_id, step) SELECT DISTINCT t1.s_id AS s_id, t2.o_id AS o_id, ? AS step FROM sco AS t1 INNER JOIN sco AS t2 ON t1.o_id=t2.s_id AND t1.step=? AND t2.step<=?");
 		// use with (newindex, index-1, index-1)
-		PreparedStatement rule1_2 = con.prepareStatement("INSERT IGNORE INTO sco (s_id, o_id, step) SELECT DISTINCT t1.s_id AS s_id, t2.o_id AS o_id, ? AS step FROM sco AS t1 INNER JOIN sco AS t2 ON t1.o_id=t2.s_id AND t1.step<=? AND t2.step=?");		
-		
+		PreparedStatement rule1_2 = con.prepareStatement("INSERT IGNORE INTO sco (s_id, o_id, step) SELECT DISTINCT t1.s_id AS s_id, t2.o_id AS o_id, ? AS step FROM sco AS t1 INNER JOIN sco AS t2 ON t1.o_id=t2.s_id AND t1.step<=? AND t2.step=?");
+		// use with (newindex, index-1, index-2)
+		//PreparedStatement rule1_1 = con.prepareStatement("INSERT IGNORE INTO sco (s_id, o_id, step) SELECT DISTINCT t1.s_id AS s_id, t2.o_id AS o_id, ? AS step FROM (SELECT * FROM sco WHERE sco.step=?) AS t1 INNER JOIN sco AS t2 ON t1.o_id=t2.s_id AND t2.step<=?");
+		// use with (newindex, index-1, index-1)
+		//PreparedStatement rule1_2 = con.prepareStatement("INSERT IGNORE INTO sco (s_id, o_id, step) SELECT DISTINCT t1.s_id AS s_id, t2.o_id AS o_id, ? AS step FROM sco AS t1 INNER JOIN (SELECT * FROM sco WHERE sco.step=?) AS t2 ON t1.o_id=t2.s_id AND t1.step<=?");
 		
 		int i = 1;
 		int affectedrows = 1;
