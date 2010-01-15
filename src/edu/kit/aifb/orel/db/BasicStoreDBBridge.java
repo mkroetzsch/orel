@@ -1,5 +1,6 @@
 package edu.kit.aifb.orel.db;
 
+import java.sql.Statement;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
@@ -22,15 +23,19 @@ import org.semanticweb.owl.model.OWLObjectPropertyExpression;
  * @author markus
  */
 public class BasicStoreDBBridge {
+	protected int namefieldlength = 100;
+	
 	protected Connection con = null;
 	protected MessageDigest digest = null;
-	protected int maxbatchsize = 500;
+	protected int maxbatchsize = 1000;
 
 	// cache ids locally
 	protected HashMap<String,Integer> ids = null;
-	final protected int idcachesize = 100;
+	final protected int idcachesize = 1000;
 	protected PreparedStatement findid = null;
-	protected PreparedStatement makeid = null;
+	protected PreparedStatement makeids = null;
+	protected PreparedStatement prelocids = null;
+	protected ResultSet prelocatedids = null;
 	
 	// keep prepared statements in a map to process them with less code
 	protected HashMap<String,PreparedStatement> prepstmts;
@@ -54,16 +59,19 @@ public class BasicStoreDBBridge {
 	 */
 	public void close() throws SQLException {
 		Iterator<String> inserttables = prepstmts.keySet().iterator();
-		PreparedStatement stmt;
+		PreparedStatement pstmt;
 		String key;
 		while (inserttables.hasNext()) {
 			key = inserttables.next();
-			stmt = prepstmts.get(key);
-			stmt.executeBatch();
-			stmt.close();
+			pstmt = prepstmts.get(key);
+			pstmt.executeBatch();
+			pstmt.close();
 		}
 		prepstmts.clear();
 		prepstmtsizes.clear();
+		if (makeids != null) makeids.executeBatch();
+		Statement stmt = con.createStatement();
+		stmt.execute("DELETE FROM ids WHERE name=\"-\""); // delete any unused pre-allocated ids
 	}
 	
 	public void insertIdsToTable(String tablename, int id1, int id2) throws SQLException {
@@ -120,30 +128,53 @@ public class BasicStoreDBBridge {
 	public int getID(String description) throws SQLException {
 		int id = 0;
 		String hash;
-		if (description.toCharArray().length < 100) { // try to keep names intact ...
+		if (description.toCharArray().length < namefieldlength) { // try to keep names intact ...
 			hash = description;
 		} else { // ... but use a hash if the string is too long
 			digest.update(description.getBytes());
 			hash = "_" + getHex(digest.digest());
 		}
-		//String hash = description;
-		// TODO use our hash map as well for faster access
-		if (findid == null) findid = con.prepareStatement("SELECT id FROM ids WHERE name=? LIMIT 1");
-		findid.setString(1, hash);
-		ResultSet res = findid.executeQuery();
-		if (res.next()) {
-			id = res.getInt(1);
+		if (ids.containsKey(hash)) {
+			id = ids.get(hash).intValue();
 		} else {
-			if (makeid == null) makeid = con.prepareStatement("INSERT INTO ids VALUES (NULL,?)");
-			makeid.setString(1, hash);
-			makeid.executeUpdate();
-			ResultSet keys = makeid.getGeneratedKeys();
-			if (keys.next()) {
-				id = keys.getInt(1);
-			} // else we are really out of luck, return 0
-			keys.close();
+			if (findid == null) findid = con.prepareStatement("SELECT id FROM ids WHERE name=? LIMIT 1");
+			findid.setString(1, hash);
+			ResultSet res = findid.executeQuery();
+			if (res.next()) {
+				id = res.getInt(1);
+			} else {
+				if ((prelocatedids == null) || (!prelocatedids.next())) {
+					if (prelocids == null) {
+						String insertvals = "(NULL,\"-\")";
+						for (int i=0; i<100; i++) {
+							insertvals = insertvals.concat(",(NULL,\"-\")");
+						}
+						prelocids = con.prepareStatement("INSERT INTO ids VALUES " + insertvals);
+					}
+					if (prelocatedids != null) prelocatedids.close();
+					if (makeids != null) makeids.executeBatch();
+					prelocids.executeUpdate();
+					prelocatedids = prelocids.getGeneratedKeys();
+					prelocatedids.next();
+				}
+				id = prelocatedids.getInt(1);
+				if (makeids == null) makeids = con.prepareStatement("UPDATE ids SET name=? WHERE id=?");
+				makeids.setInt(2,id);
+				makeids.setString(1,hash);
+				makeids.addBatch();
+				/*if (makeid == null) makeid = con.prepareStatement("INSERT INTO ids VALUES (NULL,?)");
+				makeid.setString(1, hash);
+				makeid.executeUpdate();
+				ResultSet keys = makeid.getGeneratedKeys();
+				if (keys.next()) {
+					id = keys.getInt(1);
+				} // else we are really out of luck, return 0
+				keys.close();*/
+			}
+			res.close();
+			if (ids.size() >= idcachesize) ids.clear(); // violent cache management but better than leaking memory
+			ids.put(hash,id);
 		}
-		res.close();
 		return id;
 	}
 
