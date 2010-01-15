@@ -1,5 +1,6 @@
 package edu.kit.aifb.orel.db;
 
+import java.io.File;
 import java.net.URI;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -112,7 +113,8 @@ public class BasicStore {
 	 */
 	public void loadOntology(String uristring) throws OWLOntologyCreationException,SQLException {
 		OWLOntologyManager manager = OWLManager.createOWLOntologyManager();
-		URI physicalURI= URI.create(uristring);
+		URI physicalURI=(new File(uristring)).toURI();
+//		URI physicalURI= URI.create(uristring);
 		OWLOntology ontology = manager.loadOntologyFromPhysicalURI(physicalURI);
 		
 		idsinsert = con.prepareStatement("INSERT IGNORE INTO ids VALUES (?,?)");

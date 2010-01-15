@@ -27,9 +27,8 @@ public class Settings {
 		URI fileuri = new URI(fileurl);
 //		URI workingdir = new URI("file://" + System.getProperty("user.dir") + "/");
 		URI workingdir = new File(System.getProperty("user.dir")).toURI();
-		fileuri = workingdir.resolve(fileuri);
 		System.out.println("Trying to load configuration from " + fileuri + ".");
-		FileInputStream configfile = new FileInputStream(new File(fileuri));
+		FileInputStream configfile = new FileInputStream(new File(workingdir.getPath().toString()+fileuri));
 		if (configfile == null) throw new IOException("Config file '" + fileurl + "' not found.");
 		props.load(configfile);
 		System.out.println("Configuration loaded.");
