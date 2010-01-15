@@ -7,6 +7,9 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Iterator;
 
+import org.semanticweb.owl.model.OWLDescription;
+import org.semanticweb.owl.model.OWLObjectPropertyExpression;
+
 /**
  * Class for implementing a simple caching interface for DB access, 
  * using batch updates for writing and caches for reading.
@@ -50,9 +53,9 @@ public class BasicStoreDBBridge {
 			stmt = prepstmts.get(key);
 			stmt.executeBatch();
 			stmt.close();
-			prepstmts.remove(key);
-			prepstmtsizes.remove(key);
 		}
+		prepstmts.clear();
+		prepstmtsizes.clear();
 	}
 	
 	public void insertIdsToTable(String tablename, int id1, int id2) throws SQLException {
@@ -68,7 +71,7 @@ public class BasicStoreDBBridge {
 		}
 		if (id1 >= 0) stmt.setInt(1, id1);
 		if (id2 >= 0) stmt.setInt(2, id2);
-		if (id3 >= 0) stmt.setInt(2, id3);
+		if (id3 >= 0) stmt.setInt(3, id3);
 		stmt.addBatch();
 		int cursize = prepstmtsizes.get(tablename)+1;
 		if (cursize >= maxbatchsize) {
@@ -96,6 +99,14 @@ public class BasicStoreDBBridge {
 			return con.prepareStatement("INSERT IGNORE INTO ids VALUES (?,?)");
 		}
 		return null;
+	}
+	
+	public int getID(OWLDescription description) throws SQLException {
+		return getID(description.toString());
+	}
+	
+	public int getID(OWLObjectPropertyExpression property) throws SQLException {
+		return getID(property.toString());
 	}
 	
 	public int getID(String description) throws SQLException {
