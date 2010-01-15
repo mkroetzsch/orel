@@ -1,5 +1,7 @@
 package edu.kit.aifb.orel.db;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -21,6 +23,7 @@ import org.semanticweb.owl.model.OWLObjectPropertyExpression;
  */
 public class BasicStoreDBBridge {
 	protected Connection con = null;
+	protected MessageDigest digest = null;
 	protected int maxbatchsize = 500;
 
 	// cache ids locally
@@ -38,6 +41,11 @@ public class BasicStoreDBBridge {
 		ids = new HashMap<String,Integer>(idcachesize);
 		prepstmts = new HashMap<String,PreparedStatement>(idcachesize);
 		prepstmtsizes = new HashMap<String,Integer>(idcachesize);
+		try {
+			digest = java.security.MessageDigest.getInstance("MD5");
+		} catch (NoSuchAlgorithmException e) {
+			// unlikely
+		}
 	}
 	
 	/**
@@ -111,15 +119,23 @@ public class BasicStoreDBBridge {
 	
 	public int getID(String description) throws SQLException {
 		int id = 0;
+		String hash;
+		if (description.toCharArray().length < 100) { // try to keep names intact ...
+			hash = description;
+		} else { // ... but use a hash if the string is too long
+			digest.update(description.getBytes());
+			hash = "_" + getHex(digest.digest());
+		}
+		//String hash = description;
 		// TODO use our hash map as well for faster access
 		if (findid == null) findid = con.prepareStatement("SELECT id FROM ids WHERE name=? LIMIT 1");
-		findid.setString(1, description);
+		findid.setString(1, hash);
 		ResultSet res = findid.executeQuery();
 		if (res.next()) {
 			id = res.getInt(1);
 		} else {
 			if (makeid == null) makeid = con.prepareStatement("INSERT INTO ids VALUES (NULL,?)");
-			makeid.setString(1, description);
+			makeid.setString(1, hash);
 			makeid.executeUpdate();
 			ResultSet keys = makeid.getGeneratedKeys();
 			if (keys.next()) {
@@ -130,5 +146,25 @@ public class BasicStoreDBBridge {
 		res.close();
 		return id;
 	}
+
+	static final String HEXES = "0123456789ABCDEF";
+	/**
+	 * Convert a byte array to a string that shows its entries in Hex format.
+	 * Based on code from http://www.rgagnon.com/javadetails/java-0596.html.
+	 * @param raw
+	 * @return
+	 */
+	protected static String getHex( byte [] raw ) {
+		if ( raw == null ) {
+			return null;
+		}
+		final StringBuilder hex = new StringBuilder( 2 * raw.length );
+		for ( final byte b : raw ) {
+			hex.append(HEXES.charAt((b & 0xF0) >> 4))
+				.append(HEXES.charAt((b & 0x0F)));
+		}
+		return hex.toString();
+	  }
+
 	
 }
