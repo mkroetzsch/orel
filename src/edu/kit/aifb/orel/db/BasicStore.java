@@ -7,6 +7,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 
 import org.semanticweb.owl.apibinding.OWLManager;
@@ -125,6 +126,8 @@ public class BasicStore {
 				loadEquivalentClasses(((OWLEquivalentClassesAxiom)axiom).getDescriptions());
 			} else if (axiom.getAxiomType() == AxiomType.SUB_OBJECT_PROPERTY) {
 				loadSubpropertyOf(((OWLObjectSubPropertyAxiom) axiom).getSubProperty(), ((OWLObjectSubPropertyAxiom) axiom).getSuperProperty());
+			} else if (axiom.getAxiomType() == AxiomType.PROPERTY_CHAIN_SUB_PROPERTY) {
+				loadSubpropertyChainOf(((OWLObjectPropertyChainSubPropertyAxiom) axiom).getPropertyChain(), ((OWLObjectPropertyChainSubPropertyAxiom) axiom).getSuperProperty());
 			} else {
 				System.err.println("The following axiom is not supported: " + axiom + "\n");
 			}
@@ -174,8 +177,18 @@ public class BasicStore {
 		}
 	}
 
-	protected void loadSubpropertyOf(OWLObjectPropertyExpression p1, OWLObjectPropertyExpression p2) {
-		//System.err.println("Calling subproperty of.");
+	protected void loadSubpropertyOf(OWLObjectPropertyExpression p1, OWLObjectPropertyExpression p2) throws SQLException {
+		int pid1 = bridge.getID(p1), pid2 = bridge.getID(p2);
+		bridge.insertIdsToTable("subpropertyof", pid1, pid2);
+	}
+	
+	protected void loadSubpropertyChainOf(List<OWLObjectPropertyExpression> chain, OWLObjectPropertyExpression p) throws SQLException {
+		if (chain.size() == 2) {
+			int pid = bridge.getID(p), pid1 = bridge.getID(chain.get(0)), pid2 = bridge.getID(chain.get(1));
+			bridge.insertIdsToTable("subpropertychain", pid1, pid2, pid);
+		} else {
+			// TODO recursion
+		}
 	}
 	
 	protected void createBodyFacts(int id, OWLDescription d) throws SQLException {
