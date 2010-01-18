@@ -9,6 +9,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import org.semanticweb.owlapi.model.OWLClassExpression;
 import org.semanticweb.owlapi.model.OWLObjectPropertyExpression;
@@ -23,29 +25,48 @@ import org.semanticweb.owlapi.model.OWLObjectPropertyExpression;
  * @author markus
  */
 public class BasicStoreDBBridge {
-	protected int namefieldlength = 100;
+	protected int curid = 0; // optionally do your own counting instead of using auto increment: faster but not multi-thread safe
+	// (a value of 0 indicates that AUTO INCREMENT should be used)
+	protected int maxid = -1; // maximum id that is currently reserved (only used for committing batches right now) 
 	
+	protected int namefieldlength = 50; // maximal length of the VARCHAR in the ids table
 	protected Connection con = null;
 	protected MessageDigest digest = null;
 	protected int maxbatchsize = 1000;
 
 	// cache ids locally
-	protected HashMap<String,Integer> ids = null;
+	//protected HashMap<String,Integer> ids = null;
+	protected LinkedHashMap<String,Integer> ids = null;
 	final protected int idcachesize = 1000;
-	protected PreparedStatement findid = null;
-	protected PreparedStatement makeids = null;
-	protected PreparedStatement prelocids = null;
-	protected ResultSet prelocatedids = null;
+	final protected int prelocsize = 1000;
+	protected PreparedStatement findid = null; // SELECT id by name
+	protected PreparedStatement makeids = null; // UPDATE prelocated ids with their names 
+	protected PreparedStatement prelocids = null; // prelocate empty id rows
+	protected ResultSet prelocatedids = null; // keys of prelocated ids
+	protected HashMap<String,Integer> unwrittenids = null; // map of yet to be written ids (do not rely on "ids" cache until all is written!)
 	
 	// keep prepared statements in a map to process them with less code
 	protected HashMap<String,PreparedStatement> prepstmts;
 	protected HashMap<String,Integer> prepstmtsizes;
+	
+	public BasicStoreDBBridge(Connection connection, int startid) {
+		this(connection);
+		curid = startid;
+	}
 
 	public BasicStoreDBBridge(Connection connection) {
 		con = connection;
-		ids = new HashMap<String,Integer>(idcachesize);
-		prepstmts = new HashMap<String,PreparedStatement>(idcachesize);
-		prepstmtsizes = new HashMap<String,Integer>(idcachesize);
+		//ids = new HashMap<String,Integer>(idcachesize);
+		ids = new LinkedHashMap<String,Integer>(idcachesize,0.75f,true) {
+			/// Anonymous inner class
+			private static final long serialVersionUID = 1L;
+			protected boolean removeEldestEntry(Map.Entry<String,Integer> eldest) {
+			   return size() > idcachesize;
+			}
+		};
+		unwrittenids = new HashMap<String,Integer>(prelocsize);
+		prepstmts = new HashMap<String,PreparedStatement>(10);
+		prepstmtsizes = new HashMap<String,Integer>(10);
 		try {
 			digest = java.security.MessageDigest.getInstance("MD5");
 		} catch (NoSuchAlgorithmException e) {
@@ -72,6 +93,7 @@ public class BasicStoreDBBridge {
 		if (makeids != null) makeids.executeBatch();
 		Statement stmt = con.createStatement();
 		stmt.execute("DELETE FROM ids WHERE name=\"-\""); // delete any unused pre-allocated ids
+		con.commit();
 	}
 	
 	public void insertIdsToTable(String tablename, int id1, int id2) throws SQLException {
@@ -134,45 +156,57 @@ public class BasicStoreDBBridge {
 			digest.update(description.getBytes());
 			hash = "_" + getHex(digest.digest());
 		}
-		if (ids.containsKey(hash)) {
+		if (ids.containsKey(hash)) { // id in LRU cache
 			id = ids.get(hash).intValue();
-		} else {
+		} else if (unwrittenids.containsKey(hash)) { // id was created recently and is not written to disk yet
+			id = unwrittenids.get(hash).intValue();
+		} else { // id not available: find it in the DB or newly allocate it
 			if (findid == null) findid = con.prepareStatement("SELECT id FROM ids WHERE name=? LIMIT 1");
 			findid.setString(1, hash);
 			ResultSet res = findid.executeQuery();
 			if (res.next()) {
 				id = res.getInt(1);
 			} else {
-				if ((prelocatedids == null) || (!prelocatedids.next())) {
-					if (prelocids == null) {
-						String insertvals = "(NULL,\"-\")";
-						for (int i=0; i<100; i++) {
-							insertvals = insertvals.concat(",(NULL,\"-\")");
+				// check if we need to pre-allocate more ids (and commit recently created ids)
+				if ( ( (curid>0) && (curid>maxid) ) || 
+				     ( (curid==0) && ((prelocatedids == null) || (!prelocatedids.next())) ) ) {
+					if (curid == 0) { // rely on AUTO INCREMENT
+						if (prelocids == null) {
+							String insertvals = "(NULL,\"-\")";
+							for (int i=1; i<prelocsize; i++) {
+								insertvals = insertvals.concat(",NULL,\"-\")");
+							}
+							prelocids = con.prepareStatement("INSERT INTO ids VALUES " + insertvals);//,Statement.RETURN_GENERATED_KEYS);
 						}
-						prelocids = con.prepareStatement("INSERT INTO ids VALUES " + insertvals);
+						if (prelocatedids != null) prelocatedids.close();						
+						prelocids.executeUpdate();
+						prelocatedids = prelocids.getGeneratedKeys();
+						prelocatedids.next();						
+					} else { // simply increment ids yourself
+						maxid = maxid + prelocsize;
 					}
-					if (prelocatedids != null) prelocatedids.close();
-					if (makeids != null) makeids.executeBatch();
-					prelocids.executeUpdate();
-					prelocatedids = prelocids.getGeneratedKeys();
-					prelocatedids.next();
+					if (makeids != null) { // in any case: batch write recently introduced ids
+						makeids.executeBatch();
+						unwrittenids.clear();
+					}
+					con.commit(); // needed to ensure that above SELECTs will be correct now that unwrittenids is empty again
 				}
-				id = prelocatedids.getInt(1);
-				if (makeids == null) makeids = con.prepareStatement("UPDATE ids SET name=? WHERE id=?");
-				makeids.setInt(2,id);
-				makeids.setString(1,hash);
+				// add a new id to the current batch and unwritten id cache
+				if (curid == 0) {
+					id = prelocatedids.getInt(1);
+					if (makeids == null) makeids = con.prepareStatement("UPDATE ids SET name=? WHERE id=?");
+					makeids.setInt(2,id);
+					makeids.setString(1,hash);
+				} else {
+					id = curid++;
+					if (makeids == null) makeids = con.prepareStatement("INSERT INTO ids VALUES (?,?)");
+					makeids.setInt(1,id);
+					makeids.setString(2,hash);					
+				}
+				unwrittenids.put(hash,id);
 				makeids.addBatch();
-				/*if (makeid == null) makeid = con.prepareStatement("INSERT INTO ids VALUES (NULL,?)");
-				makeid.setString(1, hash);
-				makeid.executeUpdate();
-				ResultSet keys = makeid.getGeneratedKeys();
-				if (keys.next()) {
-					id = keys.getInt(1);
-				} // else we are really out of luck, return 0
-				keys.close();*/
 			}
 			res.close();
-			if (ids.size() >= idcachesize) ids.clear(); // violent cache management but better than leaking memory
 			ids.put(hash,id);
 		}
 		return id;
