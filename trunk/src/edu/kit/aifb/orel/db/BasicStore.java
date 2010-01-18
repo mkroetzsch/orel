@@ -1,7 +1,5 @@
 package edu.kit.aifb.orel.db;
 
-import java.io.File;
-import java.net.URI;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -11,8 +9,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
-import org.semanticweb.owl.apibinding.OWLManager;
-import org.semanticweb.owl.model.*;
+import org.semanticweb.owlapi.model.*;
 
 /**
  * Basic class to manage initialization, writing, and query answering from a
@@ -111,6 +108,7 @@ public class BasicStore {
 	 * Load the content of some ontology to the database.   
 	 * @param ontology
 	 */
+	@SuppressWarnings("unchecked")
 	public void loadOntology(OWLOntology ontology) throws SQLException {
 		java.util.Set<OWLLogicalAxiom> axiomset = ontology.getLogicalAxioms();
 		Iterator<OWLLogicalAxiom> axiomiterator = axiomset.iterator();
@@ -119,13 +117,13 @@ public class BasicStore {
 		while(axiomiterator.hasNext()){
 			axiom = axiomiterator.next();
 			if (axiom.getAxiomType() == AxiomType.SUBCLASS) {
-				loadSubclassOf(((OWLSubClassAxiom) axiom).getSubClass(), ((OWLSubClassAxiom) axiom).getSuperClass());
+				loadSubclassOf(((OWLSubClassOfAxiom) axiom).getSubClass(), ((OWLSubClassOfAxiom) axiom).getSuperClass());
 			} else if (axiom.getAxiomType() == AxiomType.EQUIVALENT_CLASSES) {
-				loadEquivalentClasses(((OWLEquivalentClassesAxiom)axiom).getDescriptions());
+				loadEquivalentClasses(((OWLEquivalentClassesAxiom)axiom).getClassExpressions());
 			} else if (axiom.getAxiomType() == AxiomType.SUB_OBJECT_PROPERTY) {
-				loadSubpropertyOf(((OWLObjectSubPropertyAxiom) axiom).getSubProperty(), ((OWLObjectSubPropertyAxiom) axiom).getSuperProperty());
-			} else if (axiom.getAxiomType() == AxiomType.PROPERTY_CHAIN_SUB_PROPERTY) {
-				loadSubpropertyChainOf(((OWLObjectPropertyChainSubPropertyAxiom) axiom).getPropertyChain(), ((OWLObjectPropertyChainSubPropertyAxiom) axiom).getSuperProperty());
+				loadSubpropertyOf(((OWLSubPropertyAxiom<OWLObjectProperty>) axiom).getSubProperty(), ((OWLSubPropertyAxiom<OWLObjectProperty>) axiom).getSuperProperty());
+			} else if (axiom.getAxiomType() == AxiomType.SUB_PROPERTY_CHAIN_OF) {
+				loadSubpropertyChainOf(((OWLSubPropertyChainOfAxiom) axiom).getPropertyChain(), ((OWLSubPropertyChainOfAxiom) axiom).getSuperProperty());
 			} else {
 				System.err.println("The following axiom is not supported: " + axiom + "\n");
 			}
@@ -196,7 +194,7 @@ public class BasicStore {
         }
 	}
 
-	protected void loadSubclassOf(OWLDescription c1, OWLDescription c2) throws SQLException {
+	protected void loadSubclassOf(OWLClassExpression c1, OWLClassExpression c2) throws SQLException {
 		//System.err.println("Calling subclass of.");
 		int id1 = bridge.getID(c1);
 		int id2 = bridge.getID(c2);
@@ -205,12 +203,12 @@ public class BasicStore {
 		createHeadFacts(id2,c2);
 	}
 
-	protected void loadEquivalentClasses(Set<OWLDescription> descriptions) throws SQLException {
+	protected void loadEquivalentClasses(Set<OWLClassExpression> descriptions) throws SQLException {
 		Object[] descs = descriptions.toArray();
 		int j;
 		for(int i=0;i<descs.length;i++){
 			j=(i%(descs.length-1))+1;
-			loadSubclassOf((OWLDescription)descs[i],(OWLDescription)descs[j]);
+			loadSubclassOf((OWLClassExpression)descs[i],(OWLClassExpression)descs[j]);
 		}
 	}
 
@@ -228,15 +226,15 @@ public class BasicStore {
 		}
 	}
 	
-	protected void createBodyFacts(int id, OWLDescription d) throws SQLException {
+	protected void createBodyFacts(int id, OWLClassExpression d) throws SQLException {
 		if (d instanceof OWLClass) {
 			// nothing to do here
 		} else if (d instanceof OWLObjectIntersectionOf) {
-			Set<OWLDescription> ops = ((OWLObjectIntersectionOf) d).getOperands();
-			Iterator<OWLDescription> opsit = ops.iterator();
+			Set<OWLClassExpression> ops = ((OWLObjectIntersectionOf) d).getOperands();
+			Iterator<OWLClassExpression> opsit = ops.iterator();
 			// TODO maybe sort ops first to increase likeliness of finding the same sub-ops again
 			if (ops.size() == 2) {
-				OWLDescription op1 = opsit.next(), op2 = opsit.next();
+				OWLClassExpression op1 = opsit.next(), op2 = opsit.next();
 				int oid1 = bridge.getID(op1), oid2 = bridge.getID(op2);
 				bridge.insertIdsToTable("subconjunctionof",oid1,oid2,id);
 				createBodyFacts(oid1,op1);
@@ -244,21 +242,21 @@ public class BasicStore {
 			} else { // recursion
 				// TODO
 			}
-		} else if (d instanceof OWLObjectSomeRestriction) {
-			int pid = bridge.getID(((OWLObjectSomeRestriction)d).getProperty());
-			OWLDescription filler = ((OWLObjectSomeRestriction)d).getFiller();
+		} else if (d instanceof OWLObjectSomeValuesFrom) {
+			int pid = bridge.getID(((OWLObjectSomeValuesFrom)d).getProperty());
+			OWLClassExpression filler = ((OWLObjectSomeValuesFrom)d).getFiller();
 			int sid = bridge.getID(filler);
 			bridge.insertIdsToTable("subsomevalues",pid,sid,id);
 			createBodyFacts(sid,filler);
 		} // TODO: add more description types
 	}
 
-	protected void createHeadFacts(int sid, OWLDescription d) throws SQLException {
+	protected void createHeadFacts(int sid, OWLClassExpression d) throws SQLException {
 		if (d instanceof OWLClass) {
 			// nothing to do here
 		} else if (d instanceof OWLObjectIntersectionOf){
-			Iterator<OWLDescription> descit = ((OWLObjectIntersectionOf)d).getOperands().iterator();
-			OWLDescription desc;
+			Iterator<OWLClassExpression> descit = ((OWLObjectIntersectionOf)d).getOperands().iterator();
+			OWLClassExpression desc;
 			int descid;
 			while (descit.hasNext()) {
 				desc = descit.next();
@@ -266,9 +264,9 @@ public class BasicStore {
 				bridge.insertIdsToTable("sco",sid,descid);
 				createHeadFacts(descid,desc);
 			}
-		} else if (d instanceof OWLObjectSomeRestriction){
-			int pid = bridge.getID(((OWLObjectSomeRestriction)d).getProperty());
-			OWLDescription filler = ((OWLObjectSomeRestriction)d).getFiller();
+		} else if (d instanceof OWLObjectSomeValuesFrom){
+			int pid = bridge.getID(((OWLObjectSomeValuesFrom)d).getProperty());
+			OWLClassExpression filler = ((OWLObjectSomeValuesFrom)d).getFiller();
 			int oid = bridge.getID(filler);
 			bridge.insertIdsToTable("sv",sid,pid,oid);
 			createHeadFacts(oid,filler);
