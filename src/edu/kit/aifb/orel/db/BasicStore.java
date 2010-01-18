@@ -52,7 +52,18 @@ public class BasicStore {
 				", o_id " + idfieldtype +
 				", step INT" + 
 				", INDEX(step), INDEX(s_id), INDEX(o_id), PRIMARY KEY (s_id,o_id)) " + engine);
+		stmt.execute("CREATE TABLE IF NOT EXISTS sco_nl " +
+				"( s_id " + idfieldtype + 
+				", o_id " + idfieldtype +
+				", step INT" + 
+				", INDEX(step), INDEX(s_id), INDEX(o_id), PRIMARY KEY (s_id,o_id)) " + engine);
 		stmt.execute("CREATE TABLE IF NOT EXISTS sv " +
+				"( s_id " + idfieldtype + 
+                ", p_id " + idfieldtype +
+                ", o_id " + idfieldtype +
+                ", step INT" +
+                ", INDEX(step), INDEX(s_id), INDEX(p_id,o_id), PRIMARY KEY (s_id,p_id,o_id) ) " + engine);
+		stmt.execute("CREATE TABLE IF NOT EXISTS sv_nl " +
 				"( s_id " + idfieldtype + 
                 ", p_id " + idfieldtype +
                 ", o_id " + idfieldtype +
@@ -67,6 +78,7 @@ public class BasicStore {
 				"( s1_id " + idfieldtype + 
                 ", s2_id " + idfieldtype +
                 ", o_id " + idfieldtype + 
+                ", step INT" +
                 ", INDEX(s1_id,s2_id), INDEX(o_id), PRIMARY KEY (s1_id,s2_id,o_id) ) " + engine);
 		stmt.execute("CREATE TABLE IF NOT EXISTS subsomevalues " +
 				"( p_id " + idfieldtype + 
@@ -76,6 +88,7 @@ public class BasicStore {
 		stmt.execute("CREATE TABLE IF NOT EXISTS subpropertyof " +
 				"( s_id " + idfieldtype + 
                 ", o_id " + idfieldtype + 
+                ", step INT" +
                 ", INDEX(s_id), INDEX(o_id), PRIMARY KEY (s_id,o_id) ) " + engine);
 	}
 
@@ -162,6 +175,17 @@ public class BasicStore {
 	 * Compute all materialized statements on the database.  
 	 */
 	public void materialize() throws SQLException {
+		long sTime;
+		sTime=System.currentTimeMillis();
+		System.out.println("Separating leafs ... ");
+		separateLeafs();
+		System.out.println("Done in " + (System.currentTimeMillis() - sTime) + "ms.");
+		
+		sTime=System.currentTimeMillis();
+		System.out.println("Materialising property hierarchy ... ");
+		materializePropertyHierarchy();
+		System.out.println("Done in " + (System.currentTimeMillis() - sTime) + "ms.");
+		
 		// use with (newindex, index-1, index-2)
 		//PreparedStatement rule1_1 = con.prepareStatement("INSERT IGNORE INTO sco (s_id, o_id, step) SELECT DISTINCT t1.s_id AS s_id, t2.o_id AS o_id, ? AS step FROM sco AS t1 INNER JOIN sco AS t2 ON t1.o_id=t2.s_id WHERE t1.step=? AND t2.step<=?");
 		// use with (newindex, index-1, index-1)
@@ -178,7 +202,7 @@ public class BasicStore {
 		//PreparedStatement rule1_2 = con.prepareStatement("INSERT IGNORE INTO sco (s_id, o_id, step) SELECT DISTINCT t1.s_id AS s_id, t2.o_id AS o_id, ? AS step FROM sco AS t1 INNER JOIN (SELECT * FROM sco WHERE sco.step=?) AS t2 ON t1.o_id=t2.s_id AND t1.step<=?");
 		
 		// use with (newindex, newindex-1)
-		PreparedStatement rule1_2 = con.prepareStatement("INSERT IGNORE INTO sco (s_id, o_id, step) SELECT DISTINCT t1.s_id AS s_id, t2.o_id AS o_id, ? AS step FROM sco AS t1 INNER JOIN sco AS t2 ON t1.o_id=t2.s_id AND t1.step=0 AND t2.step=?");
+		/*PreparedStatement rule1_2 = con.prepareStatement("INSERT IGNORE INTO sco (s_id, o_id, step) SELECT DISTINCT t1.s_id AS s_id, t2.o_id AS o_id, ? AS step FROM sco AS t1 INNER JOIN sco AS t2 ON t1.o_id=t2.s_id AND t1.step=0 AND t2.step=?");
 		
 		int i = 1;
 		int affectedrows = 1;
@@ -187,14 +211,14 @@ public class BasicStore {
 			/*rule1_1.setInt(1, i);
 			rule1_1.setInt(2, i-1);
 			rule1_1.setInt(3, i-2);
-			affectedrows = affectedrows + rule1_1.executeUpdate();*/
+			affectedrows = affectedrows + rule1_1.executeUpdate();*
 			rule1_2.setInt(1, i);
 			rule1_2.setInt(2, i-1);
 			//rule1_2.setInt(3, i-1);
 			affectedrows = affectedrows + rule1_2.executeUpdate();
 			System.out.println("Updated " + affectedrows + " rows.");
 			i++;
-		}
+		}*/
 		
 	}
 
@@ -299,7 +323,7 @@ public class BasicStore {
 		}
 	}
 	
-	public void enableKeys(boolean ek) throws SQLException {
+	protected void enableKeys(boolean ek) throws SQLException {
 		Statement stmt = con.createStatement();
 		String action;
 		if (ek) {
@@ -313,6 +337,100 @@ public class BasicStore {
 		stmt.execute("ALTER TABLE subpropertychain " + action);
 		stmt.execute("ALTER TABLE subsomevalues " + action);
 		stmt.execute("ALTER TABLE subpropertyof " + action);
+	}
+	
+	/**
+	 * Method for separating leaf classes from other classes in the sco and sv table.
+	 * The operation is idempotent.
+	 * @throws SQLException
+	 */
+	protected void separateLeafs() throws SQLException {
+		int affectedrows;
+		Statement stmt = con.createStatement();
+		// begin with the subClassOf statements:
+		affectedrows = stmt.executeUpdate( 
+			"INSERT IGNORE INTO sco_nl " + 
+			"SELECT DISTINCT t1.s_id AS s_id,t1.o_id AS o_id, \"0\" AS step " +
+			"FROM sco AS t1 INNER JOIN sco AS t2 ON t1.s_id=t2.o_id"
+		);
+		if (affectedrows > 0) {
+			stmt.executeUpdate("DELETE t1.* FROM sco AS t1 INNER JOIN sco AS t2 ON t1.s_id=t2.o_id");
+		}
+		affectedrows = stmt.executeUpdate(
+			"INSERT IGNORE INTO sco_nl " + 
+			"SELECT DISTINCT t1.s_id AS s_id,t1.o_id AS o_id, \"0\" AS step FROM " +
+			"sco AS t1 INNER JOIN subconjunctionof AS t2 ON t1.s_id=t2.o_id"
+		);
+		if (affectedrows > 0) {
+			stmt.executeUpdate("DELETE t1.* FROM sco AS t1 INNER JOIN subconjunctionof AS t2 ON t1.s_id=t2.o_id");
+		}
+		affectedrows = stmt.executeUpdate(
+			"INSERT IGNORE INTO sco_nl " + 
+			"SELECT DISTINCT t1.s_id AS s_id,t1.o_id AS o_id, \"0\" AS step FROM " +
+			"sco AS t1 INNER JOIN subsomevalues AS t2 ON t1.s_id=t2.o_id"
+		);
+		if (affectedrows > 0) {
+			stmt.executeUpdate("DELETE t1.* FROM sco AS t1 INNER JOIN subsomevalues AS t2 ON t1.s_id=t2.o_id");
+		}
+		// now also take care of all other property statements:
+		affectedrows = stmt.executeUpdate( // take advantage of pre-computed sco leafs:
+			"INSERT IGNORE INTO sv_nl " + 
+			"SELECT DISTINCT t1.s_id AS s_id,t1.p_id AS p_id,t1.o_id AS o_id, \"0\" AS step FROM " +
+			"sv AS t1 INNER JOIN sco_nl AS t2 ON t1.s_id=t2.s_id"
+		);
+		if (affectedrows > 0) {
+			stmt.executeUpdate("DELETE t1.* FROM sv AS t1 INNER JOIN sco_nl AS t2 ON t1.s_id=t2.s_id");
+		}
+		// but still check the other tables, since not all non-leafs need to occur in sco table at all:
+		affectedrows = stmt.executeUpdate(
+			"INSERT IGNORE INTO sv_nl " + 
+			"SELECT DISTINCT t1.s_id AS s_id,t1.p_id AS p_id,t1.o_id AS o_id, \"0\" AS step FROM " +
+			"sv AS t1 INNER JOIN subconjunctionof AS t2 ON t1.s_id=t2.o_id"
+		);
+		if (affectedrows > 0) {
+			stmt.executeUpdate("DELETE t1.* FROM sv AS t1 INNER JOIN subconjunctionof AS t2 ON t1.s_id=t2.o_id");
+		}
+		affectedrows = stmt.executeUpdate(
+			"INSERT IGNORE INTO sv_nl " + 
+			"SELECT DISTINCT t1.s_id AS s_id,t1.p_id AS p_id,t1.o_id AS o_id, \"0\" AS step FROM " +
+			"sv AS t1 INNER JOIN subsomevalues AS t2 ON t1.s_id=t2.o_id"
+		);
+		if (affectedrows > 0) {
+			stmt.executeUpdate("DELETE t1.* FROM sv AS t1 INNER JOIN subsomevalues AS t2 ON t1.s_id=t2.o_id");
+		}
+	}
+	
+	protected void materializePropertyHierarchy() throws SQLException {
+		// Rule A: subPropertyOf(x,z) :- subPropertyOf(x,y), subPropertyOf(x,z)
+		// tail recursive, usage: (i,i-1)		
+		PreparedStatement rule_A = con.prepareStatement(
+				"INSERT IGNORE INTO subpropertyof (s_id, o_id, step) " +
+				"SELECT DISTINCT t1.s_id AS s_id, t2.o_id AS o_id, ? AS step " +
+				"FROM subpropertyof AS t1 INNER JOIN subpropertyof AS t2 ON t1.o_id=t2.s_id AND t1.step=0 AND t2.step=?");
+		
+		int i = 1;
+		int affectedrows = 1;
+		while (affectedrows != 0 ) {
+			affectedrows = 0;
+			rule_A.setInt(1, i);
+			rule_A.setInt(2, i-1);
+			affectedrows = affectedrows + rule_A.executeUpdate();
+			i++;
+		}
+
+		Statement stmt = con.createStatement();
+		// Rule B: subPropertyChainOf(u,v2,w) :- subPropertyChainOf(v1,v2,w), subPropertyOf(u,v1)
+		stmt.executeUpdate(
+			"INSERT IGNORE INTO subpropertychain (s1_id, s2_id, o_id, step) " +
+			"SELECT DISTINCT t2.s_id AS s1_id, t1.s2_id AS s2_id, t1.o_id AS o_id, \"1\" AS step " +
+			"FROM subpropertychain AS t1 INNER JOIN subpropertyof AS t2 ON t2.o_id=t1.s1_id"
+		);
+		// Rule C: subPropertyChainOf(v1,u,w) :- subPropertyChainOf(v1,v2,w), subPropertyOf(u,v2)
+		stmt.executeUpdate(
+			"INSERT IGNORE INTO subpropertychain (s1_id, s2_id, o_id, step) " +
+			"SELECT DISTINCT t1.s1_id AS s1_id, t2.s_id AS s2_id, t1.o_id AS o_id, \"1\" AS step " +
+			"FROM subpropertychain AS t1 INNER JOIN subpropertyof AS t2 ON t2.o_id=t1.s2_id"
+		);
 	}
 
 }

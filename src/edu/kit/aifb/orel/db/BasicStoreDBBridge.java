@@ -128,9 +128,9 @@ public class BasicStoreDBBridge {
 		} else if (tablename.equals("subconjunctionof")) {
 			return con.prepareStatement("INSERT IGNORE INTO subconjunctionof VALUES (?,?,?)");
 		} else if (tablename.equals("subpropertyof")) {
-			return con.prepareStatement("INSERT IGNORE INTO subpropertyof VALUES (?,?)");
+			return con.prepareStatement("INSERT IGNORE INTO subpropertyof VALUES (?,?,0)");
 		} else if (tablename.equals("subpropertychain")) {
-			return con.prepareStatement("INSERT IGNORE INTO subpropertychain VALUES (?,?,?)");
+			return con.prepareStatement("INSERT IGNORE INTO subpropertychain VALUES (?,?,?,0)");
 		} else if (tablename.equals("subsomevalues")) {
 			return con.prepareStatement("INSERT IGNORE INTO subsomevalues VALUES (?,?,?)");
 		} else if (tablename.equals("ids")) {
