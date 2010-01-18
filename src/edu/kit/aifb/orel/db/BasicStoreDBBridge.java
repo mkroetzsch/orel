@@ -10,8 +10,8 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Iterator;
 
-import org.semanticweb.owl.model.OWLDescription;
-import org.semanticweb.owl.model.OWLObjectPropertyExpression;
+import org.semanticweb.owlapi.model.OWLClassExpression;
+import org.semanticweb.owlapi.model.OWLObjectPropertyExpression;
 
 /**
  * Class for implementing a simple caching interface for DB access, 
@@ -117,7 +117,7 @@ public class BasicStoreDBBridge {
 		return null;
 	}
 	
-	public int getID(OWLDescription description) throws SQLException {
+	public int getID(OWLClassExpression description) throws SQLException {
 		return getID(description.toString());
 	}
 	

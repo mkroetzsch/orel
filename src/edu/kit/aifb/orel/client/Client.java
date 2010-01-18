@@ -1,11 +1,10 @@
 package edu.kit.aifb.orel.client;
 
-import java.io.IOException;
 import java.net.URI;
 
-import org.semanticweb.owl.apibinding.OWLManager;
-import org.semanticweb.owl.model.OWLOntology;
-import org.semanticweb.owl.model.OWLOntologyManager;
+import org.semanticweb.owlapi.apibinding.OWLManager;
+import org.semanticweb.owlapi.model.OWLOntology;
+import org.semanticweb.owlapi.model.OWLOntologyManager;
 
 import edu.kit.aifb.orel.db.BasicStore;
 
@@ -104,7 +103,7 @@ public class Client {
 				Client.store.loadOntology(ontology);
 				loadeTime=System.currentTimeMillis();
 				System.out.println("Ontology stored in " + (loadeTime-loadsTime) + " ms.");
-				manager.removeOntology(ontology.getURI());
+				manager.removeOntology(ontology);
 			} else if (operation.equals("materialize")) {
 				System.out.println("Materialising consequences ...");
 				Client.store.materialize();
