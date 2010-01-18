@@ -3,6 +3,7 @@ package edu.kit.aifb.orel.db;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Iterator;
@@ -39,40 +40,43 @@ public class BasicStore {
 	 */
 	public void initialize() throws SQLException {
 		Statement stmt = con.createStatement();
+		//String engine = "ENGINE = InnoDB"; // tends to be slow
+		String engine = "ENGINE = MyISAM";
+		//String engine = "ENGINE = Memory";
 		String idfieldtype = "INT NOT NULL";
 		stmt.execute("CREATE TABLE IF NOT EXISTS ids " +
 				"( id " + idfieldtype + " AUTO_INCREMENT" +
-                ", name VARCHAR(255), PRIMARY KEY (id), INDEX(name))");
+                ", name VARCHAR(50), PRIMARY KEY (id), INDEX(name)) " + engine);
 		stmt.execute("CREATE TABLE IF NOT EXISTS sco " +
 				"( s_id " + idfieldtype + 
 				", o_id " + idfieldtype +
 				", step INT" + 
-				", INDEX(step), INDEX(s_id), INDEX(o_id), PRIMARY KEY (s_id,o_id))");
+				", INDEX(step), INDEX(s_id), INDEX(o_id), PRIMARY KEY (s_id,o_id)) " + engine);
 		stmt.execute("CREATE TABLE IF NOT EXISTS sv " +
 				"( s_id " + idfieldtype + 
                 ", p_id " + idfieldtype +
                 ", o_id " + idfieldtype +
                 ", step INT" +
-                ", INDEX(step), INDEX(s_id), INDEX(p_id,o_id), PRIMARY KEY (s_id,p_id,o_id) )");
+                ", INDEX(step), INDEX(s_id), INDEX(p_id,o_id), PRIMARY KEY (s_id,p_id,o_id) ) " + engine);
 		stmt.execute("CREATE TABLE IF NOT EXISTS subconjunctionof " +
 				"( s1_id " + idfieldtype + 
                 ", s2_id " + idfieldtype +
                 ", o_id " + idfieldtype + 
-                ", INDEX(s1_id,s2_id), INDEX(o_id), PRIMARY KEY (s1_id,s2_id,o_id) )");
+                ", INDEX(s1_id,s2_id), INDEX(o_id), PRIMARY KEY (s1_id,s2_id,o_id) ) " + engine);
 		stmt.execute("CREATE TABLE IF NOT EXISTS subpropertychain " +
 				"( s1_id " + idfieldtype + 
                 ", s2_id " + idfieldtype +
                 ", o_id " + idfieldtype + 
-                ", INDEX(s1_id,s2_id), INDEX(o_id), PRIMARY KEY (s1_id,s2_id,o_id) )");
+                ", INDEX(s1_id,s2_id), INDEX(o_id), PRIMARY KEY (s1_id,s2_id,o_id) ) " + engine);
 		stmt.execute("CREATE TABLE IF NOT EXISTS subsomevalues " +
 				"( p_id " + idfieldtype + 
                 ", s_id " + idfieldtype +
                 ", o_id " + idfieldtype + 
-                ", INDEX(p_id,s_id), INDEX(o_id), PRIMARY KEY (p_id,s_id,o_id) )");
+                ", INDEX(p_id,s_id), INDEX(o_id), PRIMARY KEY (p_id,s_id,o_id) ) " + engine);
 		stmt.execute("CREATE TABLE IF NOT EXISTS subpropertyof " +
 				"( s_id " + idfieldtype + 
                 ", o_id " + idfieldtype + 
-                ", INDEX(s_id), INDEX(o_id), PRIMARY KEY (s_id,o_id) )");
+                ", INDEX(s_id), INDEX(o_id), PRIMARY KEY (s_id,o_id) ) " + engine);
 	}
 
 	/**
@@ -110,10 +114,27 @@ public class BasicStore {
 	 */
 	@SuppressWarnings("unchecked")
 	public void loadOntology(OWLOntology ontology) throws SQLException {
+		// prepare DB for bulk insert:
+		con.setAutoCommit(false);
+		//con.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+		//con.setTransactionIsolation(Connection.TRANSACTION_REPEATABLE_READ);
+		con.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+		enableKeys(false);
+		// find largest used id to start iteration:
+		Statement stmt = con.createStatement();
+		ResultSet res = stmt.executeQuery("SELECT max(id) FROM ids");
+		int startid;
+		if (res.next()) {
+			startid = res.getInt(1) + 1;
+		} else {
+			startid = 1;
+		}
+		bridge = new BasicStoreDBBridge(con,startid);
+		// iterate over ontology to load all axioms:
 		java.util.Set<OWLLogicalAxiom> axiomset = ontology.getLogicalAxioms();
 		Iterator<OWLLogicalAxiom> axiomiterator = axiomset.iterator();
 		OWLLogicalAxiom axiom;
-		bridge = new BasicStoreDBBridge(con);
+		int count = 0;
 		while(axiomiterator.hasNext()){
 			axiom = axiomiterator.next();
 			if (axiom.getAxiomType() == AxiomType.SUBCLASS) {
@@ -127,8 +148,13 @@ public class BasicStore {
 			} else {
 				System.err.println("The following axiom is not supported: " + axiom + "\n");
 			}
+			count++;
+			if (count % 100  == 0 ) System.out.print(".");
 		}
+		// close, commit, and recompute indexes
 		bridge.close();
+		con.setAutoCommit(true);
+		enableKeys(true);
 		bridge = null;
 	}
 
@@ -185,7 +211,7 @@ public class BasicStore {
             // This will load the MySQL driver, each DB has its own driver
             Class.forName("com.mysql.jdbc.Driver");
             // Setup the connection with the DB
-            con = DriverManager.getConnection("jdbc:mysql://" + dbserver + "/" + dbname + "?user=" + dbuser + "&password=" + dbpwd);
+            con = DriverManager.getConnection("jdbc:mysql://" + dbserver + "/" + dbname + "?user=" + dbuser + "&password=" + dbpwd + "&rewriteBatchedStatements=true");
         } catch (SQLException e) { // TODO either do something useful or drop this catch block
             throw e;
         } catch (ClassNotFoundException e) {
@@ -273,5 +299,20 @@ public class BasicStore {
 		}
 	}
 	
+	public void enableKeys(boolean ek) throws SQLException {
+		Statement stmt = con.createStatement();
+		String action;
+		if (ek) {
+			action = "ENABLE KEYS";
+		} else {
+			action = "DISABLE KEYS";
+		}
+		stmt.execute("ALTER TABLE sco " + action);
+		stmt.execute("ALTER TABLE sv " + action);
+		stmt.execute("ALTER TABLE subconjunctionof " + action);
+		stmt.execute("ALTER TABLE subpropertychain " + action);
+		stmt.execute("ALTER TABLE subsomevalues " + action);
+		stmt.execute("ALTER TABLE subpropertyof " + action);
+	}
 
 }
