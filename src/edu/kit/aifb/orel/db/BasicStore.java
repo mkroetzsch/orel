@@ -99,7 +99,9 @@ public class BasicStore {
 		Statement stmt = con.createStatement();
 		stmt.execute("DROP TABLE IF EXISTS ids");
 		stmt.execute("DROP TABLE IF EXISTS sco");
+		stmt.execute("DROP TABLE IF EXISTS sco_nl");
 		stmt.execute("DROP TABLE IF EXISTS sv");
+		stmt.execute("DROP TABLE IF EXISTS sv_nl");
 		stmt.execute("DROP TABLE IF EXISTS subconjunctionof");
 		stmt.execute("DROP TABLE IF EXISTS subpropertychain");
 		stmt.execute("DROP TABLE IF EXISTS subsomevalues");
@@ -110,15 +112,26 @@ public class BasicStore {
 	 * Delete the contents of the database but do not drop the tables we created.
 	 * @throws SQLException
 	 */
-	public void clearDatabase() throws SQLException {
+	public void clearDatabase(boolean onlyderived) throws SQLException {
 		Statement stmt = con.createStatement();
-		stmt.execute("TRUNCATE TABLE ids");
-		stmt.execute("TRUNCATE TABLE sco");
-		stmt.execute("TRUNCATE TABLE sv");
-		stmt.execute("TRUNCATE TABLE subconjunctionof");
-		stmt.execute("TRUNCATE TABLE subpropertychain");
-		stmt.execute("TRUNCATE TABLE subsomevalues");
-		stmt.execute("TRUNCATE TABLE subpropertyof");
+		if (onlyderived == true) {
+			stmt.execute("DELETE FROM sco WHERE step!=0");
+			stmt.execute("DELETE FROM sco_nl WHERE step!=0");
+			stmt.execute("DELETE FROM sv WHERE step!=0");
+			stmt.execute("DELETE FROM sv_nl WHERE step!=0");
+			stmt.execute("DELETE FROM subpropertychain WHERE step!=0");
+			stmt.execute("DELETE FROM subpropertyof WHERE step!=0");
+		} else {
+			stmt.execute("TRUNCATE TABLE ids");
+			stmt.execute("TRUNCATE TABLE sco");
+			stmt.execute("TRUNCATE TABLE sco_nl");
+			stmt.execute("TRUNCATE TABLE sv");
+			stmt.execute("TRUNCATE TABLE sv_nl");
+			stmt.execute("TRUNCATE TABLE subconjunctionof");
+			stmt.execute("TRUNCATE TABLE subpropertychain");
+			stmt.execute("TRUNCATE TABLE subsomevalues");
+			stmt.execute("TRUNCATE TABLE subpropertyof");
+		}
 	}
 	
 	/**
@@ -184,6 +197,31 @@ public class BasicStore {
 		sTime=System.currentTimeMillis();
 		System.out.println("Materialising property hierarchy ... ");
 		materializePropertyHierarchy();
+		System.out.println("Done in " + (System.currentTimeMillis() - sTime) + "ms.");
+		
+		sTime=System.currentTimeMillis();
+		System.out.println("Starting iterative materialisation ... ");
+		int affectedrows, newstep=0, step = -1; // start iteration
+		while (newstep!=step) {
+			step=newstep;
+			System.out.println("  Materialising transitivity for " + step + "... ");
+			newstep = materializeSubclassOfTransitivity(step);
+			System.out.println("  Done.");
+			System.out.println("  Applying Rule E for " + (newstep+1) + " ... ");
+			affectedrows = runRuleEsconl(newstep+1);
+			System.out.println("  Done.");
+			System.out.println("  Applying Rule F for " + (newstep+1) + " ... ");
+			affectedrows = affectedrows + runRuleFsconl(newstep+1);
+			System.out.println("  Done.");
+			System.out.println("  Applying Rule G for " + (newstep+1) + " ... ");
+			affectedrows = affectedrows + runRuleGsconl(newstep+1);
+			System.out.println("  Done.");
+			if (affectedrows > 0) {
+				System.out.println("  Number of rows affected in Rule E to G: " + affectedrows + ". Starting repair ... ");
+				newstep = repairMaterializeSubclassOfTransitivity(newstep+1);
+				System.out.println("  Done.");
+			}
+		}
 		System.out.println("Done in " + (System.currentTimeMillis() - sTime) + "ms.");
 		
 		// use with (newindex, index-1, index-2)
@@ -411,10 +449,9 @@ public class BasicStore {
 		int i = 1;
 		int affectedrows = 1;
 		while (affectedrows != 0 ) {
-			affectedrows = 0;
 			rule_A.setInt(1, i);
 			rule_A.setInt(2, i-1);
-			affectedrows = affectedrows + rule_A.executeUpdate();
+			affectedrows = rule_A.executeUpdate();
 			i++;
 		}
 
@@ -432,5 +469,173 @@ public class BasicStore {
 			"FROM subpropertychain AS t1 INNER JOIN subpropertyof AS t2 ON t2.o_id=t1.s2_id"
 		);
 	}
+	
+	/**
+	 * Materialize all consequences of Rule D (transitivity of subclassOf) starting 
+	 * from the given step counter. The operation performs steps until no more results
+	 * are obtained, and it returns the step counter of the last new results that have
+	 * been added. Especially, the method returns an unchanged step counter if no facts
+	 * were added.
+	 * @param step
+	 * @return new step counter
+	 * @throws SQLException
+	 */
+	protected int materializeSubclassOfTransitivity(int step) throws SQLException {
+		int affectedrows = 1;
+		while (affectedrows != 0 ) {
+			affectedrows = runRuleDsconl(++step);
+			System.out.println("    Updated " + affectedrows + " rows.");
+		}
+		return step-1;
+	}
+
+	/**
+	 * Materialize additional consequences of Rule D (transitivity of subclassOf) that would have been 
+	 * obtained up to this step if all sco_nl facts that have been inserted at the given step would have 
+	 * been available as base facts. The operation performs enough steps to ensure that all those
+	 * conclusions are obtained, so that the normal materialization can continue at the returned step
+	 * value. The operation does not continue until staturation of the sco_nl table w.r.t. Rule D -- it
+	 * just restores the assumed completeness of facts that are found in sco_nl up to step. 
+	 * 
+	 * After this "repair" operation, all facts of level -1 so as to be taken into account for future
+	 * applications of Rule D.
+	 * @param step
+	 * @return new step counter
+	 * @throws SQLException
+	 */
+	protected int repairMaterializeSubclassOfTransitivity(int step) throws SQLException {
+		// Rule D, tail recursive, reflexivity avoiding, usage (i,i-initialstep-1) 
+		final PreparedStatement rule_D = con.prepareStatement(
+				"INSERT IGNORE INTO sco_nl (s_id, o_id, step) " +
+				"SELECT DISTINCT t1.s_id AS s_id, t2.o_id AS o_id, ? AS step " +
+				"FROM sco_nl AS t1 INNER JOIN sco_nl AS t2 ON t1.o_id=t2.s_id AND t1.step<=0 AND t2.step=? WHERE t1.s_id!=t2.o_id"
+		);
+		// Rule D repair, tail recursive (using new base facts instead of old ones), reflexivity avoiding, usage (i,i-initialstep-1) or (i,i-1)
+		final PreparedStatement rule_D_repair = con.prepareStatement(
+				"INSERT IGNORE INTO sco_nl (s_id, o_id, step) " +
+				"SELECT DISTINCT t1.s_id AS s_id, t2.o_id AS o_id, ? AS step " +
+				"FROM sco_nl AS t1 INNER JOIN sco_nl AS t2 ON t1.o_id=t2.s_id AND t1.step=\"" + step + 
+					"\" AND t2.step=? WHERE t1.s_id!=t2.o_id"
+		);
+		
+		final PreparedStatement addNewSCOFacts = con.prepareStatement(
+				"UPDATE sco_nl SET step=\"-1\" WHERE step=?"
+		);
+		
+		// repeat all sco_nl Rule D iterations that happened so far, but only recompute results that
+		// rely on the newly added facts
+		int affectedrows = 0;
+		for (int i=1; i<step; i++) {
+			rule_D.setInt(1, step+i);
+			rule_D.setInt(2, i);
+			affectedrows = rule_D.executeUpdate();
+			rule_D_repair.setInt(1, step+i);
+			rule_D_repair.setInt(2, i);
+			affectedrows = affectedrows + rule_D_repair.executeUpdate();
+			rule_D_repair.setInt(1, step+i);
+			rule_D_repair.setInt(2, step+i-1);
+			affectedrows = affectedrows + rule_D_repair.executeUpdate();
+			System.out.println("    Updated " + affectedrows + " rows.");
+		}
+		// move the new facts down to the base level
+		addNewSCOFacts.setInt(1, step);
+		addNewSCOFacts.executeUpdate();
+		step = 2*step-1;
+		return step;
+	}
+
+	/**
+	 * Run Rule D:
+	 * subClassOfNL(x,z) :- subClassOfNL(x,y), subClassOfNL(y,z)
+	 * @param step
+	 * @return number of computed results (affected rows)
+	 * @throws SQLException
+	 */
+	protected int runRuleDsconl(int step) throws SQLException {
+		// Rule D, reflexivity avoiding, tail recursive, usage (i,i-1)
+		final PreparedStatement rule_D = con.prepareStatement(
+				"INSERT IGNORE INTO sco_nl (s_id, o_id, step) " +
+				"SELECT DISTINCT t1.s_id AS s_id, t2.o_id AS o_id, ? AS step " +
+				"FROM sco_nl AS t1 INNER JOIN sco_nl AS t2 ON t1.o_id=t2.s_id AND t1.step<=0 AND t2.step=? WHERE t1.s_id!=t2.o_id"
+		);
+		rule_D.setInt(1, step);
+		rule_D.setInt(2, step-1);
+		return rule_D.executeUpdate();
+	}
+
+	/**
+	 * Run Rule E:
+	 * subClassOfNL(x,z) :- subConjunctionOf(y1,y2,z), subClassOfNL(x,y1), subClassOfNL(x,y2)
+	 * TODO Optimization needed. Currently we use the whole sco_nl table each time this rule is run.
+	 * @param step
+	 * @return number of computed results (affected rows)
+	 * @throws SQLException
+	 */
+	protected int runRuleEsconl(int step) throws SQLException {
+		// Rule E, reflexivity avoiding, usage (i)
+		// The extra ref rules simulate "virtual" reflexivity statements 
+		final PreparedStatement rule_E = con.prepareStatement(
+				"INSERT IGNORE INTO sco_nl (s_id, o_id, step) " +
+				"SELECT DISTINCT t1.s_id AS s_id, tc.o_id AS o_id, ? AS step " +
+				"FROM subconjunctionof AS tc INNER JOIN sco_nl AS t1 ON tc.s1_id=t1.o_id INNER JOIN sco_nl AS t2 ON t1.s_id=t2.s_id AND t2.o_id=tc.s2_id WHERE tc.o_id!=t1.s_id"
+		);
+		final PreparedStatement rule_E_ref1 = con.prepareStatement(
+				"INSERT IGNORE INTO sco_nl (s_id, o_id, step) " +
+				"SELECT DISTINCT t.s_id AS s_id, tc.o_id AS o_id, ? AS step " +
+				"FROM subconjunctionof AS tc INNER JOIN sco_nl AS t ON tc.s1_id=t.o_id AND tc.s2_id=t.s_id WHERE tc.o_id!=t.s_id"
+		);
+		final PreparedStatement rule_E_ref2 = con.prepareStatement(
+				"INSERT IGNORE INTO sco_nl (s_id, o_id, step) " +
+				"SELECT DISTINCT t.s_id AS s_id, tc.o_id AS o_id, ? AS step " +
+				"FROM subconjunctionof AS tc INNER JOIN sco_nl AS t ON tc.s2_id=t.o_id AND tc.s1_id=t.s_id WHERE tc.o_id!=t.s_id"
+		);
+		final PreparedStatement rule_E_ref12 = con.prepareStatement(
+				"INSERT IGNORE INTO sco_nl (s_id, o_id, step) " +
+				"SELECT DISTINCT tc.s1_id AS s_id, tc.o_id AS o_id, ? AS step " +
+				"FROM subconjunctionof AS tc WHERE tc.s1_id=tc.s2_id AND tc.o_id!=tc.s1_id"
+		);
+		rule_E.setInt(1, step);
+		rule_E_ref1.setInt(1, step);
+		rule_E_ref2.setInt(1, step);
+		rule_E_ref12.setInt(1, step);
+		return rule_E.executeUpdate() + rule_E_ref1.executeUpdate() + rule_E_ref2.executeUpdate() + rule_E_ref12.executeUpdate();
+	}
+	
+	/**
+	 * Run Rule F:
+	 * subClassOfNL(x,y) :- someValuesOfNL(x,v,z), subSomeValuesOfNL(v,z,y)
+	 * @param step
+	 * @return number of computed results (affected rows)
+	 * @throws SQLException
+	 */
+	protected int runRuleFsconl(int step) throws SQLException {
+		// Rule F, reflexivity avoiding, usage (i)
+		final PreparedStatement rule_F = con.prepareStatement(
+			"INSERT IGNORE INTO sco_nl (s_id, o_id, step) " +
+			"SELECT DISTINCT t1.s_id AS s_id, t2.o_id AS o_id, ? AS step " +
+			"FROM sv_nl AS t1 INNER JOIN subsomevalues AS t2 ON t1.p_id=t2.p_id AND t1.o_id=t2.s_id AND t1.s_id!=t2.o_id"
+		);
+		rule_F.setInt(1, step);
+		return rule_F.executeUpdate();
+	}
+	
+	/**
+	 * Run Rule G:
+	 * subClassOfNL(x,y) :- someValuesOfNL(x,v,z), subPropertyOf(v,u), subSomeValuesOfNL(u,z,y)
+	 * @param step
+	 * @return number of computed results (affected rows)
+	 * @throws SQLException
+	 */
+	protected int runRuleGsconl(int step) throws SQLException {
+		// Rule G, reflexivity avoiding, usage (i)
+		final PreparedStatement rule_G = con.prepareStatement(
+			"INSERT IGNORE INTO sco_nl (s_id, o_id, step) " +
+			"SELECT DISTINCT t1.s_id AS s_id, t2.o_id AS o_id, ? AS step " +
+			"FROM sv_nl AS t1 INNER JOIN subpropertyof AS tp ON t1.p_id=tp.s_id INNER JOIN subsomevalues AS t2 ON tp.o_id=t2.p_id AND t1.o_id=t2.s_id AND t1.s_id!=t2.o_id"
+		);
+		rule_G.setInt(1, step);
+		return rule_G.executeUpdate();
+	}
+	
 
 }

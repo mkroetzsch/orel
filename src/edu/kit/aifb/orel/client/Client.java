@@ -17,7 +17,7 @@ public class Client {
 	public static void main(String[] args) {
 		// parse command line arguments
 		// supported arguments:  
-		// <mode> -- one of "load", "materialize", "init", "clear"
+		// <mode> -- one of "load", "materialize", "init", "clear", "clearall"
 		// -c <configfile> -- URL of configuration file
 		int i = 0;
 		String arg;
@@ -40,7 +40,7 @@ public class Client {
 				} else {
 					System.err.println(arg + " requires a filename of the input file");
 				}
-			} else if (arg.equals("materialize") || arg.equals("init") || arg.equals("drop") || arg.equals("clear")) {
+			} else if (arg.equals("materialize") || arg.equals("init") || arg.equals("drop") || arg.equals("clear") || arg.equals("clearall")) {
 				operation = arg;
 			} else {
 				System.err.println("Unknown command " + arg);
@@ -49,7 +49,7 @@ public class Client {
 
 		if ( operation.equals("") ) {
 			System.out.println("No operation given. Usage:\n orel.sh <command> -c <configfile> -i <inputfile>\n" +
-					           " <command>       : one of \"load\", \"materialize\", \"init\", \"drop\"\n" +
+					           " <command>       : one of \"load\", \"materialize\", \"init\", \"drop\", \"clear\", \"clearall\"\n" +
 					           "                   where \"load\" must be followed by an input ontology URI\n" +
 					           " -c <configfile> : path to the configuration file\n");
 			System.out.println("Exiting.");
@@ -80,11 +80,17 @@ public class Client {
 				Thread.sleep(5000);
 				Client.store.drop();
 			} else if (operation.equals("clear")) {
-				System.out.println("Deleting all database content ...");
+				System.out.println("Deleting derived database content ...");
 				Thread.sleep(1000);
 				System.out.println("(CTRL+C to abort within the next 3 seconds!)");
 				Thread.sleep(3000);
-				Client.store.clearDatabase();
+				Client.store.clearDatabase(true);
+			} else if (operation.equals("clearall")) {
+				System.out.println("Deleting ALL database content ...");
+				Thread.sleep(1000);
+				System.out.println("(CTRL+C to abort within the next 3 seconds!)");
+				Thread.sleep(3000);
+				Client.store.clearDatabase(false);
 			} else if (operation.equals("load")) {
 				System.out.println("Loading ontology ...");
 				if (inputfile.equals("")) {
