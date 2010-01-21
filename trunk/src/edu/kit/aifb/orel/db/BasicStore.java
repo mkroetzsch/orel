@@ -118,6 +118,11 @@ public class BasicStore {
                 ", o_id " + idfieldtype + 
                 ", step INT" +
                 ", INDEX(s_id), INDEX(o_id), PRIMARY KEY (s_id,o_id) ) " + engine);
+		stmt.execute("CREATE TABLE IF NOT EXISTS nominal " +
+				"( id " + idfieldtype + ", PRIMARY KEY (id)) " + engine);
+		stmt.execute("CREATE TABLE IF NOT EXISTS nonempty " +
+				"( id " + idfieldtype + 
+				", step INT, PRIMARY KEY (id)) " + engine);
 	}
 
 	/**
@@ -135,6 +140,8 @@ public class BasicStore {
 		stmt.execute("DROP TABLE IF EXISTS subpropertychain");
 		stmt.execute("DROP TABLE IF EXISTS subsomevalues");
 		stmt.execute("DROP TABLE IF EXISTS subpropertyof");
+		stmt.execute("DROP TABLE IF EXISTS nonempty");
+		stmt.execute("DROP TABLE IF EXISTS nominal");
 	}
 	
 	/**
@@ -150,6 +157,7 @@ public class BasicStore {
 			stmt.execute("DELETE FROM sv_nl WHERE step!=0");
 			stmt.execute("DELETE FROM subpropertychain WHERE step!=0");
 			stmt.execute("DELETE FROM subpropertyof WHERE step!=0");
+			stmt.execute("DELETE FROM nonempty WHERE step!=0");
 		} else {
 			stmt.execute("TRUNCATE TABLE ids");
 			stmt.execute("TRUNCATE TABLE sco");
@@ -160,7 +168,10 @@ public class BasicStore {
 			stmt.execute("TRUNCATE TABLE subpropertychain");
 			stmt.execute("TRUNCATE TABLE subsomevalues");
 			stmt.execute("TRUNCATE TABLE subpropertyof");
+			stmt.execute("TRUNCATE TABLE nonempty");
+			stmt.execute("TRUNCATE TABLE nominal");
 		}
+		
 	}
 	
 	/**
@@ -390,7 +401,7 @@ public class BasicStore {
 		if (d instanceof OWLClass) {
 			// nothing to do here
 		} else if (d instanceof OWLObjectIntersectionOf) {
-			createConjunctionBodyFacts(id, ((OWLObjectIntersectionOf) d).getOperands());
+			createConjunctionBodyFacts(id, ((OWLObjectIntersectionOf) d).getOperands().toArray());
 		} else if (d instanceof OWLObjectSomeValuesFrom) {
 			int pid = bridge.getID(((OWLObjectSomeValuesFrom)d).getProperty());
 			OWLClassExpression filler = ((OWLObjectSomeValuesFrom)d).getFiller();
@@ -400,29 +411,26 @@ public class BasicStore {
 		} // TODO: add more description types
 	}
 	
-	protected void createConjunctionBodyFacts(int id, Set<OWLClassExpression> ops) throws SQLException {
+	protected void createConjunctionBodyFacts(int id, Object[] ops) throws SQLException {
 		// TODO maybe sort ops first to increase likeliness of finding the same sub-ops again
-		Iterator<OWLClassExpression> opsit = ops.iterator();
-		OWLClassExpression op1 = opsit.next();
-		OWLClassExpression op2;
-		int oid1 = bridge.getID(op1);
-		createBodyFacts(oid1,op1);
-		if (ops.size() == 2) {
-			op2 = opsit.next();
-			int oid2 = bridge.getID(op2);
+		if (ops.length <= 0) return;
+		int oid1 = bridge.getID((OWLClassExpression)ops[0]);
+		createBodyFacts(oid1,(OWLClassExpression)ops[0]);
+		if (ops.length == 2) {
+			int oid2 = bridge.getID((OWLClassExpression)ops[1]);
 			bridge.insertIdsToTable("subconjunctionof",oid1,oid2,id);
-
-			createBodyFacts(oid2,op2);
+			createBodyFacts(oid2,(OWLClassExpression)ops[1]);
 		} else { // recursion
-			ops.remove(op1);
 			String opsidstring = "IntersectionOf(";
-			while (opsit.hasNext()) {
-				opsidstring = opsidstring + ' ' + opsit.next().toString();
+			Object[] newops = new Object[ops.length-1];
+			for (int i=1; i<ops.length; i++) {
+				opsidstring = new String(opsidstring + " " + ops[i].toString());
+				newops[i-1] = ops[i];
 			}
 			opsidstring = opsidstring + ')';
 			int oid2 = bridge.getID(opsidstring);
 			bridge.insertIdsToTable("subconjunctionof",oid1,oid2,id);
-			createConjunctionBodyFacts(oid2,ops);
+			createConjunctionBodyFacts(oid2,newops);
 		}
 	}
 
