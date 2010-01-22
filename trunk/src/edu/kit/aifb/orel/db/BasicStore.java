@@ -258,7 +258,6 @@ public class BasicStore {
 		Set<OWLLogicalAxiom> axiomset = ontology.getLogicalAxioms();
 		Iterator<OWLLogicalAxiom> axiomiterator = axiomset.iterator();
 		OWLLogicalAxiom axiom;
-		//int count = 0;
 		int id1,id2;
 		while(axiomiterator.hasNext()){
 			axiom = axiomiterator.next();
@@ -280,12 +279,18 @@ public class BasicStore {
 				id2 = bridge.getID(((OWLSubPropertyAxiom<OWLObjectProperty>) axiom).getSuperProperty());
 				if ( (id1 != id2) && (!bridge.checkIdsInTable("subpropertyof",id1,id2)) ) return false;
 			} else if (axiom.getAxiomType() == AxiomType.SUB_PROPERTY_CHAIN_OF) {
-				//return false;
+				List<OWLObjectPropertyExpression> chain = ((OWLSubPropertyChainOfAxiom) axiom).getPropertyChain();
+				if (chain.size() == 2) {
+					id1 = bridge.getID(chain.get(0));
+					id2 = bridge.getID(chain.get(1));
+					if (!bridge.checkIdsInTable("subpropertychain",id1,id2,bridge.getID(((OWLSubPropertyChainOfAxiom) axiom).getSuperProperty()))) return false;
+				} else {
+					//return false;
+					// TODO
+				}
 			} else {
 				System.err.println("The following axiom is not supported: " + axiom + "\n");
 			}
-			//count++;
-			//if (count % 100  == 0 ) System.out.print(".");
 		}
 		return true;
 	}
