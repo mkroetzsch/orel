@@ -554,8 +554,17 @@ public class BasicStore {
 	protected void separateLeafs() throws SQLException {
 		int affectedrows;
 		Statement stmt = con.createStatement();
+		// do not perform the leaf distinction now
+		affectedrows = stmt.executeUpdate("INSERT IGNORE INTO sco_nl SELECT * FROM sco");
+		if (affectedrows > 0) {
+			stmt.executeUpdate("TRUNCATE TABLE sco");
+		}
+		affectedrows = stmt.executeUpdate("INSERT IGNORE INTO sv_nl SELECT * FROM sv");
+		if (affectedrows > 0) {
+			stmt.executeUpdate("TRUNCATE TABLE sv");
+		}
 		// begin with the subClassOf statements:
-		affectedrows = stmt.executeUpdate( 
+		/*affectedrows = stmt.executeUpdate( 
 			"INSERT IGNORE INTO sco_nl " + 
 			"SELECT DISTINCT t1.s_id AS s_id,t1.o_id AS o_id, \"0\" AS step " +
 			"FROM sco AS t1 INNER JOIN sco AS t2 ON t1.s_id=t2.o_id"
@@ -604,7 +613,7 @@ public class BasicStore {
 		);
 		if (affectedrows > 0) {
 			stmt.executeUpdate("DELETE t1.* FROM sv AS t1 INNER JOIN subsomevalues AS t2 ON t1.s_id=t2.o_id");
-		}
+		}*/
 	}
 	
 	protected void materializePropertyHierarchy() throws SQLException {
@@ -1371,6 +1380,175 @@ public class BasicStore {
 		timeRuleS = timeRuleS + System.currentTimeMillis() - starttime;
 		return result;
 	}
-	
+
+	/**
+	 * Run Rule NA:
+	 * subClassOfNL(y,x) :- subClassOf(x,y), Nonempty(x), Nominal(y)
+	 * TODO Check the leaf/non-leaf interactions for this rule.
+	 * @param min_cur_step the earliest derivations not considered as "current" in this rule yet  
+	 * @param max_cur_step the latest derivations before this call
+	 * @return number of computed results (affected rows)
+	 * @throws SQLException
+	 */
+	protected int runRuleNAsconl(int min_cur_step, int max_cur_step) throws SQLException {
+		//long starttime = System.currentTimeMillis();
+		// Rule NA, non-leaf case
+		// Rule 1 of semi-naive eval, usage (step,min_cur_step,max_cur_step)
+		final PreparedStatement rule_NA_NL_1 = con.prepareStatement(
+			"INSERT IGNORE INTO sco_nl (s_id, o_id, step) " +
+			"SELECT DISTINCT t.o_id AS s_id, t.s_id AS o_id, ? AS step " +
+			"FROM sco_nl AS t INNER JOIN nonempty AS ne ON t.step>=? AND t.step<=? AND t.s_id=ne.id " +
+			"INNER JOIN nominal AS nom ON t.o_id=nom.id"
+		);
+		// Rule 2 of semi-naive eval, usage (step,min_cur_step,min_cur_step,max_cur_step)
+		final PreparedStatement rule_NA_NL_2 = con.prepareStatement(
+			"INSERT IGNORE INTO sco_nl (s_id, o_id, step) " +
+			"SELECT DISTINCT t.o_id AS s_id, t.s_id AS o_id, ? AS step " +
+			"FROM sco_nl AS t INNER JOIN nonempty AS ne ON t.step<? AND ne.step>=? AND ne.step<=? AND t.s_id=ne.id " +
+			"INNER JOIN nominal AS nom ON t.o_id=nom.id"
+		);
+		// Rule NA, leaf case
+		// Rule 1 of semi-naive eval, usage (step,min_cur_step,max_cur_step)
+		final PreparedStatement rule_NA_L_1 = con.prepareStatement(
+			"INSERT IGNORE INTO sco_nl (s_id, o_id, step) " +
+			"SELECT DISTINCT t.o_id AS s_id, t.s_id AS o_id, ? AS step " +
+			"FROM sco AS t INNER JOIN nonempty AS ne ON t.step>=? AND t.step<=? AND t.s_id=ne.id " +
+			"INNER JOIN nominal AS nom ON t.o_id=nom.id"
+		);
+		// Rule 2 of semi-naive eval, usage (step,min_cur_step,min_cur_step,max_cur_step)
+		final PreparedStatement rule_NA_L_2 = con.prepareStatement(
+			"INSERT IGNORE INTO sco_nl (s_id, o_id, step) " +
+			"SELECT DISTINCT t.o_id AS s_id, t.s_id AS o_id, ? AS step " +
+			"FROM sco AS t INNER JOIN nonempty AS ne ON t.step<? AND ne.step>=? AND ne.step<=? AND t.s_id=ne.id " +
+			"INNER JOIN nominal AS nom ON t.o_id=nom.id"
+		);
+		rule_NA_NL_1.setInt(1, max_cur_step+1);
+		rule_NA_NL_1.setInt(2, min_cur_step);
+		rule_NA_NL_1.setInt(3, max_cur_step);
+		rule_NA_NL_2.setInt(1, max_cur_step+1);
+		rule_NA_NL_2.setInt(2, min_cur_step);
+		rule_NA_NL_2.setInt(3, min_cur_step);
+		rule_NA_NL_2.setInt(4, max_cur_step);
+		rule_NA_L_1.setInt(1, max_cur_step+1);
+		rule_NA_L_1.setInt(2, min_cur_step);
+		rule_NA_L_1.setInt(3, max_cur_step);
+		rule_NA_L_2.setInt(1, max_cur_step+1);
+		rule_NA_L_2.setInt(2, min_cur_step);
+		rule_NA_L_2.setInt(3, min_cur_step);
+		rule_NA_L_2.setInt(4, max_cur_step);
+		int result = rule_NA_NL_1.executeUpdate() + rule_NA_NL_2.executeUpdate() + rule_NA_L_1.executeUpdate() + rule_NA_L_2.executeUpdate();
+		//timeRuleR = timeRuleR + System.currentTimeMillis() - starttime;
+		return result;
+	}
+
+	/**
+	 * Run Rule NB:
+	 * Nonempty(y) :- subClassOf(x,y), Nonempty(x)
+	 * @param min_cur_step the earliest derivations not considered as "current" in this rule yet  
+	 * @param max_cur_step the latest derivations before this call
+	 * @return number of computed results (affected rows)
+	 * @throws SQLException
+	 */
+	protected int runRuleNBsconl(int min_cur_step, int max_cur_step) throws SQLException {
+		//long starttime = System.currentTimeMillis();
+		// Rule NB, non-leaf case
+		// Rule 1 of semi-naive eval, usage (step,min_cur_step,max_cur_step)
+		final PreparedStatement rule_NB_NL_1 = con.prepareStatement(
+			"INSERT IGNORE INTO nonempty (id, step) " +
+			"SELECT DISTINCT t.o_id AS id, ? AS step " +
+			"FROM sco_nl AS t INNER JOIN nonempty AS ne ON t.step>=? AND t.step<=? AND t.s_id=ne.id"
+		);
+		// Rule 2 of semi-naive eval, usage (step,min_cur_step,min_cur_step,max_cur_step)
+		final PreparedStatement rule_NB_NL_2 = con.prepareStatement(
+			"INSERT IGNORE INTO nonempty (id, step) " +
+			"SELECT DISTINCT t.o_id AS id, ? AS step " +
+			"FROM sco_nl AS t INNER JOIN nonempty AS ne ON t.step<? AND ne.step>=? AND ne.step<=? AND t.s_id=ne.id"
+		);
+		// Rule NB, leaf case
+		// Rule 1 of semi-naive eval, usage (step,min_cur_step,max_cur_step)
+		final PreparedStatement rule_NB_L_1 = con.prepareStatement(
+			"INSERT IGNORE INTO nonempty (id, step) " +
+			"SELECT DISTINCT t.o_id AS id, ? AS step " +
+			"FROM sco AS t INNER JOIN nonempty AS ne ON t.step>=? AND t.step<=? AND t.s_id=ne.id"
+		);
+		// Rule 2 of semi-naive eval, usage (step,min_cur_step,min_cur_step,max_cur_step)
+		final PreparedStatement rule_NB_L_2 = con.prepareStatement(
+			"INSERT IGNORE INTO nonempty (id, step) " +
+			"SELECT DISTINCT t.o_id AS id, ? AS step " +
+			"FROM sco AS t INNER JOIN nonempty AS ne ON t.step<? AND ne.step>=? AND ne.step<=? AND t.s_id=ne.id"
+		);
+		rule_NB_NL_1.setInt(1, max_cur_step+1);
+		rule_NB_NL_1.setInt(2, min_cur_step);
+		rule_NB_NL_1.setInt(3, max_cur_step);
+		rule_NB_NL_2.setInt(1, max_cur_step+1);
+		rule_NB_NL_2.setInt(2, min_cur_step);
+		rule_NB_NL_2.setInt(3, min_cur_step);
+		rule_NB_NL_2.setInt(4, max_cur_step);
+		rule_NB_L_1.setInt(1, max_cur_step+1);
+		rule_NB_L_1.setInt(2, min_cur_step);
+		rule_NB_L_1.setInt(3, max_cur_step);
+		rule_NB_L_2.setInt(1, max_cur_step+1);
+		rule_NB_L_2.setInt(2, min_cur_step);
+		rule_NB_L_2.setInt(3, min_cur_step);
+		rule_NB_L_2.setInt(4, max_cur_step);
+		int result = rule_NB_NL_1.executeUpdate() + rule_NB_NL_2.executeUpdate() + rule_NB_L_1.executeUpdate() + rule_NB_L_2.executeUpdate();
+		//timeRuleR = timeRuleR + System.currentTimeMillis() - starttime;
+		return result;
+	}
+
+	/**
+	 * Run Rule NC:
+	 * Nonempty(y) :- sv(x,v,y), Nonempty(x)
+	 * @param min_cur_step the earliest derivations not considered as "current" in this rule yet  
+	 * @param max_cur_step the latest derivations before this call
+	 * @return number of computed results (affected rows)
+	 * @throws SQLException
+	 */
+	protected int runRuleNCsconl(int min_cur_step, int max_cur_step) throws SQLException {
+		//long starttime = System.currentTimeMillis();
+		// Rule NC, non-leaf case
+		// Rule 1 of semi-naive eval, usage (step,min_cur_step,max_cur_step)
+		final PreparedStatement rule_NC_NL_1 = con.prepareStatement(
+			"INSERT IGNORE INTO nonempty (id, step) " +
+			"SELECT DISTINCT t.o_id AS id, ? AS step " +
+			"FROM sv_nl AS t INNER JOIN nonempty AS ne ON t.step>=? AND t.step<=? AND t.s_id=ne.id"
+		);
+		// Rule 2 of semi-naive eval, usage (step,min_cur_step,min_cur_step,max_cur_step)
+		final PreparedStatement rule_NC_NL_2 = con.prepareStatement(
+			"INSERT IGNORE INTO nonempty (id, step) " +
+			"SELECT DISTINCT t.o_id AS id, ? AS step " +
+			"FROM sv_nl AS t INNER JOIN nonempty AS ne ON t.step<? AND ne.step>=? AND ne.step<=? AND t.s_id=ne.id"
+		);
+		// Rule NC, leaf case
+		// Rule 1 of semi-naive eval, usage (step,min_cur_step,max_cur_step)
+		final PreparedStatement rule_NC_L_1 = con.prepareStatement(
+			"INSERT IGNORE INTO nonempty (id, step) " +
+			"SELECT DISTINCT t.o_id AS id, ? AS step " +
+			"FROM sv AS t INNER JOIN nonempty AS ne ON t.step>=? AND t.step<=? AND t.s_id=ne.id"
+		);
+		// Rule 2 of semi-naive eval, usage (step,min_cur_step,min_cur_step,max_cur_step)
+		final PreparedStatement rule_NC_L_2 = con.prepareStatement(
+			"INSERT IGNORE INTO nonempty (id, step) " +
+			"SELECT DISTINCT t.o_id AS id, ? AS step " +
+			"FROM sv AS t INNER JOIN nonempty AS ne ON t.step<? AND ne.step>=? AND ne.step<=? AND t.s_id=ne.id"
+		);
+		rule_NC_NL_1.setInt(1, max_cur_step+1);
+		rule_NC_NL_1.setInt(2, min_cur_step);
+		rule_NC_NL_1.setInt(3, max_cur_step);
+		rule_NC_NL_2.setInt(1, max_cur_step+1);
+		rule_NC_NL_2.setInt(2, min_cur_step);
+		rule_NC_NL_2.setInt(3, min_cur_step);
+		rule_NC_NL_2.setInt(4, max_cur_step);
+		rule_NC_L_1.setInt(1, max_cur_step+1);
+		rule_NC_L_1.setInt(2, min_cur_step);
+		rule_NC_L_1.setInt(3, max_cur_step);
+		rule_NC_L_2.setInt(1, max_cur_step+1);
+		rule_NC_L_2.setInt(2, min_cur_step);
+		rule_NC_L_2.setInt(3, min_cur_step);
+		rule_NC_L_2.setInt(4, max_cur_step);
+		int result = rule_NC_NL_1.executeUpdate() + rule_NC_NL_2.executeUpdate() + rule_NC_L_1.executeUpdate() + rule_NC_L_2.executeUpdate();
+		//timeRuleR = timeRuleR + System.currentTimeMillis() - starttime;
+		return result;
+	}
 
 }
