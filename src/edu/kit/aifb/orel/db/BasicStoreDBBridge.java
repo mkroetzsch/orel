@@ -46,8 +46,9 @@ public class BasicStoreDBBridge {
 	protected HashMap<String,Integer> unwrittenids = null; // map of yet to be written ids (do not rely on "ids" cache until all is written!)
 	
 	// keep prepared statements in a map to process them with less code
-	protected HashMap<String,PreparedStatement> prepstmts;
-	protected HashMap<String,Integer> prepstmtsizes;
+	protected HashMap<String,PreparedStatement> prepinsertstmts;
+	protected HashMap<String,Integer> prepinsertstmtsizes;
+	protected HashMap<String,PreparedStatement> prepcheckstmts;
 	
 	public BasicStoreDBBridge(Connection connection, int startid) {
 		this(connection);
@@ -65,8 +66,9 @@ public class BasicStoreDBBridge {
 			}
 		};
 		unwrittenids = new HashMap<String,Integer>(prelocsize);
-		prepstmts = new HashMap<String,PreparedStatement>(10);
-		prepstmtsizes = new HashMap<String,Integer>(10);
+		prepinsertstmts = new HashMap<String,PreparedStatement>(15);
+		prepinsertstmtsizes = new HashMap<String,Integer>(15);
+		prepcheckstmts = new HashMap<String,PreparedStatement>(15);
 		try {
 			digest = java.security.MessageDigest.getInstance("MD5");
 		} catch (NoSuchAlgorithmException e) {
@@ -79,17 +81,17 @@ public class BasicStoreDBBridge {
 	 * below the maximum size.
 	 */
 	public void close() throws SQLException {
-		Iterator<String> inserttables = prepstmts.keySet().iterator();
+		Iterator<String> inserttables = prepinsertstmts.keySet().iterator();
 		PreparedStatement pstmt;
 		String key;
 		while (inserttables.hasNext()) {
 			key = inserttables.next();
-			pstmt = prepstmts.get(key);
+			pstmt = prepinsertstmts.get(key);
 			pstmt.executeBatch();
 			pstmt.close();
 		}
-		prepstmts.clear();
-		prepstmtsizes.clear();
+		prepinsertstmts.clear();
+		prepinsertstmtsizes.clear();
 		if (makeids != null) makeids.executeBatch();
 		Statement stmt = con.createStatement();
 		stmt.execute("DELETE FROM ids WHERE name=\"-\""); // delete any unused pre-allocated ids
@@ -101,22 +103,22 @@ public class BasicStoreDBBridge {
 	}
 
 	public void insertIdsToTable(String tablename, int id1, int id2, int id3) throws SQLException {
-		PreparedStatement stmt = prepstmts.get(tablename);
+		PreparedStatement stmt = prepinsertstmts.get(tablename);
 		if (stmt == null) {
 			stmt = getPreparedInsertStatement(tablename);
-			prepstmts.put(tablename, stmt);
-			prepstmtsizes.put(tablename, 0);
+			prepinsertstmts.put(tablename, stmt);
+			prepinsertstmtsizes.put(tablename, 0);
 		}
 		if (id1 >= 0) stmt.setInt(1, id1);
 		if (id2 >= 0) stmt.setInt(2, id2);
 		if (id3 >= 0) stmt.setInt(3, id3);
 		stmt.addBatch();
-		int cursize = prepstmtsizes.get(tablename)+1;
+		int cursize = prepinsertstmtsizes.get(tablename)+1;
 		if (cursize >= maxbatchsize) {
 			stmt.executeBatch();
-			prepstmtsizes.put(tablename,0);
+			prepinsertstmtsizes.put(tablename,0);
 		} else {
-			prepstmtsizes.put(tablename,cursize);
+			prepinsertstmtsizes.put(tablename,cursize);
 		}
 	}
 	
@@ -135,6 +137,40 @@ public class BasicStoreDBBridge {
 			return con.prepareStatement("INSERT IGNORE INTO subsomevalues VALUES (?,?,?)");
 		} else if (tablename.equals("ids")) {
 			return con.prepareStatement("INSERT IGNORE INTO ids VALUES (?,?)");
+		}
+		return null;
+	}
+
+	public boolean checkIdsInTable(String tablename, int id1, int id2) throws SQLException {
+		PreparedStatement stmt = prepcheckstmts.get(tablename);
+		if (stmt == null) {
+			stmt = getPreparedCheckStatement(tablename);
+			prepinsertstmts.put(tablename, stmt);
+			prepinsertstmtsizes.put(tablename, 0);
+		}
+		if (id1 >= 0) stmt.setInt(1, id1);
+		if (id2 >= 0) stmt.setInt(2, id2);
+		ResultSet res = stmt.executeQuery();
+		boolean result = (res.next());
+		res.close();
+		return result;
+	}
+
+	protected PreparedStatement getPreparedCheckStatement(String tablename) throws SQLException {
+		if (tablename.equals("sco")) {
+			return con.prepareStatement("SELECT * FROM sco WHERE s_id=? AND o_id=? LIMIT 1");
+		} else if (tablename.equals("sv")) {
+			return null;
+		} else if (tablename.equals("subconjunctionof")) {
+			return null;
+		} else if (tablename.equals("subpropertyof")) {
+			return con.prepareStatement("SELECT * FROM subpropertyof WHERE s_id=? AND o_id=? LIMIT 1");
+		} else if (tablename.equals("subpropertychain")) {
+			return con.prepareStatement("SELECT * FROM subpropertychain WHERE s1_id=? AND s2_id=? AND o_id=? LIMIT 1");
+		} else if (tablename.equals("subsomevalues")) {
+			return null;
+		} else if (tablename.equals("ids")) {
+			return null;
 		}
 		return null;
 	}
