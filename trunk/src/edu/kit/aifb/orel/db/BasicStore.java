@@ -239,6 +239,7 @@ public class BasicStore {
 	 * Unsupported axioms will be ignored, and the result will be as if they had not been given.   
 	 * @param ontology
 	 */
+	@SuppressWarnings("unchecked")
 	public boolean checkEntailment(OWLOntology ontology) throws SQLException {
 		loadOntology(ontology,true);
 		materialize();
@@ -264,11 +265,20 @@ public class BasicStore {
 			if (axiom.getAxiomType() == AxiomType.SUBCLASS) {
 				id1 = bridge.getID(((OWLSubClassOfAxiom) axiom).getSubClass());
 				id2 = bridge.getID(((OWLSubClassOfAxiom) axiom).getSuperClass());
-				if (!bridge.checkIdsInTable("sco",id1,id2)) return false;
+				if ( (id1 != id2) && (!bridge.checkIdsInTable("sco",id1,id2)) ) return false;
 			} else if (axiom.getAxiomType() == AxiomType.EQUIVALENT_CLASSES) {
-				//return false;
+				Object[] descs = ((OWLEquivalentClassesAxiom)axiom).getClassExpressions().toArray();
+				int j;
+				for(int i=0;i<descs.length;i++){
+					j=(i%(descs.length-1))+1;
+					id1 = bridge.getID((OWLClassExpression)descs[i]);
+					id2 = bridge.getID((OWLClassExpression)descs[j]);
+					if ( (id1 != id2) && (!bridge.checkIdsInTable("sco",id1,id2)) ) return false;
+				}
 			} else if (axiom.getAxiomType() == AxiomType.SUB_OBJECT_PROPERTY) {
-				//return false;
+				id1 = bridge.getID(((OWLSubPropertyAxiom<OWLObjectProperty>) axiom).getSubProperty());
+				id2 = bridge.getID(((OWLSubPropertyAxiom<OWLObjectProperty>) axiom).getSuperProperty());
+				if ( (id1 != id2) && (!bridge.checkIdsInTable("subpropertyof",id1,id2)) ) return false;
 			} else if (axiom.getAxiomType() == AxiomType.SUB_PROPERTY_CHAIN_OF) {
 				//return false;
 			} else {
