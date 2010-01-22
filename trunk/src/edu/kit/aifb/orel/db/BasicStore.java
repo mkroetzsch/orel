@@ -178,8 +178,17 @@ public class BasicStore {
 	 * Load the content of some ontology to the database.   
 	 * @param ontology
 	 */
-	@SuppressWarnings("unchecked")
 	public void loadOntology(OWLOntology ontology) throws SQLException {
+		loadOntology(ontology, false);
+	}
+	
+	/**
+	 * Load the content of some ontology to the database.   
+	 * @param ontology
+	 * @param donotassert if true then only load the relevant subexpressions without asserting the axioms 
+	 */
+	@SuppressWarnings("unchecked")
+	public void loadOntology(OWLOntology ontology, boolean donotassert) throws SQLException {
 		// prepare DB for bulk insert:
 		con.setAutoCommit(false);
 		//con.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
@@ -197,20 +206,20 @@ public class BasicStore {
 		}
 		bridge = new BasicStoreDBBridge(con,startid);
 		// iterate over ontology to load all axioms:
-		java.util.Set<OWLLogicalAxiom> axiomset = ontology.getLogicalAxioms();
+		Set<OWLLogicalAxiom> axiomset = ontology.getLogicalAxioms();
 		Iterator<OWLLogicalAxiom> axiomiterator = axiomset.iterator();
 		OWLLogicalAxiom axiom;
 		int count = 0;
 		while(axiomiterator.hasNext()){
 			axiom = axiomiterator.next();
 			if (axiom.getAxiomType() == AxiomType.SUBCLASS) {
-				loadSubclassOf(((OWLSubClassOfAxiom) axiom).getSubClass(), ((OWLSubClassOfAxiom) axiom).getSuperClass());
+				loadSubclassOf(((OWLSubClassOfAxiom) axiom).getSubClass(), ((OWLSubClassOfAxiom) axiom).getSuperClass(),donotassert);
 			} else if (axiom.getAxiomType() == AxiomType.EQUIVALENT_CLASSES) {
-				loadEquivalentClasses(((OWLEquivalentClassesAxiom)axiom).getClassExpressions());
+				loadEquivalentClasses(((OWLEquivalentClassesAxiom)axiom).getClassExpressions(),donotassert);
 			} else if (axiom.getAxiomType() == AxiomType.SUB_OBJECT_PROPERTY) {
-				loadSubpropertyOf(((OWLSubPropertyAxiom<OWLObjectProperty>) axiom).getSubProperty(), ((OWLSubPropertyAxiom<OWLObjectProperty>) axiom).getSuperProperty());
+				loadSubpropertyOf(((OWLSubPropertyAxiom<OWLObjectProperty>) axiom).getSubProperty(), ((OWLSubPropertyAxiom<OWLObjectProperty>) axiom).getSuperProperty(),donotassert);
 			} else if (axiom.getAxiomType() == AxiomType.SUB_PROPERTY_CHAIN_OF) {
-				loadSubpropertyChainOf(((OWLSubPropertyChainOfAxiom) axiom).getPropertyChain(), ((OWLSubPropertyChainOfAxiom) axiom).getSuperProperty());
+				loadSubpropertyChainOf(((OWLSubPropertyChainOfAxiom) axiom).getPropertyChain(), ((OWLSubPropertyChainOfAxiom) axiom).getSuperProperty(),donotassert);
 			} else {
 				System.err.println("The following axiom is not supported: " + axiom + "\n");
 			}
@@ -223,6 +232,52 @@ public class BasicStore {
 		con.setAutoCommit(true);
 		enableKeys(true);
 		bridge = null;
+	}
+
+	/**
+	 * Check if the given ontology is entailed by the loaded axioms (return true or false).
+	 * Unsupported axioms will be ignored, and the result will be as if they had not been given.   
+	 * @param ontology
+	 */
+	public boolean checkEntailment(OWLOntology ontology) throws SQLException {
+		loadOntology(ontology,true);
+		materialize();
+		// find largest used id to start iteration:
+		// (bridge was closed earlier; maybe do this more efficiently)
+		Statement stmt = con.createStatement();
+		ResultSet res = stmt.executeQuery("SELECT max(id) FROM ids");
+		int startid;
+		if (res.next()) {
+			startid = res.getInt(1) + 1;
+		} else {
+			startid = 1;
+		}
+		bridge = new BasicStoreDBBridge(con,startid);
+		// now check entailment of all axioms
+		Set<OWLLogicalAxiom> axiomset = ontology.getLogicalAxioms();
+		Iterator<OWLLogicalAxiom> axiomiterator = axiomset.iterator();
+		OWLLogicalAxiom axiom;
+		//int count = 0;
+		int id1,id2;
+		while(axiomiterator.hasNext()){
+			axiom = axiomiterator.next();
+			if (axiom.getAxiomType() == AxiomType.SUBCLASS) {
+				id1 = bridge.getID(((OWLSubClassOfAxiom) axiom).getSubClass());
+				id2 = bridge.getID(((OWLSubClassOfAxiom) axiom).getSuperClass());
+				if (!bridge.checkIdsInTable("sco",id1,id2)) return false;
+			} else if (axiom.getAxiomType() == AxiomType.EQUIVALENT_CLASSES) {
+				//return false;
+			} else if (axiom.getAxiomType() == AxiomType.SUB_OBJECT_PROPERTY) {
+				//return false;
+			} else if (axiom.getAxiomType() == AxiomType.SUB_PROPERTY_CHAIN_OF) {
+				//return false;
+			} else {
+				System.err.println("The following axiom is not supported: " + axiom + "\n");
+			}
+			//count++;
+			//if (count % 100  == 0 ) System.out.print(".");
+		}
+		return true;
 	}
 
 	/**
@@ -365,35 +420,39 @@ public class BasicStore {
         }
 	}
 
-	protected void loadSubclassOf(OWLClassExpression c1, OWLClassExpression c2) throws SQLException {
+	protected void loadSubclassOf(OWLClassExpression c1, OWLClassExpression c2, boolean donotassert) throws SQLException {
 		//System.err.println("Calling subclass of.");
 		int id1 = bridge.getID(c1);
 		int id2 = bridge.getID(c2);
-		bridge.insertIdsToTable("sco",id1,id2);
+		if (donotassert == false) {
+			bridge.insertIdsToTable("sco",id1,id2);
+		}
 		createBodyFacts(id1,c1);
 		createHeadFacts(id2,c2);
 	}
 
-	protected void loadEquivalentClasses(Set<OWLClassExpression> descriptions) throws SQLException {
+	protected void loadEquivalentClasses(Set<OWLClassExpression> descriptions, boolean donotassert) throws SQLException {
 		Object[] descs = descriptions.toArray();
 		int j;
 		for(int i=0;i<descs.length;i++){
 			j=(i%(descs.length-1))+1;
-			loadSubclassOf((OWLClassExpression)descs[i],(OWLClassExpression)descs[j]);
+			loadSubclassOf((OWLClassExpression)descs[i],(OWLClassExpression)descs[j], donotassert);
 		}
 	}
 
-	protected void loadSubpropertyOf(OWLObjectPropertyExpression p1, OWLObjectPropertyExpression p2) throws SQLException {
+	protected void loadSubpropertyOf(OWLObjectPropertyExpression p1, OWLObjectPropertyExpression p2, boolean donotassert) throws SQLException {
+		if (donotassert) return;
 		int pid1 = bridge.getID(p1), pid2 = bridge.getID(p2);
 		bridge.insertIdsToTable("subpropertyof", pid1, pid2);
 	}
 	
-	protected void loadSubpropertyChainOf(List<OWLObjectPropertyExpression> chain, OWLObjectPropertyExpression p) throws SQLException {
+	protected void loadSubpropertyChainOf(List<OWLObjectPropertyExpression> chain, OWLObjectPropertyExpression p, boolean donotassert) throws SQLException {
 		if (chain.size() == 2) {
+			if (donotassert) return;
 			int pid = bridge.getID(p), pid1 = bridge.getID(chain.get(0)), pid2 = bridge.getID(chain.get(1));
 			bridge.insertIdsToTable("subpropertychain", pid1, pid2, pid);
 		} else {
-			// TODO recursion
+			// TODO recursion (even if donotassert==true we need to assert the subchains here)
 		}
 	}
 	
@@ -1088,7 +1147,15 @@ public class BasicStore {
 		rule_N_3.setInt(3, min_cur_step);
 		rule_N_3.setInt(4, min_cur_step);
 		rule_N_3.setInt(5, max_cur_step);
-		int result = rule_N_1.executeUpdate() + rule_N_2.executeUpdate() + rule_N_3.executeUpdate();
+		long time = System.currentTimeMillis();
+		int result = rule_N_1.executeUpdate();
+		System.out.print("[" + (System.currentTimeMillis()-time) + "]");
+		time = System.currentTimeMillis();
+		result = result + rule_N_2.executeUpdate();
+		System.out.print("[" + (System.currentTimeMillis()-time) + "]");
+		time = System.currentTimeMillis();
+		result = result + rule_N_3.executeUpdate();
+		System.out.print("[" + (System.currentTimeMillis()-time) + "]");
 		timeRuleN = timeRuleN + System.currentTimeMillis() - starttime;
 		return result;
 	}

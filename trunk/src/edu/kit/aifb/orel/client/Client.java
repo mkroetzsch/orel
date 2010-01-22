@@ -17,7 +17,7 @@ public class Client {
 	public static void main(String[] args) {
 		// parse command line arguments
 		// supported arguments:  
-		// <mode> -- one of "load", "materialize", "init", "clear", "clearall"
+		// <mode> -- one of "load", "materialize", "init", "clear", "clearall", "checkentailment"
 		// -c <configfile> -- URL of configuration file
 		int i = 0;
 		String arg;
@@ -33,14 +33,15 @@ public class Client {
 				}
 			} else if (arg.startsWith("-")) {
 				System.err.println("Unknown option " + arg);
-			} else if (arg.equals("load")) {
+			} else if ( (arg.equals("load")) || arg.equals("checkentailment") ) {
 				operation = arg;
 				if (i < args.length) {
 					inputfile = args[i++];
 				} else {
 					System.err.println(arg + " requires a filename of the input file");
 				}
-			} else if (arg.equals("materialize") || arg.equals("init") || arg.equals("drop") || arg.equals("clear") || arg.equals("clearall")) {
+			} else if (arg.equals("materialize") || arg.equals("init") || arg.equals("drop") || 
+					   arg.equals("clear") || arg.equals("clearall")) {
 				operation = arg;
 			} else {
 				System.err.println("Unknown command " + arg);
@@ -49,8 +50,8 @@ public class Client {
 
 		if ( operation.equals("") ) {
 			System.out.println("No operation given. Usage:\n orel.sh <command> -c <configfile> -i <inputfile>\n" +
-					           " <command>       : one of \"load\", \"materialize\", \"init\", \"drop\", \"clear\", \"clearall\"\n" +
-					           "                   where \"load\" must be followed by an input ontology URI\n" +
+					           " <command>       : one of \"load\", \"materialize\", \"init\", \"drop\", \"clear\", \"clearall\", \"checkentailment\"\n" +
+					           "                   where \"load\" and \"checkentailment\" must be followed by an input ontology URI\n" +
 					           " -c <configfile> : path to the configuration file\n");
 			System.out.println("Exiting.");
 			return;
@@ -109,6 +110,29 @@ public class Client {
 				Client.store.loadOntology(ontology);
 				loadeTime=System.currentTimeMillis();
 				System.out.println("Ontology stored in " + (loadeTime-loadsTime) + " ms.");
+				manager.removeOntology(ontology);
+			} else if (operation.equals("checkentailment")) {
+				System.out.println("Checking entailment of ontology ...");
+				if (inputfile.equals("")) {
+					System.err.println("Please provide the URI of the input ontology using the parameter -i.");
+					return;
+				}
+				long loadsTime=System.currentTimeMillis();
+				OWLOntologyManager manager = OWLManager.createOWLOntologyManager();
+				//URI physicalURI=(new File(uristring)).toURI();
+				URI physicalURI= URI.create(inputfile);
+				OWLOntology ontology = manager.loadOntologyFromPhysicalURI(physicalURI);
+				long loadeTime=System.currentTimeMillis();
+				System.out.println("Ontology loaded in " + (loadeTime-loadsTime) + " ms.");
+				System.out.println("Processing ontology ...");
+				loadsTime=System.currentTimeMillis();
+				if (Client.store.checkEntailment(ontology)) {
+					System.out.println("Ontology is entailed.");
+				} else {
+					System.out.println("Ontology is not entailed.");
+				}
+				loadeTime=System.currentTimeMillis();
+				System.out.println("Ontology processed in " + (loadeTime-loadsTime) + " ms.");
 				manager.removeOntology(ontology);
 			} else if (operation.equals("materialize")) {
 				System.out.println("Materialising consequences ...");
