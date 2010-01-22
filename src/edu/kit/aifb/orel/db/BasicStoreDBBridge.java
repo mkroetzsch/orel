@@ -140,8 +140,12 @@ public class BasicStoreDBBridge {
 		}
 		return null;
 	}
-
+	
 	public boolean checkIdsInTable(String tablename, int id1, int id2) throws SQLException {
+		return checkIdsInTable(tablename,id1,id2,-1);
+	}
+
+	public boolean checkIdsInTable(String tablename, int id1, int id2, int id3) throws SQLException {
 		PreparedStatement stmt = prepcheckstmts.get(tablename);
 		if (stmt == null) {
 			stmt = getPreparedCheckStatement(tablename);
@@ -150,6 +154,7 @@ public class BasicStoreDBBridge {
 		}
 		if (id1 >= 0) stmt.setInt(1, id1);
 		if (id2 >= 0) stmt.setInt(2, id2);
+		if (id3 >= 0) stmt.setInt(3, id3);
 		ResultSet res = stmt.executeQuery();
 		boolean result = (res.next());
 		res.close();
