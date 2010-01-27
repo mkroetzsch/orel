@@ -1,13 +1,10 @@
 package edu.kit.aifb.orel.test;
 
-import java.io.IOException;
-import java.net.URISyntaxException;
-
 import org.semanticweb.owlapi.model.OWLOntology;
-import org.semanticweb.owlapi.model.OWLOntologyCreationException;
-
 import edu.kit.aifb.orel.client.Settings;
-import edu.kit.aifb.orel.db.BasicStore;
+import edu.kit.aifb.orel.kbmanager.BasicKBManager;
+import edu.kit.aifb.orel.storage.MySQLStorageDriver;
+import edu.kit.aifb.orel.storage.StorageDriver;
 
 public class RunTest {
 
@@ -20,13 +17,14 @@ public class RunTest {
 		//set your own settings
 		String configfile = "mysettings.cfg";
 		Settings.load(configfile);
-		BasicStore store=new BasicStore(Settings.getDBServer(),Settings.getDBName(),Settings.getDBUser(),Settings.getDBPassword());
-		store.initialize();
+		StorageDriver storage = new MySQLStorageDriver(Settings.getDBServer(),Settings.getDBName(),Settings.getDBUser(),Settings.getDBPassword());
+		BasicKBManager kbmanager = new BasicKBManager(storage);
+		kbmanager.initialize();
 		Test test=new Test("syntax-dl.rdf");
 		OWLOntology premise=test.getPremiseOntology();
 		OWLOntology conclusion=test.getConclusionOntology();
-		store.loadOntology(premise);
-		if(store.checkEntailment(conclusion)){
+		kbmanager.loadOntology(premise);
+		if(kbmanager.checkEntailment(conclusion)){
 			System.out.println("Entailed");
 		}
 		else{
