@@ -1,13 +1,7 @@
 package edu.kit.aifb.orel.kbmanager;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
-
 import org.semanticweb.owlapi.model.*;
 
-import edu.kit.aifb.orel.inferencing.InferenceRuleDeclaration;
 import edu.kit.aifb.orel.inferencing.PredicateDeclaration;
 import edu.kit.aifb.orel.storage.StorageDriver;
 
