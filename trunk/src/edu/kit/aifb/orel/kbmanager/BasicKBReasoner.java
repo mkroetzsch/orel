@@ -81,15 +81,15 @@ public class BasicKBReasoner {
 		while ( (maxstep>=curstep_scotra) || (maxstep>=curstep_sco) || (maxstep>=curstep_nonsco) ) {
 			System.out.println("###");
 			if (maxstep>=curstep_scotra) {
-				System.out.println("  Materialising transitivity for step " + curstep_scotra + "... ");
+				System.out.println(" Materialising transitivity for step " + curstep_scotra + "... ");
 				maxstep = materializeSubclassOfTransitivity(curstep_scotra);
 				curstep_scotra = maxstep + 1; // for now we are done; only future results will matter to scotra
-				System.out.println("  Done.");
+				System.out.println(" Done.");
 			} else if (maxstep>=curstep_sco) {
-				System.out.println("  Applying remaining SCO rules to results " + curstep_sco + " to " + maxstep + " ...");
+				System.out.println(" Applying remaining SCO rules to results " + curstep_sco + " to " + maxstep + " ...");
 				affectedrows = storage.runRule("F",curstep_sco,maxstep);
 				affectedrows = affectedrows + storage.runRule("G",curstep_sco,maxstep);
-				System.out.println("  Applying Rule E iteratively ... ");
+				System.out.println(" Applying Rule E iteratively ... ");
 				auxarows = 1;
 				while (auxarows > 0) {
 					auxarows = storage.runRule("E",curstep_sco,maxstep) +
@@ -100,21 +100,20 @@ public class BasicKBReasoner {
 					curstep_sco = maxstep+1; // executed at least once, making sure that we do set this value even if no rules applied
 					if (auxarows > 0 ) maxstep = maxstep+1;
 				}
-				System.out.println("(" + affectedrows + ")");
 				if (affectedrows > 0) { // new sconl statements; update result of transitivity materialisation
-					System.out.println("  Number of rows affected in above rules: " + affectedrows + ". Starting sco repair ... ");
+					System.out.println(" Number of rows affected in above rules: " + affectedrows + ". Starting sco repair ... ");
 					maxstep = repairMaterializeSubclassOfTransitivity(maxstep+1); // always increases step counter
 					curstep_scotra = maxstep; // scotra can continue here
-					System.out.println("  Done.");
+					System.out.println(" Done.");
 				}
 			} else { // this implies (maxstep>=curstep_nonsco)
-				System.out.println("  Applying remaining non-SCO rules to results " + curstep_nonsco + " to " + maxstep + " ...");
+				System.out.println(" Applying remaining non-SCO rules to results " + curstep_nonsco + " to " + maxstep + " ...");
 				affectedrows = storage.runRule("Hn",curstep_nonsco,maxstep);
 				affectedrows = affectedrows + storage.runRule("I",curstep_nonsco,maxstep);
 				affectedrows = affectedrows + storage.runRule("Jn",curstep_nonsco,maxstep);
 				curstep_nonsco = maxstep+1;
 				if (affectedrows > 0) { // some other new statements, just increase step counter directly
-					System.out.println("  Number of rows affected in above rules: " + affectedrows + ". Continue iteration.");
+					System.out.println(" Number of rows affected in above rules: " + affectedrows + ". Continue iteration.");
 					maxstep++;
 					curstep_scotra = maxstep + 1; // the rules we have here are not relevant for scotra, so move curstep for this rule
 				}
@@ -227,7 +226,7 @@ public class BasicKBReasoner {
 	 */
 	protected int repairMaterializeSubclassOfTransitivity(int step) throws Exception {
 		long starttime = System.currentTimeMillis();
-		// repeat all sco Rule D iterations that happened so far, but only recompute results that
+		// repeat all sco transitivity iterations that happened so far, but only recompute results that
 		// rely on the newly added facts
 		System.out.print("    ");
 		int affectedrows, curstep=step;
@@ -238,15 +237,14 @@ public class BasicKBReasoner {
 			// join new base facts with old level i facts:
 			params2[0] = step;
 			params2[1] = i;
-			affectedrows = storage.runRule("trans_repair2" , curstep+1, params2 );
-			///rule_D_repair.executeUpdate();
+			affectedrows = storage.runRule("trans-repair2" , curstep+1, params2 );
 			if (prevaffected) {
 				// joins with new level i facts only needed if new level i facts were added:
 				params2[0] = step;
 				params2[1] = curstep;
-				affectedrows = affectedrows + storage.runRule("trans_repair2" , curstep+1, params2 );
+				affectedrows = affectedrows + storage.runRule("trans-repair2" , curstep+1, params2 );
 				params1[0] = i;
-				affectedrows = affectedrows + storage.runRule("trans_repair1" , curstep+1, params1 );
+				affectedrows = affectedrows + storage.runRule("trans-repair1" , curstep+1, params1 );
 			}
 			prevaffected = (affectedrows > 0);
 			if (prevaffected) {

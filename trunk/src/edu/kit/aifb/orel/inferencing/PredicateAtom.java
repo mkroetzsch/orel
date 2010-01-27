@@ -22,7 +22,8 @@ public class PredicateAtom {
 			} else if ( (arg.charAt(0) == '0') || (arg.charAt(0) == '1') || (arg.charAt(0) == '2') ||
 					    (arg.charAt(0) == '3') || (arg.charAt(0) == '4') || (arg.charAt(0) == '5') ||
 					    (arg.charAt(0) == '6') || (arg.charAt(0) == '7') || (arg.charAt(0) == '8') ||
-					    (arg.charAt(0) == '9') ) { // treat numbers as constants
+					    (arg.charAt(0) == '9') || (arg.charAt(0) == '?')) { 
+				// treat numbers and ? as constants
 				arguments.add(new PredicateTerm(arg,false));
 			} else { // treat as variable
 				arguments.add(new PredicateTerm(arg,true));
