@@ -234,6 +234,20 @@ public class MySQLStorageDriver implements StorageDriver {
 	}
 	
 	/**
+	 * Debugging function to print all statistics gathered about some run. Maybe the
+	 * architecture for this could become more intelligent in the future.
+	 */
+	public void dumpStatistics() {
+		Iterator<String> statit = inferenceruleruntimes.keySet().iterator();
+		String rulename;
+		System.out.println("Times spent on inference rules:");
+		while (statit.hasNext()) {
+			rulename = statit.next();
+			System.out.println("  Rule " + rulename + ": " + inferenceruleruntimes.get(rulename) + "ms.");
+		}
+	}
+	
+	/**
 	 * Configure the store for loading large amounts of data more efficiently.
 	 * Call endLoading() when the operation is completed.
 	 */
@@ -408,6 +422,7 @@ public class MySQLStorageDriver implements StorageDriver {
 			return 0;
 		}
 		System.out.print("  Rule " + rulename + "(*) -> " + newstep + " ... "); // debug
+		long sTime = System.currentTimeMillis();
 		PreparedStatement stmt = stmts.get(0);
 		int result = 0;
 		try {
@@ -417,6 +432,10 @@ public class MySQLStorageDriver implements StorageDriver {
 			System.err.println(e.toString());
 		}
 		System.out.println("[" + result + "]"); // debug
+		if (inferenceruleruntimes.containsKey(rulename)) {
+			sTime = sTime - inferenceruleruntimes.get(rulename);
+		}
+		inferenceruleruntimes.put(rulename,new Long(System.currentTimeMillis() - sTime));
 		return result;
 	}
 
@@ -435,6 +454,7 @@ public class MySQLStorageDriver implements StorageDriver {
 			return 0;
 		}
 		System.out.print("  Rule " + rulename + "(*) -> " + newstep + " ... "); // debug
+		long sTime = System.currentTimeMillis();
 		PreparedStatement stmt = stmts.get(0);
 		int result = 0, pos=1;
 		try {
@@ -447,6 +467,10 @@ public class MySQLStorageDriver implements StorageDriver {
 			System.err.println(e.toString());
 		}
 		System.out.println("[" + result + "]"); // debug
+		if (inferenceruleruntimes.containsKey(rulename)) {
+			sTime = sTime - inferenceruleruntimes.get(rulename);
+		}
+		inferenceruleruntimes.put(rulename,new Long(System.currentTimeMillis() - sTime));
 		return result;
 	}
 	
