@@ -411,7 +411,7 @@ public class MySQLStorageDriver implements StorageDriver {
 		PreparedStatement stmt = stmts.get(0);
 		int result = 0;
 		try {
-			stmt.setInt(1, newstep);
+			if (!inferencerules.get(rulename).retractInferences()) stmt.setInt(1, newstep);
 			result = stmt.executeUpdate();
 		} catch (SQLException e) { // internal bug, just print the message
 			System.err.println(e.toString());
@@ -436,11 +436,11 @@ public class MySQLStorageDriver implements StorageDriver {
 		}
 		System.out.print("  Rule " + rulename + "(*) -> " + newstep + " ... "); // debug
 		PreparedStatement stmt = stmts.get(0);
-		int result = 0;
+		int result = 0, pos=1;
 		try {
-			stmt.setInt(1, newstep);
+			if (!inferencerules.get(rulename).retractInferences()) stmt.setInt(pos++, newstep);
 			for (int i=0; i<params.length; i++) {
-				stmt.setInt(i+2, params[i]);				
+				stmt.setInt(pos++, params[i]);				
 			}
 			result = stmt.executeUpdate();
 		} catch (SQLException e) { // internal bug, just print the message
@@ -477,7 +477,7 @@ public class MySQLStorageDriver implements StorageDriver {
 			for (int i=1; i<stmts.size(); i++) {
 				stmt = stmts.get(i);
 				pos = 1;
-				stmt.setInt(pos++, max_cur_step+1);
+				if (!inferencerules.get(rulename).retractInferences()) stmt.setInt(pos++, max_cur_step+1);
 				for (int j=1; j<=i; j++) {
 					stmt.setInt(pos++, min_cur_step);
 				}
@@ -511,7 +511,6 @@ public class MySQLStorageDriver implements StorageDriver {
 		HashMap<String,ArrayList<String>> constequalities = new HashMap<String,ArrayList<String>>();
 		String from = "", insert, select = "", on = "", 
 		       on_op = " WHERE ";  // use WHERE while there is just one table
-		PredicateAtom pa;
 		PredicateTerm pt;
 		PredicateDeclaration pd;
 		boolean hasParameterConstants = false; // constants of value "?" are set at application time;
@@ -521,54 +520,19 @@ public class MySQLStorageDriver implements StorageDriver {
 		// iterate over body to collect all variables and their variable->column mappings
 		// also make join string for FROM here
 		for (int i=0; i<rd.getBody().size(); i++) {
-			pa = rd.getBody().get(i);
-			pd = predicates.get(pa.getName());
-			if (pd == null) continue; // ignore unknown predicates
-			// build basic join string
 			if (i>0) {
 				from = from + " INNER JOIN ";
 				on_op = " ON ";
 			}
-			from = from + pa.getName() + " AS t" + (i);
-			// collect inferred body tables unless "step" value is given explicitly
-			if ( (pd.isInferred() && (pa.getArguments().size()==pd.getFieldCount()) )) {
-				inferredTables.add("t" + (i));
-			}
-			// collect fields equal to each variable/constant
-			for (int j=0; j<pa.getArguments().size(); j++) {
-				pt = pa.getArguments().get(j);
-				if (pt.isVariable()) {
-					if (!varequalities.containsKey(pt.getValue())) {
-						varequalities.put(pt.getValue(),new ArrayList<String>());
-					}
-					varequalities.get(pt.getValue()).add( "t" + (i) + ".f" + (j) );
-				} else {
-					if (!constequalities.containsKey(pt.getValue())) {
-						constequalities.put(pt.getValue(),new ArrayList<String>());
-					}
-					if (j<pd.getFieldCount()) {
-						constequalities.get(pt.getValue()).add( "=t" + (i) + ".f" + (j) );
-					} else { // use the extra field for fixed step
-						if (pa.getArguments().size() == pd.getFieldCount()+1) {
-							if (pt.getValue().equals("0")) { // special handling: match all steps below 0
-								constequalities.get(pt.getValue()).add( ">=t" + (i) + ".step" );
-							} else {
-								constequalities.get(pt.getValue()).add( "=t" + (i) + ".step" );
-							}
-						} else { // support up to two step parameters (outer bounds)  
-							if (j==pd.getFieldCount()) {
-								constequalities.get(pt.getValue()).add( "<=t" + (i) + ".step" );
-							} else if (j==pd.getFieldCount()+1) {
-								constequalities.get(pt.getValue()).add( ">=t" + (i) + ".step" );
-							}
-						}
-					}
-				}
-			}
+			from = from + prepareRuleBodyAtom(rd, rd.getBody().get(i), i, inferredTables, varequalities, constequalities);
 		}
 		
 		// make strings for INSERT and SELECT part
-		if (!rd.retractInferences()) { 
+		if (rd.retractInferences()) {
+			insert = "DELETE t" + rd.getBody().size() + ".*";
+			if (!from.equals("")) from = from + " INNER JOIN ";
+			from = from + prepareRuleBodyAtom(rd, rd.getHead(), rd.getBody().size(), inferredTables, varequalities, constequalities);
+		} else { // make strings for INSERT and SELECT part
 			insert = "INSERT IGNORE INTO " + rd.getHead().getName() + " (";
 			pd = predicates.get(rd.getHead().getName()); // use "pd == null" to indicate that rule is broken
 			for (int i=0; i<rd.getHead().getArguments().size(); i++) {
@@ -597,8 +561,6 @@ public class MySQLStorageDriver implements StorageDriver {
 			}
 			insert = insert + ") "; 
 			select = "SELECT DISTINCT " + select;
-		} else {
-			insert = "DELETE " + rd.getHead().getName() + ".*";
 		}
 		
 		// make string for ON part (join conditions)
@@ -656,6 +618,61 @@ public class MySQLStorageDriver implements StorageDriver {
 			}
 		}		
 		return result;
+	}
+	
+	/**
+	 * Helper function to process the i-th atom in the body of a rule described by rd. 
+	 * @param rd
+	 * @param i
+	 * @param inferredTables
+	 * @param varequalities
+	 * @param constequalities
+	 * @return
+	 */
+	protected String prepareRuleBodyAtom(InferenceRuleDeclaration rd, PredicateAtom pa, int i, 
+			ArrayList<String> inferredTables, 
+			HashMap<String,ArrayList<String>> varequalities,
+			HashMap<String,ArrayList<String>> constequalities) {
+		PredicateTerm pt;
+		PredicateDeclaration pd;
+		pd = predicates.get(pa.getName());
+		if (pd == null) return ""; // ignore unknown predicates
+		// collect inferred body tables unless "step" value is given explicitly
+		if ( (pd.isInferred() && (pa.getArguments().size()==pd.getFieldCount()) )) {
+			inferredTables.add("t" + (i));
+		}
+		// collect fields equal to each variable/constant
+		for (int j=0; j<pa.getArguments().size(); j++) {
+			pt = pa.getArguments().get(j);
+			if (pt.isVariable()) {
+				if (!varequalities.containsKey(pt.getValue())) {
+					varequalities.put(pt.getValue(),new ArrayList<String>());
+				}
+				varequalities.get(pt.getValue()).add( "t" + (i) + ".f" + (j) );
+			} else {
+				if (!constequalities.containsKey(pt.getValue())) {
+					constequalities.put(pt.getValue(),new ArrayList<String>());
+				}
+				if (j<pd.getFieldCount()) {
+					constequalities.get(pt.getValue()).add( "=t" + (i) + ".f" + (j) );
+				} else { // use the extra field for fixed step
+					if (pa.getArguments().size() == pd.getFieldCount()+1) {
+						if (pt.getValue().equals("0")) { // special handling: match all steps below 0
+							constequalities.get(pt.getValue()).add( ">=t" + (i) + ".step" );
+						} else {
+							constequalities.get(pt.getValue()).add( "=t" + (i) + ".step" );
+						}
+					} else { // support up to two step parameters (outer bounds)  
+						if (j==pd.getFieldCount()) {
+							constequalities.get(pt.getValue()).add( "<=t" + (i) + ".step" );
+						} else if (j==pd.getFieldCount()+1) {
+							constequalities.get(pt.getValue()).add( ">=t" + (i) + ".step" );
+						}
+					}
+				}
+			}
+		}
+		return pa.getName() + " AS t" + (i);
 	}
 
 	/* *** Id management *** */
