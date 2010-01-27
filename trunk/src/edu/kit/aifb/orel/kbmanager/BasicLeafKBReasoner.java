@@ -51,8 +51,8 @@ public class BasicLeafKBReasoner {
 		rules.put("Hn",     "sv_nl(x,w,z) :- sv_nl(x,v1,y), sv_nl(y,v2,z), subpropertychain(v1,v2,w)");
 		rules.put("Hl",     "sv_nl(x,w,z) :- sv_nl(x,v1,y), sv(y,v2,z), subpropertychain(v1,v2,w)");
 		rules.put("I",      "sv_nl(x,v,z) :- sco_nl(x,y), sv_nl(y,v,z)");
-		rules.put("Jn",     "sv_nl(x,v,z) :- sv_nl(x,v,y), sco(y,z)");
-		rules.put("Jl",     "sv_nl(x,v,z) :- sv(x,v,y), sco(y,z)");
+		rules.put("Jn",     "sv_nl(x,v,z) :- sv_nl(x,v,y), sco_nl(y,z)");
+		rules.put("Jl",     "sv_nl(x,v,z) :- sv_nl(x,v,y), sco(y,z)");
 		rules.put("K",      "subconint(x,z,w) :- sco(x,y), subconjunctionof(y,z,w)");
 		rules.put("L",      "subconint(x,z,w) :- sco(x,y), sco_nl(y,y1), subconjunctionof(y1,z,w)");
 		rules.put("M",      "sco(x,w)     :- subconint(x,z,w), sco(x,z)");
@@ -71,8 +71,6 @@ public class BasicLeafKBReasoner {
 		rules.put("Nom 2l", "nonempty(y) :- sco(x,y), nonempty(x)");
 		rules.put("Nom 3n", "nonempty(y) :- sv_nl(x,v,y), nonempty(x)");
 		rules.put("Nom 3l", "nonempty(y) :- sv(x,v,y), nonempty(x)");
-		
-		//rules.put("test", "subconint(x,z,w) :- sco(x,y), sco_nl(y,y1), subconjunctionof(y1,z,w)");
 		
 		// now register those rules:
 		Iterator<String> nameit = rules.keySet().iterator();

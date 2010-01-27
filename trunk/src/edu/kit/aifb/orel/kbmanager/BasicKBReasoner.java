@@ -32,47 +32,26 @@ public class BasicKBReasoner {
 		HashMap<String,String> rules = new HashMap<String,String>();
 		// make the rule declaration as readable as possible;
 		// it is crucial to have this error free and customizable
-		rules.put("move-sco", "sco_nl(x,y)  :- sco(x,y,0)");
-		rules.put("move-sv",  "sv_nl(x,v,y) :- sv(x,v,y,0)");
-		
 		rules.put("prop-1", "subpropertyof(x,z) :- subpropertyof(x,y,0), subpropertyof(y,z)");
 		rules.put("prop-2", "subpropertychain(u,v2,w) :- subpropertyof(u,v1), subpropertychain(v1,v2,w)");
 		rules.put("prop-3", "subpropertychain(v1,u,w) :- subpropertyof(u,v2), subpropertychain(v1,v2,w)");
 		
-		rules.put("trans",  "sco_nl(x,z)  :- sco_nl(x,y,0), sco_nl(y,z)");
-		rules.put("trans-repair1",  "sco_nl(x,z)  :- sco_nl(x,y,0), sco_nl(y,z,?)");
-		rules.put("trans-repair2",  "sco_nl(x,z)  :- sco_nl(x,y,?), sco_nl(y,z,?)");
-		rules.put("E",      "sco_nl(x,z)  :- subconjunctionof(y1,y2,z), sco_nl(x,y1), sco_nl(x,y2)");
-		rules.put("E ref1", "sco_nl(x,z)  :- subconjunctionof(x,y,z), sco_nl(x,y)");
-		rules.put("E ref2", "sco_nl(x,z)  :- subconjunctionof(y,x,z), sco_nl(x,y)");
-		rules.put("E ref3", "sco_nl(x,z)  :- subconjunctionof(x,x,z)");
-		rules.put("F",      "sco_nl(x,y)  :- sv_nl(x,v,z), subsomevalues(v,z,y)");
-		rules.put("G",      "sco_nl(x,y)  :- sv_nl(x,v,z), subpropertyof(v,u), subsomevalues(u,z,y)");
-		rules.put("Hn",     "sv_nl(x,w,z) :- sv_nl(x,v1,y), sv_nl(y,v2,z), subpropertychain(v1,v2,w)");
-		rules.put("Hl",     "sv_nl(x,w,z) :- sv_nl(x,v1,y), sv(y,v2,z), subpropertychain(v1,v2,w)");
-		rules.put("I",      "sv_nl(x,v,z) :- sco_nl(x,y), sv_nl(y,v,z)");
-		rules.put("Jn",     "sv_nl(x,v,z) :- sv_nl(x,v,y), sco(y,z)");
-		rules.put("Jl",     "sv_nl(x,v,z) :- sv(x,v,y), sco(y,z)");
-		rules.put("K",      "subconint(x,z,w) :- sco(x,y), subconjunctionof(y,z,w)");
-		rules.put("L",      "subconint(x,z,w) :- sco(x,y), sco_nl(y,y1), subconjunctionof(y1,z,w)");
-		rules.put("M",      "sco(x,w)     :- subconint(x,z,w), sco(x,z)");
-		rules.put("N",      "sco(x,w)     :- subconint(x,z,w), sco(x,z1), sco_nl(z1,z)");
-		rules.put("O",      "sco(x,y)     :- sv(x,v,z), subsomevalues(v,z,y)");
-		rules.put("P",      "sco(x,y)     :- sv(x,v,z), subpropertyof(v,u), subsomevalues(u,z,y)");
-		rules.put("Qn",     "sv(x,w,z)    :- sv(x,v1,y), sv_nl(y,v2,z), subpropertychain(v1,v2,w)");
-		rules.put("Ql",     "sv(x,w,z)    :- sv(x,v1,y), sv(y,v2,z), subpropertychain(v1,v2,w)");
-		rules.put("R",      "sv(x,v,z)    :- sco(x,y), sv_nl(y,v,z)");
-		rules.put("Sn",     "sv(x,v,z)    :- sv(x,v,y), sco_nl(y,z)");
-		rules.put("Sl",     "sv(x,v,z)    :- sv(x,v,y), sco(y,z)");
+		rules.put("trans",  "sco(x,z)  :- sco(x,y,0), sco(y,z)");
+		rules.put("trans-repair1",  "sco(x,z)  :- sco(x,y,0), sco(y,z,?)");
+		rules.put("trans-repair2",  "sco(x,z)  :- sco(x,y,?), sco(y,z,?)");
+		rules.put("E",      "sco(x,z)  :- subconjunctionof(y1,y2,z), sco(x,y1), sco(x,y2)");
+		rules.put("E ref1", "sco(x,z)  :- subconjunctionof(x,y,z), sco(x,y)");
+		rules.put("E ref2", "sco(x,z)  :- subconjunctionof(y,x,z), sco(x,y)");
+		rules.put("E ref3", "sco(x,z)  :- subconjunctionof(x,x,z)");
+		rules.put("F",      "sco(x,y)  :- sv(x,v,z), subsomevalues(v,z,y)");
+		rules.put("G",      "sco(x,y)  :- sv(x,v,z), subpropertyof(v,u), subsomevalues(u,z,y)");
+		rules.put("Hn",     "sv(x,w,z) :- sv(x,v1,y), sv(y,v2,z), subpropertychain(v1,v2,w)");
+		rules.put("I",      "sv(x,v,z) :- sco(x,y), sv(y,v,z)");
+		rules.put("Jn",     "sv(x,v,z) :- sv(x,v,y), sco(y,z)");
 		
-		rules.put("Nom 1n", "sco_nl(y,x) :- sco_nl(x,y), nonempty(x), nominal(y)");
-		rules.put("Nom 1l", "sco_nl(y,x) :- sco(x,y), nonempty(x), nominal(y)");
-		rules.put("Nom 2n", "nonempty(y) :- sco_nl(x,y), nonempty(x)");
-		rules.put("Nom 2l", "nonempty(y) :- sco(x,y), nonempty(x)");
-		rules.put("Nom 3n", "nonempty(y) :- sv_nl(x,v,y), nonempty(x)");
-		rules.put("Nom 3l", "nonempty(y) :- sv(x,v,y), nonempty(x)");
-		
-		//rules.put("test", "subconint(x,z,w) :- sco(x,y), sco_nl(y,y1), subconjunctionof(y1,z,w)");
+		rules.put("Nom 1n", "sco(y,x) :- sco(x,y), nonempty(x), nominal(y)");
+		rules.put("Nom 2n", "nonempty(y) :- sco(x,y), nonempty(x)");
+		rules.put("Nom 3n", "nonempty(y) :- sv(x,v,y), nonempty(x)");
 		
 		// now register those rules:
 		Iterator<String> nameit = rules.keySet().iterator();
@@ -89,11 +68,6 @@ public class BasicKBReasoner {
 	public void materialize() throws Exception {
 		long sTime;
 		registerInferenceRules();
-		
-		sTime=System.currentTimeMillis();
-		System.out.println("Separating leafs ... ");
-		separateLeafs();
-		System.out.println("Done in " + (System.currentTimeMillis() - sTime) + "ms.");
 		
 		sTime=System.currentTimeMillis();
 		System.out.println("Materialising property hierarchy ... ");
@@ -136,21 +110,8 @@ public class BasicKBReasoner {
 			} else { // this implies (maxstep>=curstep_nonsco)
 				System.out.println("  Applying remaining non-SCO rules to results " + curstep_nonsco + " to " + maxstep + " ...");
 				affectedrows = storage.runRule("Hn",curstep_nonsco,maxstep);
-				affectedrows = affectedrows + storage.runRule("Hl",curstep_nonsco,maxstep);
 				affectedrows = affectedrows + storage.runRule("I",curstep_nonsco,maxstep);
 				affectedrows = affectedrows + storage.runRule("Jn",curstep_nonsco,maxstep);
-				affectedrows = affectedrows + storage.runRule("Jl",curstep_nonsco,maxstep);
-				affectedrows = affectedrows + storage.runRule("K",curstep_nonsco,maxstep);
-				affectedrows = affectedrows + storage.runRule("L",curstep_nonsco,maxstep);
-				affectedrows = affectedrows + storage.runRule("M",curstep_nonsco,maxstep);
-				affectedrows = affectedrows + storage.runRule("N",curstep_nonsco,maxstep);
-				affectedrows = affectedrows + storage.runRule("O",curstep_nonsco,maxstep);
-				affectedrows = affectedrows + storage.runRule("P",curstep_nonsco,maxstep);
-				affectedrows = affectedrows + storage.runRule("Qn",curstep_nonsco,maxstep);
-				affectedrows = affectedrows + storage.runRule("Ql",curstep_nonsco,maxstep);
-				affectedrows = affectedrows + storage.runRule("P",curstep_nonsco,maxstep);
-				affectedrows = affectedrows + storage.runRule("Sn",curstep_nonsco,maxstep);
-				affectedrows = affectedrows + storage.runRule("Sl",curstep_nonsco,maxstep);
 				curstep_nonsco = maxstep+1;
 				if (affectedrows > 0) { // some other new statements, just increase step counter directly
 					System.out.println("  Number of rows affected in above rules: " + affectedrows + ". Continue iteration.");
@@ -217,76 +178,6 @@ public class BasicKBReasoner {
 		return true;
 	}
 	
-	/**
-	 * Method for separating leaf classes from other classes in the sco and sv table.
-	 * The operation is idempotent.
-	 * @throws SQLException
-	 */
-	protected void separateLeafs() throws Exception {
-		int affectedrows;
-		
-		// do not perform the leaf distinction now
-		affectedrows = storage.runRule("move-sco", 0); 
-		if (affectedrows > 0) {
-			storage.clear("sco",false);
-		}
-		affectedrows = storage.runRule("move-sv", 0);
-		if (affectedrows > 0) {
-			storage.clear("sv",false);
-		}
-		// begin with the subClassOf statements:
-		/*affectedrows = stmt.executeUpdate( 
-			"INSERT IGNORE INTO sco_nl " + 
-			"SELECT DISTINCT t1.s_id AS s_id,t1.o_id AS o_id, \"0\" AS step " +
-			"FROM sco AS t1 INNER JOIN sco AS t2 ON t1.s_id=t2.o_id"
-		);
-		if (affectedrows > 0) {
-			stmt.executeUpdate("DELETE t1.* FROM sco AS t1 INNER JOIN sco AS t2 ON t1.s_id=t2.o_id");
-		}
-		affectedrows = stmt.executeUpdate(
-			"INSERT IGNORE INTO sco_nl " + 
-			"SELECT DISTINCT t1.s_id AS s_id,t1.o_id AS o_id, \"0\" AS step FROM " +
-			"sco AS t1 INNER JOIN subconjunctionof AS t2 ON t1.s_id=t2.o_id"
-		);
-		if (affectedrows > 0) {
-			stmt.executeUpdate("DELETE t1.* FROM sco AS t1 INNER JOIN subconjunctionof AS t2 ON t1.s_id=t2.o_id");
-		}
-		affectedrows = stmt.executeUpdate(
-			"INSERT IGNORE INTO sco_nl " + 
-			"SELECT DISTINCT t1.s_id AS s_id,t1.o_id AS o_id, \"0\" AS step FROM " +
-			"sco AS t1 INNER JOIN subsomevalues AS t2 ON t1.s_id=t2.o_id"
-		);
-		if (affectedrows > 0) {
-			stmt.executeUpdate("DELETE t1.* FROM sco AS t1 INNER JOIN subsomevalues AS t2 ON t1.s_id=t2.o_id");
-		}
-		// now also take care of all other property statements:
-		affectedrows = stmt.executeUpdate( // take advantage of pre-computed sco leafs:
-			"INSERT IGNORE INTO sv_nl " + 
-			"SELECT DISTINCT t1.s_id AS s_id,t1.p_id AS p_id,t1.o_id AS o_id, \"0\" AS step FROM " +
-			"sv AS t1 INNER JOIN sco_nl AS t2 ON t1.s_id=t2.s_id"
-		);
-		if (affectedrows > 0) {
-			stmt.executeUpdate("DELETE t1.* FROM sv AS t1 INNER JOIN sco_nl AS t2 ON t1.s_id=t2.s_id");
-		}
-		// but still check the other tables, since not all non-leafs need to occur in sco table at all:
-		affectedrows = stmt.executeUpdate(
-			"INSERT IGNORE INTO sv_nl " + 
-			"SELECT DISTINCT t1.s_id AS s_id,t1.p_id AS p_id,t1.o_id AS o_id, \"0\" AS step FROM " +
-			"sv AS t1 INNER JOIN subconjunctionof AS t2 ON t1.s_id=t2.o_id"
-		);
-		if (affectedrows > 0) {
-			stmt.executeUpdate("DELETE t1.* FROM sv AS t1 INNER JOIN subconjunctionof AS t2 ON t1.s_id=t2.o_id");
-		}
-		affectedrows = stmt.executeUpdate(
-			"INSERT IGNORE INTO sv_nl " + 
-			"SELECT DISTINCT t1.s_id AS s_id,t1.p_id AS p_id,t1.o_id AS o_id, \"0\" AS step FROM " +
-			"sv AS t1 INNER JOIN subsomevalues AS t2 ON t1.s_id=t2.o_id"
-		);
-		if (affectedrows > 0) {
-			stmt.executeUpdate("DELETE t1.* FROM sv AS t1 INNER JOIN subsomevalues AS t2 ON t1.s_id=t2.o_id");
-		}*/
-	}
-	
 	protected void materializePropertyHierarchy() throws Exception {
 		int i = 1;
 		int affectedrows = 1;
@@ -322,11 +213,11 @@ public class BasicKBReasoner {
 
 	/**
 	 * Materialize additional consequences of Rule D (transitivity of subclassOf) that would have been 
-	 * obtained up to this step if all sco_nl facts that have been inserted at the given step would have 
+	 * obtained up to this step if all sco facts that have been inserted at the given step would have 
 	 * been available as base facts. The operation performs enough steps to ensure that all those
 	 * conclusions are obtained, so that the normal materialization can continue at the returned step
-	 * value. The operation does not continue until staturation of the sco_nl table w.r.t. Rule D -- it
-	 * just restores the assumed completeness of facts that are found in sco_nl up to step. 
+	 * value. The operation does not continue until staturation of the sco table w.r.t. Rule D -- it
+	 * just restores the assumed completeness of facts that are found in sco up to step. 
 	 * 
 	 * After this "repair" operation, all facts of level -1 so as to be taken into account for future
 	 * applications of Rule D.
@@ -336,7 +227,7 @@ public class BasicKBReasoner {
 	 */
 	protected int repairMaterializeSubclassOfTransitivity(int step) throws Exception {
 		long starttime = System.currentTimeMillis();
-		// repeat all sco_nl Rule D iterations that happened so far, but only recompute results that
+		// repeat all sco Rule D iterations that happened so far, but only recompute results that
 		// rely on the newly added facts
 		System.out.print("    ");
 		int affectedrows, curstep=step;
@@ -367,7 +258,7 @@ public class BasicKBReasoner {
 		}
 		System.out.println(" Done.");
 		// move the new facts down to the base level
-		storage.changeStep("sco_nl",step,-1);
+		storage.changeStep("sco",step,-1);
 		step = curstep;
 		timerepair = timerepair + System.currentTimeMillis() - starttime;
 		return step;
