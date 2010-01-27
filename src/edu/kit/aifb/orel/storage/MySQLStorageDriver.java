@@ -36,6 +36,7 @@ public class MySQLStorageDriver implements StorageDriver {
 	protected HashMap<String,PredicateDeclaration> predicates;
 	protected HashMap<String,InferenceRuleDeclaration> inferencerules;
 	protected HashMap<String,ArrayList<PreparedStatement>> inferencerulestmts;
+	protected HashMap<String,Long> inferenceruleruntimes;
 	// keep prepared statements in a map to process them with less code
 	protected HashMap<String,PreparedStatement> prepinsertstmts;
 	protected HashMap<String,Integer> prepinsertstmtsizes;
@@ -77,6 +78,7 @@ public class MySQLStorageDriver implements StorageDriver {
 		predicates = new HashMap<String,PredicateDeclaration>(expectedNumberOfPredicates);
 		inferencerules     = new HashMap<String,InferenceRuleDeclaration>(30);
 		inferencerulestmts = new HashMap<String,ArrayList<PreparedStatement>>(30);
+		inferenceruleruntimes = new HashMap<String,Long>(30);
 
 		unwrittenids = new HashMap<String,Integer>(prelocsize);
 		prepinsertstmts = new HashMap<String,PreparedStatement>(expectedNumberOfPredicates);
@@ -402,10 +404,10 @@ public class MySQLStorageDriver implements StorageDriver {
 	public int runRule(String rulename, int newstep) {
 		ArrayList<PreparedStatement> stmts = inferencerulestmts.get(rulename);
 		if ((stmts == null) || (stmts.size() == 0)) { // internal error, just print it
-			System.err.println("Illegal call to rule " + rulename);
+			System.err.println("Call to unknown rule " + rulename);
 			return 0;
 		}
-		System.out.print("  Applying Rule " + rulename + " ... "); // debug
+		System.out.print("  Rule " + rulename + "(*) -> " + newstep + " ... "); // debug
 		PreparedStatement stmt = stmts.get(0);
 		int result = 0;
 		try {
@@ -414,7 +416,7 @@ public class MySQLStorageDriver implements StorageDriver {
 		} catch (SQLException e) { // internal bug, just print the message
 			System.err.println(e.toString());
 		}
-		System.out.println(" got " + result + " rows."); // debug
+		System.out.println("[" + result + "]"); // debug
 		return result;
 	}
 
@@ -429,10 +431,10 @@ public class MySQLStorageDriver implements StorageDriver {
 	public int runRule(String rulename, int newstep, int[] params) {
 		ArrayList<PreparedStatement> stmts = inferencerulestmts.get(rulename);
 		if ((stmts == null) || (stmts.size() == 0)) { // internal error, just print it
-			System.err.println("Illegal call to rule " + rulename);
+			System.err.println("Call to unknown rule " + rulename);
 			return 0;
 		}
-		System.out.print("  Applying Rule " + rulename + " ... "); // debug
+		System.out.print("  Rule " + rulename + "(*) -> " + newstep + " ... "); // debug
 		PreparedStatement stmt = stmts.get(0);
 		int result = 0;
 		try {
@@ -444,7 +446,7 @@ public class MySQLStorageDriver implements StorageDriver {
 		} catch (SQLException e) { // internal bug, just print the message
 			System.err.println(e.toString());
 		}
-		System.out.println(" got " + result + " rows."); // debug
+		System.out.println("[" + result + "]"); // debug
 		return result;
 	}
 	
@@ -459,14 +461,16 @@ public class MySQLStorageDriver implements StorageDriver {
 	 * @return the number of new tuples that were found
 	 */
 	public int runRule(String rulename, int min_cur_step, int max_cur_step) {
+		if (min_cur_step == 0) min_cur_step = -1; // make sure that sub-zero (late) base facts are considered in this case 
 		ArrayList<PreparedStatement> stmts = inferencerulestmts.get(rulename);
 		if ((stmts == null) || (stmts.size() == 0)) { // internal error, just print it
-			System.err.println("Illegal call to rule " + rulename);
+			System.err.println("Call to unknown rule " + rulename);
 			return 0;
 		}
 		if (stmts.size() == 1) return runRule(rulename,max_cur_step+1); // no steps in body
 		int result = 0;
 		System.out.print("  Rule " + rulename + "(" + min_cur_step + "-" + max_cur_step + ") ... "); // debug
+		long sTime = System.currentTimeMillis();
 		try {
 			int pos;
 			PreparedStatement stmt;
@@ -484,6 +488,10 @@ public class MySQLStorageDriver implements StorageDriver {
 			System.err.println(e.toString());
 		}
 		System.out.println("[" + result + "]"); // debug
+		if (inferenceruleruntimes.containsKey(rulename)) {
+			sTime = sTime - inferenceruleruntimes.get(rulename);
+		}
+		inferenceruleruntimes.put(rulename,new Long(System.currentTimeMillis() - sTime));
 		return result;
 	}
 
@@ -501,7 +509,7 @@ public class MySQLStorageDriver implements StorageDriver {
 		ArrayList<String> inferredTables = new ArrayList<String>();
 		HashMap<String,ArrayList<String>> varequalities = new HashMap<String,ArrayList<String>>();
 		HashMap<String,ArrayList<String>> constequalities = new HashMap<String,ArrayList<String>>();
-		String from = "", insert = "", select = "", on = "", 
+		String from = "", insert, select = "", on = "", 
 		       on_op = " WHERE ";  // use WHERE while there is just one table
 		PredicateAtom pa;
 		PredicateTerm pt;
@@ -560,34 +568,38 @@ public class MySQLStorageDriver implements StorageDriver {
 		}
 		
 		// make strings for INSERT and SELECT part
-		insert = "INSERT IGNORE INTO " + rd.getHead().getName() + " (";
-		pd = predicates.get(rd.getHead().getName()); // use "pd == null" to indicate that rule is broken
-		for (int i=0; i<rd.getHead().getArguments().size(); i++) {
-			if (i>0) insert = insert + ",";
-			insert = insert + "f" + (i);
-			pt = rd.getHead().getArguments().get(i);
-			if (pt.isVariable()) {
-				if (!select.equals("")) select = select + ",";
-				if (varequalities.containsKey(pt.getValue())) {
-					select = select + varequalities.get(pt.getValue()).get(0) + " AS f" + (i);
-				} else { // else: unsafe rule, drop it
-					System.err.println("Rule " + rd.getName() + " is unsafe. Ignoring it."); 
-					pd = null;
+		if (!rd.retractInferences()) { 
+			insert = "INSERT IGNORE INTO " + rd.getHead().getName() + " (";
+			pd = predicates.get(rd.getHead().getName()); // use "pd == null" to indicate that rule is broken
+			for (int i=0; i<rd.getHead().getArguments().size(); i++) {
+				if (i>0) insert = insert + ",";
+				insert = insert + "f" + (i);
+				pt = rd.getHead().getArguments().get(i);
+				if (pt.isVariable()) {
+					if (!select.equals("")) select = select + ",";
+					if (varequalities.containsKey(pt.getValue())) {
+						select = select + varequalities.get(pt.getValue()).get(0) + " AS f" + (i);
+					} else { // else: unsafe rule, drop it
+						System.err.println("Rule " + rd.getName() + " is unsafe. Ignoring it."); 
+						pd = null;
+					}
+				} else {
+					select = select + "\"" + pt.getValue() + "\" AS f" + (i);
 				}
-			} else {
-				select = select + "\"" + pt.getValue() + "\" AS f" + (i);
 			}
+			if (pd == null) {
+				System.err.println("There was a problem registering rule " + rd.getName());
+				return result;
+			}
+			if (pd.isInferred()) {
+				insert = insert + ",step";
+				select = select + ", ? AS step";
+			}
+			insert = insert + ") "; 
+			select = "SELECT DISTINCT " + select;
+		} else {
+			insert = "DELETE " + rd.getHead().getName() + ".*";
 		}
-		if (pd == null) {
-			System.err.println("There was a problem registering rule " + rd.getName());
-			return result;
-		}
-		if (pd.isInferred()) {
-			insert = insert + ",step";
-			select = select + ", ? AS step";
-		}
-		insert = insert + ") "; 
-		select = "SELECT DISTINCT " + select;
 		
 		// make string for ON part (join conditions)
 		Iterator<String> keyit = constequalities.keySet().iterator();
