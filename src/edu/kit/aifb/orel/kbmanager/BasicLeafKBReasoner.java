@@ -345,15 +345,15 @@ public class BasicLeafKBReasoner {
 			// join new base facts with old level i facts:
 			params2[0] = step;
 			params2[1] = i;
-			affectedrows = storage.runRule("trans_repair2" , curstep+1, params2 );
+			affectedrows = storage.runRule("trans-repair2" , curstep+1, params2 );
 			///rule_D_repair.executeUpdate();
 			if (prevaffected) {
 				// joins with new level i facts only needed if new level i facts were added:
 				params2[0] = step;
 				params2[1] = curstep;
-				affectedrows = affectedrows + storage.runRule("trans_repair2" , curstep+1, params2 );
+				affectedrows = affectedrows + storage.runRule("trans-repair2" , curstep+1, params2 );
 				params1[0] = i;
-				affectedrows = affectedrows + storage.runRule("trans_repair1" , curstep+1, params1 );
+				affectedrows = affectedrows + storage.runRule("trans-repair1" , curstep+1, params1 );
 			}
 			prevaffected = (affectedrows > 0);
 			if (prevaffected) {

@@ -570,7 +570,10 @@ public class MySQLStorageDriver implements StorageDriver {
 				select = select + "\"" + pt.getValue() + "\" AS f" + (i);
 			}
 		}
-		if (pd == null) return result;
+		if (pd == null) {
+			System.err.println("There was a problem registering rule " + rd.getName());
+			return result;
+		}
 		if (pd.isInferred()) {
 			insert = insert + ",step";
 			select = select + ", ? AS step";
