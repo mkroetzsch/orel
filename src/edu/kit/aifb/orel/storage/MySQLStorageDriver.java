@@ -280,9 +280,9 @@ public class MySQLStorageDriver implements StorageDriver {
 		Statement stmt = con.createStatement();
 		String action;
 		if (ek) {
-			action = "ENABLE KEYS";
+			action = " ENABLE KEYS";
 		} else {
-			action = "DISABLE KEYS";
+			action = " DISABLE KEYS";
 		}
 		Iterator<PredicateDeclaration> pit = predicates.values().iterator();
 		PredicateDeclaration pd;
