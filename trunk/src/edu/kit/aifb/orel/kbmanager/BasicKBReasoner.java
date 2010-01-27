@@ -37,8 +37,8 @@ public class BasicKBReasoner {
 		rules.put("prop-3", "subpropertychain(v1,u,w) :- subpropertyof(u,v2), subpropertychain(v1,v2,w)");
 		
 		rules.put("trans",  "sco(x,z)  :- sco(x,y,0), sco(y,z)");
-		rules.put("trans-repair1",  "sco(x,z)  :- sco(x,y,0), sco(y,z,?)");
-		rules.put("trans-repair2",  "sco(x,z)  :- sco(x,y,?), sco(y,z,?)");
+		rules.put("trans-repair1",  "sco(x,z)  :- sco(x,y,0), sco(y,z,?,?)");
+		rules.put("trans-repair2",  "sco(x,z)  :- sco(x,y,?,?), sco(y,z,?,?)");
 		rules.put("E",      "sco(x,z)  :- subconjunctionof(y1,y2,z), sco(x,y1), sco(x,y2)");
 		rules.put("E ref1", "sco(x,z)  :- subconjunctionof(x,y,z), sco(x,y)");
 		rules.put("E ref2", "sco(x,z)  :- subconjunctionof(y,x,z), sco(x,y)");
@@ -77,7 +77,7 @@ public class BasicKBReasoner {
 		sTime=System.currentTimeMillis();
 		System.out.println("Starting iterative materialisation ... ");
 		int affectedrows, auxarows;
-		int maxstep=0,curstep_scotra=0,curstep_sco=0,curstep_nonsco=0;
+		int maxstep=0,curstep_scotra=0,curstep_sco=0,curstep_nonsco=0, auxcurstep;
 		while ( (maxstep>=curstep_scotra) || (maxstep>=curstep_sco) || (maxstep>=curstep_nonsco) ) {
 			System.out.println("###");
 			if (maxstep>=curstep_scotra) {
@@ -87,6 +87,7 @@ public class BasicKBReasoner {
 				System.out.println(" Done.");
 			} else if (maxstep>=curstep_sco) {
 				System.out.println(" Applying remaining SCO rules to results " + curstep_sco + " to " + maxstep + " ...");
+				auxcurstep = maxstep+1; // remember where first bunch of results in this step was put
 				affectedrows = storage.runRule("F",curstep_sco,maxstep);
 				affectedrows = affectedrows + storage.runRule("G",curstep_sco,maxstep);
 				System.out.println(" Applying Rule E iteratively ... ");
@@ -97,12 +98,12 @@ public class BasicKBReasoner {
 					           storage.runRule("E ref2",curstep_sco,maxstep) +
 					           storage.runRule("E ref3",curstep_sco,maxstep);
 					affectedrows = affectedrows + auxarows;
-					curstep_sco = maxstep+1; // executed at least once, making sure that we do set this value even if no rules applied
+					curstep_sco = maxstep+1; // executed at least once, so we set this value even if no rules applied
 					if (auxarows > 0 ) maxstep = maxstep+1;
 				}
 				if (affectedrows > 0) { // new sconl statements; update result of transitivity materialisation
-					System.out.println(" Number of rows affected in above rules: " + affectedrows + ". Starting sco repair ... ");
-					maxstep = repairMaterializeSubclassOfTransitivity(maxstep+1); // always increases step counter
+					System.out.println(" Number of rows affected in above rules: " + affectedrows + ". Starting sco repair for steps " + auxcurstep + " to " + maxstep + " ... ");
+					maxstep = repairMaterializeSubclassOfTransitivity(auxcurstep,maxstep); // always increases step counter
 					curstep_scotra = maxstep; // scotra can continue here
 					System.out.println(" Done.");
 				}
@@ -211,55 +212,60 @@ public class BasicKBReasoner {
 	}
 
 	/**
-	 * Materialize additional consequences of Rule D (transitivity of subclassOf) that would have been 
+	 * Materialize additional consequences of transitivity of subclassOf that would have been 
 	 * obtained up to this step if all sco facts that have been inserted at the given step would have 
 	 * been available as base facts. The operation performs enough steps to ensure that all those
 	 * conclusions are obtained, so that the normal materialization can continue at the returned step
-	 * value. The operation does not continue until staturation of the sco table w.r.t. Rule D -- it
-	 * just restores the assumed completeness of facts that are found in sco up to step. 
+	 * value. The operation does not continue until staturation of the sco table w.r.t. transitivity
+	 * -- it just restores the assumed completeness of facts that are found in sco up to step. 
 	 * 
 	 * After this "repair" operation, all facts of level -1 so as to be taken into account for future
-	 * applications of Rule D.
+	 * applications the transitivity rule.
 	 * @param step
 	 * @return new step counter
 	 * @throws SQLException
 	 */
-	protected int repairMaterializeSubclassOfTransitivity(int step) throws Exception {
+	protected int repairMaterializeSubclassOfTransitivity(int min_cur_step, int max_cur_step) throws Exception {
 		long starttime = System.currentTimeMillis();
 		// repeat all sco transitivity iterations that happened so far, but only recompute results that
 		// rely on the newly added facts
-		System.out.print("    ");
-		int affectedrows, curstep=step;
-		int[] params1 = new int[1];
-		int[] params2 = new int[2];
+		//System.out.print("    ");
+		int affectedrows, min_cstep=min_cur_step, max_cstep=max_cur_step;
+		int[] params1 = new int[2];
+		int[] params2 = new int[4];
+		params2[0] = min_cur_step;
+		params2[1] = max_cur_step;
 		boolean prevaffected = true;
-		for (int i=1; i<step; i++) {
+		for (int i=1; i<min_cur_step; i++) {
 			// join new base facts with old level i facts:
-			params2[0] = step;
-			params2[1] = i;
-			affectedrows = storage.runRule("trans-repair2" , curstep+1, params2 );
+			params2[2] = i;
+			params2[3] = i;
+			affectedrows = storage.runRule("trans-repair2", max_cstep+1, params2 );
 			if (prevaffected) {
 				// joins with new level i facts only needed if new level i facts were added:
-				params2[0] = step;
-				params2[1] = curstep;
-				affectedrows = affectedrows + storage.runRule("trans-repair2" , curstep+1, params2 );
-				params1[0] = i;
-				affectedrows = affectedrows + storage.runRule("trans-repair1" , curstep+1, params1 );
+				params2[2] = min_cstep;
+				params2[3] = max_cstep;
+				affectedrows = affectedrows + storage.runRule("trans-repair2" , max_cstep+1, params2 );
+				params1[0] = min_cstep;
+				params1[1] = max_cstep;
+				affectedrows = affectedrows + storage.runRule("trans-repair1" , max_cstep+1, params1 );
 			}
 			prevaffected = (affectedrows > 0);
 			if (prevaffected) {
-				curstep++;
-				System.out.print("(" + i + ":" + affectedrows + ")");
+				max_cstep++;
+				min_cstep = max_cstep;
+				//System.out.print("(" + i + ":" + affectedrows + ")");
 			} else {
-				System.out.print(".");
+				//System.out.print(".");
 			}
 		}
 		System.out.println(" Done.");
 		// move the new facts down to the base level
-		storage.changeStep("sco",step,-1);
-		step = curstep;
+		for (int i=min_cur_step; i<=max_cur_step; i++) {
+			storage.changeStep("sco",i,-1);
+		}
 		timerepair = timerepair + System.currentTimeMillis() - starttime;
-		return step;
+		return max_cur_step;
 	}
 	
 }

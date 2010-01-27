@@ -183,8 +183,10 @@ public class MySQLStorageDriver implements StorageDriver {
 		Statement stmt = con.createStatement();
 		PredicateDeclaration pd = predicates.get(predicate);
 		if (pd == null) return; // unknown predicate
-		if ( (onlyderived == true) && (pd.isInferred()) )  {
-			stmt.execute("DELETE FROM " + pd.getName() + " WHERE step!=0");
+		if (onlyderived == true)  {
+			if ( pd.isInferred() ) {
+				stmt.execute("DELETE FROM " + pd.getName() + " WHERE step!=0");
+			}
 		} else {
 			stmt.execute("TRUNCATE TABLE " + pd.getName());
 		}
@@ -228,8 +230,6 @@ public class MySQLStorageDriver implements StorageDriver {
 		stmt.execute("DELETE FROM ids WHERE name=\"-\""); // delete any unused pre-allocated ids
 		con.commit();
 	}
-	
-	
 	
 	/**
 	 * Configure the store for loading large amounts of data more efficiently.
@@ -381,8 +381,8 @@ public class MySQLStorageDriver implements StorageDriver {
 	
 	public int changeStep(String predicate, int oldstep, int newstep) throws SQLException {
 		Statement stmt = con.createStatement();
-		stmt.executeUpdate("UPDATE " + predicate + " SET step=\"" + newstep + "\" WHERE step=\"" + oldstep + "\"");
-		return 0;
+		//System.out.println("Changestep: " + oldstep + " -> " + newstep + " on " + predicate); // debug
+		return stmt.executeUpdate("UPDATE " + predicate + " SET step=\"" + newstep + "\" WHERE step=\"" + oldstep + "\"");
 	}
 
 	/* *** Rule execution *** */
@@ -466,7 +466,7 @@ public class MySQLStorageDriver implements StorageDriver {
 		}
 		if (stmts.size() == 1) return runRule(rulename,max_cur_step+1); // no steps in body
 		int result = 0;
-		System.out.print("  Applying Rule " + rulename + " ... "); // debug
+		System.out.print("  Rule " + rulename + "(" + min_cur_step + "-" + max_cur_step + ") ... "); // debug
 		try {
 			int pos;
 			PreparedStatement stmt;
@@ -483,7 +483,7 @@ public class MySQLStorageDriver implements StorageDriver {
 		} catch (SQLException e) { // internal bug, just print the message
 			System.err.println(e.toString());
 		}
-		System.out.println(" got " + result + " rows."); // debug
+		System.out.println("[" + result + "]"); // debug
 		return result;
 	}
 
@@ -541,10 +541,18 @@ public class MySQLStorageDriver implements StorageDriver {
 					if (j<pd.getFieldCount()) {
 						constequalities.get(pt.getValue()).add( "=t" + (i) + ".f" + (j) );
 					} else { // use the extra field for fixed step
-						if (pt.getValue().equals("0")) { // special handling: match all steps below 0
-							constequalities.get(pt.getValue()).add( ">=t" + (i) + ".step" );
-						} else {
-							constequalities.get(pt.getValue()).add( "=t" + (i) + ".step" );
+						if (pa.getArguments().size() == pd.getFieldCount()+1) {
+							if (pt.getValue().equals("0")) { // special handling: match all steps below 0
+								constequalities.get(pt.getValue()).add( ">=t" + (i) + ".step" );
+							} else {
+								constequalities.get(pt.getValue()).add( "=t" + (i) + ".step" );
+							}
+						} else { // support up to two step parameters (outer bounds)  
+							if (j==pd.getFieldCount()) {
+								constequalities.get(pt.getValue()).add( "<=t" + (i) + ".step" );
+							} else if (j==pd.getFieldCount()+1) {
+								constequalities.get(pt.getValue()).add( ">=t" + (i) + ".step" );
+							}
 						}
 					}
 				}
