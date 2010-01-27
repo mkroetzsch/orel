@@ -36,9 +36,12 @@ public class BasicKBReasoner {
 		rules.put("prop-2", "subpropertychain(u,v2,w) :- subpropertyof(u,v1), subpropertychain(v1,v2,w)");
 		rules.put("prop-3", "subpropertychain(v1,u,w) :- subpropertyof(u,v2), subpropertychain(v1,v2,w)");
 		
-		rules.put("trans",  "sco(x,z)  :- sco(x,y,0), sco(y,z)");
 		rules.put("trans-repair1",  "sco(x,z)  :- sco(x,y,0), sco(y,z,?,?)");
 		rules.put("trans-repair2",  "sco(x,z)  :- sco(x,y,?,?), sco(y,z,?,?)");
+		
+		rules.put("del-ref",  "-sco(x,x) :- sco(x,x)");
+		
+		rules.put("trans",  "sco(x,z)  :- sco(x,y,0), sco(y,z)");
 		rules.put("E",      "sco(x,z)  :- subconjunctionof(y1,y2,z), sco(x,y1), sco(x,y2)");
 		rules.put("E ref1", "sco(x,z)  :- subconjunctionof(x,y,z), sco(x,y)");
 		rules.put("E ref2", "sco(x,z)  :- subconjunctionof(y,x,z), sco(x,y)");
@@ -46,7 +49,7 @@ public class BasicKBReasoner {
 		rules.put("F",      "sco(x,y)  :- sv(x,v,z), subsomevalues(v,z,y)");
 		rules.put("G",      "sco(x,y)  :- sv(x,v,z), subpropertyof(v,u), subsomevalues(u,z,y)");
 		rules.put("Hn",     "sv(x,w,z) :- sv(x,v1,y), sv(y,v2,z), subpropertychain(v1,v2,w)");
-		rules.put("I",      "sv(x,v,z) :- sco(x,y), sv(y,v,z)");
+		//rules.put("I",      "sv(x,v,z) :- sco(x,y), sv(y,v,z)");
 		rules.put("Jn",     "sv(x,v,z) :- sv(x,v,y), sco(y,z)");
 		
 		rules.put("Nom 1n", "sco(y,x) :- sco(x,y), nonempty(x), nominal(y)");
@@ -90,7 +93,9 @@ public class BasicKBReasoner {
 				auxcurstep = maxstep+1; // remember where first bunch of results in this step was put
 				affectedrows = storage.runRule("F",curstep_sco,maxstep);
 				affectedrows = affectedrows + storage.runRule("G",curstep_sco,maxstep);
+				// note that rules F and G cannot be affected by sco derivations, hence they are not iterated here 
 				System.out.println(" Applying Rule E iteratively ... ");
+				if (affectedrows > 0) maxstep++; // don't forget new scos rule E; they will no longer be new when we come here next time!
 				auxarows = 1;
 				while (auxarows > 0) {
 					auxarows = storage.runRule("E",curstep_sco,maxstep) +
@@ -99,18 +104,22 @@ public class BasicKBReasoner {
 					           storage.runRule("E ref3",curstep_sco,maxstep);
 					affectedrows = affectedrows + auxarows;
 					curstep_sco = maxstep+1; // executed at least once, so we set this value even if no rules applied
-					if (auxarows > 0 ) maxstep = maxstep+1;
+					if (auxarows > 0 ) maxstep++;
 				}
 				if (affectedrows > 0) { // new sconl statements; update result of transitivity materialisation
-					System.out.println(" Number of rows affected in above rules: " + affectedrows + ". Starting sco repair for steps " + auxcurstep + " to " + maxstep + " ... ");
-					maxstep = repairMaterializeSubclassOfTransitivity(auxcurstep,maxstep); // always increases step counter
+					System.out.println(" Number of rows affected in above rules: " + affectedrows + ". Starting sco repair for steps " + auxcurstep + " to " + curstep_sco + " ... ");
+					// Before moving the new facts downwards to become base facts, make sure that the remaining rules have seen them:
+					affectedrows = storage.runRule("Hn",curstep_nonsco,curstep_sco);
+					affectedrows = affectedrows + storage.runRule("Jn",curstep_nonsco,curstep_sco);
+					curstep_nonsco = curstep_sco+1;
+					// now do the actual repair (and increase of maxstep)
+					maxstep = repairMaterializeSubclassOfTransitivity(auxcurstep,curstep_sco); // always increases step counter
 					curstep_scotra = maxstep; // scotra can continue here
 					System.out.println(" Done.");
 				}
 			} else { // this implies (maxstep>=curstep_nonsco)
 				System.out.println(" Applying remaining non-SCO rules to results " + curstep_nonsco + " to " + maxstep + " ...");
 				affectedrows = storage.runRule("Hn",curstep_nonsco,maxstep);
-				affectedrows = affectedrows + storage.runRule("I",curstep_nonsco,maxstep);
 				affectedrows = affectedrows + storage.runRule("Jn",curstep_nonsco,maxstep);
 				curstep_nonsco = maxstep+1;
 				if (affectedrows > 0) { // some other new statements, just increase step counter directly
@@ -205,7 +214,6 @@ public class BasicKBReasoner {
 		while (affectedrows != 0 ) {
 			affectedrows = storage.runRule("trans",curstep,curstep);
 			curstep++;
-			System.out.println("    Updated " + affectedrows + " rows.");
 		}
 		timetrans = timetrans + System.currentTimeMillis() - starttime;
 		return curstep-1;
@@ -236,9 +244,9 @@ public class BasicKBReasoner {
 		params2[0] = min_cur_step;
 		params2[1] = max_cur_step;
 		boolean prevaffected = true;
-		for (int i=1; i<min_cur_step; i++) {
+		for (int i=0; i<min_cur_step; i++) {
 			// join new base facts with old level i facts:
-			params2[2] = i;
+			if (i == 0)	params2[2] = -1; else params2[2] = i; // include -1 for base case 
 			params2[3] = i;
 			affectedrows = storage.runRule("trans-repair2", max_cstep+1, params2 );
 			if (prevaffected) {
@@ -259,13 +267,13 @@ public class BasicKBReasoner {
 				//System.out.print(".");
 			}
 		}
-		System.out.println(" Done.");
+		//System.out.println(" Done.");
 		// move the new facts down to the base level
 		for (int i=min_cur_step; i<=max_cur_step; i++) {
 			storage.changeStep("sco",i,-1);
 		}
 		timerepair = timerepair + System.currentTimeMillis() - starttime;
-		return max_cur_step;
+		return max_cstep+1;
 	}
 	
 }
