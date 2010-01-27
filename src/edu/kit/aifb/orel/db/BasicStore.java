@@ -6,11 +6,18 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
 import org.semanticweb.owlapi.model.*;
+
+import edu.kit.aifb.orel.inferencing.InferenceRuleDeclaration;
+import edu.kit.aifb.orel.inferencing.PredicateAtom;
+import edu.kit.aifb.orel.inferencing.PredicateDeclaration;
+import edu.kit.aifb.orel.inferencing.PredicateTerm;
 
 /**
  * Basic class to manage initialization, writing, and query answering from a
@@ -61,87 +68,14 @@ public class BasicStore {
 	 * Ensure that the DB has the right tables, creating them if necessary.
 	 */
 	public void initialize() throws SQLException {
-		Statement stmt = con.createStatement();
-		//String engine = "ENGINE = InnoDB"; // tends to be slow
-		String engine = "ENGINE = MyISAM";
-		//String engine = "ENGINE = Memory";
-		String idfieldtype = "INT NOT NULL";
-		stmt.execute("CREATE TABLE IF NOT EXISTS ids " +
-				"( id " + idfieldtype + " AUTO_INCREMENT" +
-                ", name VARCHAR(50), PRIMARY KEY (id), INDEX(name)) " + engine);
-		stmt.execute("CREATE TABLE IF NOT EXISTS sco " +
-				"( s_id " + idfieldtype + 
-				", o_id " + idfieldtype +
-				", step INT" + 
-				", INDEX(step), INDEX(s_id), INDEX(o_id), PRIMARY KEY (s_id,o_id)) " + engine);
-		stmt.execute("CREATE TABLE IF NOT EXISTS sco_nl " +
-				"( s_id " + idfieldtype + 
-				", o_id " + idfieldtype +
-				", step INT" + 
-				", INDEX(step), INDEX(s_id), INDEX(o_id), PRIMARY KEY (s_id,o_id)) " + engine);
-		stmt.execute("CREATE TABLE IF NOT EXISTS sv " +
-				"( s_id " + idfieldtype + 
-                ", p_id " + idfieldtype +
-                ", o_id " + idfieldtype +
-                ", step INT" +
-                ", INDEX(step), INDEX(s_id), INDEX(p_id), INDEX(o_id), PRIMARY KEY (s_id,p_id,o_id) ) " + engine);
-		stmt.execute("CREATE TABLE IF NOT EXISTS sv_nl " +
-				"( s_id " + idfieldtype + 
-                ", p_id " + idfieldtype +
-                ", o_id " + idfieldtype +
-                ", step INT" +
-                ", INDEX(step), INDEX(s_id), INDEX(p_id), INDEX(o_id), PRIMARY KEY (s_id,p_id,o_id) ) " + engine);
-		stmt.execute("CREATE TABLE IF NOT EXISTS subconjunctionof " +
-				"( s1_id " + idfieldtype + 
-                ", s2_id " + idfieldtype +
-                ", o_id " + idfieldtype + 
-                ",  INDEX(s1_id), INDEX(s2_id), INDEX(o_id), PRIMARY KEY (s1_id,s2_id,o_id) ) " + engine);
-		stmt.execute("CREATE TABLE IF NOT EXISTS subconint " +
-				"( s1_id " + idfieldtype + 
-                ", s2_id " + idfieldtype +
-                ", o_id " + idfieldtype +
-                ", step INT" +
-                ", INDEX(step), INDEX(s1_id), INDEX(s2_id), INDEX(o_id), PRIMARY KEY (s1_id,s2_id,o_id) ) " + engine);
-		stmt.execute("CREATE TABLE IF NOT EXISTS subpropertychain " +
-				"( s1_id " + idfieldtype + 
-                ", s2_id " + idfieldtype +
-                ", o_id " + idfieldtype + 
-                ", step INT" +
-                ", INDEX(s1_id), INDEX(s2_id), INDEX(o_id), PRIMARY KEY (s1_id,s2_id,o_id) ) " + engine);
-		stmt.execute("CREATE TABLE IF NOT EXISTS subsomevalues " +
-				"( p_id " + idfieldtype + 
-                ", s_id " + idfieldtype +
-                ", o_id " + idfieldtype + 
-                ", INDEX(s_id), INDEX(p_id), INDEX(o_id), PRIMARY KEY (p_id,s_id,o_id) ) " + engine);
-		stmt.execute("CREATE TABLE IF NOT EXISTS subpropertyof " +
-				"( s_id " + idfieldtype + 
-                ", o_id " + idfieldtype + 
-                ", step INT" +
-                ", INDEX(s_id), INDEX(o_id), PRIMARY KEY (s_id,o_id) ) " + engine);
-		stmt.execute("CREATE TABLE IF NOT EXISTS nominal " +
-				"( id " + idfieldtype + ", PRIMARY KEY (id)) " + engine);
-		stmt.execute("CREATE TABLE IF NOT EXISTS nonempty " +
-				"( id " + idfieldtype + 
-				", step INT, PRIMARY KEY (id)) " + engine);
+		getStoreBridge().initialize();
 	}
 
 	/**
 	 * Delete all of our database tables and their contents.
 	 */
 	public void drop() throws SQLException {
-		Statement stmt = con.createStatement();
-		stmt.execute("DROP TABLE IF EXISTS ids");
-		stmt.execute("DROP TABLE IF EXISTS sco");
-		stmt.execute("DROP TABLE IF EXISTS sco_nl");
-		stmt.execute("DROP TABLE IF EXISTS sv");
-		stmt.execute("DROP TABLE IF EXISTS sv_nl");
-		stmt.execute("DROP TABLE IF EXISTS subconjunctionof");
-		stmt.execute("DROP TABLE IF EXISTS subconint");
-		stmt.execute("DROP TABLE IF EXISTS subpropertychain");
-		stmt.execute("DROP TABLE IF EXISTS subsomevalues");
-		stmt.execute("DROP TABLE IF EXISTS subpropertyof");
-		stmt.execute("DROP TABLE IF EXISTS nonempty");
-		stmt.execute("DROP TABLE IF EXISTS nominal");
+		getStoreBridge().drop();
 	}
 	
 	/**
@@ -149,29 +83,7 @@ public class BasicStore {
 	 * @throws SQLException
 	 */
 	public void clearDatabase(boolean onlyderived) throws SQLException {
-		Statement stmt = con.createStatement();
-		if (onlyderived == true) {
-			stmt.execute("DELETE FROM sco WHERE step!=0");
-			stmt.execute("DELETE FROM sco_nl WHERE step!=0");
-			stmt.execute("DELETE FROM sv WHERE step!=0");
-			stmt.execute("DELETE FROM sv_nl WHERE step!=0");
-			stmt.execute("DELETE FROM subpropertychain WHERE step!=0");
-			stmt.execute("DELETE FROM subpropertyof WHERE step!=0");
-			stmt.execute("DELETE FROM nonempty WHERE step!=0");
-		} else {
-			stmt.execute("TRUNCATE TABLE ids");
-			stmt.execute("TRUNCATE TABLE sco");
-			stmt.execute("TRUNCATE TABLE sco_nl");
-			stmt.execute("TRUNCATE TABLE sv");
-			stmt.execute("TRUNCATE TABLE sv_nl");
-			stmt.execute("TRUNCATE TABLE subconjunctionof");
-			stmt.execute("TRUNCATE TABLE subpropertychain");
-			stmt.execute("TRUNCATE TABLE subsomevalues");
-			stmt.execute("TRUNCATE TABLE subpropertyof");
-			stmt.execute("TRUNCATE TABLE nonempty");
-			stmt.execute("TRUNCATE TABLE nominal");
-		}
-		
+		getStoreBridge().clear(onlyderived);
 	}
 	
 	/**
@@ -195,16 +107,8 @@ public class BasicStore {
 		//con.setTransactionIsolation(Connection.TRANSACTION_REPEATABLE_READ);
 		con.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
 		enableKeys(false);
-		// find largest used id to start iteration:
-		Statement stmt = con.createStatement();
-		ResultSet res = stmt.executeQuery("SELECT max(id) FROM ids");
-		int startid;
-		if (res.next()) {
-			startid = res.getInt(1) + 1;
-		} else {
-			startid = 1;
-		}
-		bridge = new BasicStoreDBBridge(con,startid);
+		getStoreBridge(); // initialize bridge
+
 		// iterate over ontology to load all axioms:
 		Set<OWLLogicalAxiom> axiomset = ontology.getLogicalAxioms();
 		Iterator<OWLLogicalAxiom> axiomiterator = axiomset.iterator();
@@ -220,6 +124,11 @@ public class BasicStore {
 				loadSubpropertyOf(((OWLSubPropertyAxiom<OWLObjectProperty>) axiom).getSubProperty(), ((OWLSubPropertyAxiom<OWLObjectProperty>) axiom).getSuperProperty(),donotassert);
 			} else if (axiom.getAxiomType() == AxiomType.SUB_PROPERTY_CHAIN_OF) {
 				loadSubpropertyChainOf(((OWLSubPropertyChainOfAxiom) axiom).getPropertyChain(), ((OWLSubPropertyChainOfAxiom) axiom).getSuperProperty(),donotassert);
+			} else if (axiom.getAxiomType() == AxiomType.CLASS_ASSERTION) {
+				loadClassAssertion( ((OWLClassAssertionAxiom) axiom).getIndividual(), ((OWLClassAssertionAxiom) axiom).getClassExpression(), donotassert); 
+			} else if (axiom.getAxiomType() == AxiomType.OBJECT_PROPERTY_ASSERTION) {
+				OWLPropertyAssertionAxiom<OWLObjectProperty,OWLIndividual> pa = ((OWLPropertyAssertionAxiom<OWLObjectProperty,OWLIndividual>) axiom);
+				loadPropertyAssertion( pa.getSubject(), pa.getProperty(), pa.getObject(), donotassert); 
 			} else {
 				System.err.println("The following axiom is not supported: " + axiom + "\n");
 			}
@@ -228,10 +137,9 @@ public class BasicStore {
 		}
 		System.out.println(" loaded " + count + " axioms.");
 		// close, commit, and recompute indexes
-		bridge.close();
+		closeStoreBridge();
 		con.setAutoCommit(true);
 		enableKeys(true);
-		bridge = null;
 	}
 
 	/**
@@ -243,17 +151,8 @@ public class BasicStore {
 	public boolean checkEntailment(OWLOntology ontology) throws SQLException {
 		loadOntology(ontology,true);
 		materialize();
-		// find largest used id to start iteration:
 		// (bridge was closed earlier; maybe do this more efficiently)
-		Statement stmt = con.createStatement();
-		ResultSet res = stmt.executeQuery("SELECT max(id) FROM ids");
-		int startid;
-		if (res.next()) {
-			startid = res.getInt(1) + 1;
-		} else {
-			startid = 1;
-		}
-		bridge = new BasicStoreDBBridge(con,startid);
+		getStoreBridge();
 		// now check entailment of all axioms
 		Set<OWLLogicalAxiom> axiomset = ontology.getLogicalAxioms();
 		Iterator<OWLLogicalAxiom> axiomiterator = axiomset.iterator();
@@ -288,6 +187,8 @@ public class BasicStore {
 					//return false;
 					// TODO
 				}
+			} else if (axiom.getAxiomType() == AxiomType.CLASS_ASSERTION) {
+				//return false;
 			} else {
 				System.err.println("The following axiom is not supported: " + axiom + "\n");
 			}
@@ -296,10 +197,12 @@ public class BasicStore {
 	}
 
 	/**
-	 * Compute all materialized statements on the database.  
+	 * Compute all materialized statements on the database.
 	 */
 	public void materialize() throws SQLException {
 		long sTime;
+		registerInferenceRules();
+		
 		sTime=System.currentTimeMillis();
 		System.out.println("Separating leafs ... ");
 		separateLeafs();
@@ -309,7 +212,7 @@ public class BasicStore {
 		System.out.println("Materialising property hierarchy ... ");
 		materializePropertyHierarchy();
 		System.out.println("Done in " + (System.currentTimeMillis() - sTime) + "ms.");
-		
+	
 		sTime=System.currentTimeMillis();
 		System.out.println("Starting iterative materialisation ... ");
 		int affectedrows, auxarows;
@@ -323,16 +226,15 @@ public class BasicStore {
 				System.out.println("  Done.");
 			} else if (maxstep>=curstep_sco) {
 				System.out.println("  Applying remaining SCO rules to results " + curstep_sco + " to " + maxstep + " ...");
-				System.out.print("  Applying Rule F ... ");
-				affectedrows = runRuleFsconl(curstep_sco,maxstep);
-				System.out.println("(" + affectedrows + ")");
-				System.out.print("  Applying Rule G ... ");
-				affectedrows = affectedrows + runRuleGsconl(curstep_sco,maxstep);
-				System.out.println("(" + affectedrows + ")");
-				System.out.print("  Applying Rule E iteratively ... ");
+				affectedrows = bridge.runRule("F",curstep_sco,maxstep);
+				affectedrows = affectedrows + bridge.runRule("G",curstep_sco,maxstep);
+				System.out.println("  Applying Rule E iteratively ... ");
 				auxarows = 1;
 				while (auxarows > 0) {
-					auxarows = runRuleEsconl(curstep_sco,maxstep);
+					auxarows = bridge.runRule("E",curstep_sco,maxstep) +
+					           bridge.runRule("E ref1",curstep_sco,maxstep) +
+					           bridge.runRule("E ref2",curstep_sco,maxstep) +
+					           bridge.runRule("E ref3",curstep_sco,maxstep);
 					affectedrows = affectedrows + auxarows;
 					curstep_sco = maxstep+1; // executed at least once, making sure that we do set this value even if no rules applied
 					if (auxarows > 0 ) maxstep = maxstep+1;
@@ -346,42 +248,22 @@ public class BasicStore {
 				}
 			} else { // this implies (maxstep>=curstep_nonsco)
 				System.out.println("  Applying remaining non-SCO rules to results " + curstep_nonsco + " to " + maxstep + " ...");
-				System.out.print("  Applying Rule H ... ");
-				affectedrows = runRuleHsvnl(curstep_nonsco,maxstep);
-				System.out.println("(" + affectedrows + ")");
-				System.out.print("  Applying Rule I ... ");
-				affectedrows = affectedrows + runRuleIsvnl(curstep_nonsco,maxstep);
-				System.out.println("(" + affectedrows + ")");
-				System.out.print("  Applying Rule J ... ");
-				affectedrows = affectedrows + runRuleJsvnl(curstep_nonsco,maxstep);
-				System.out.println("(" + affectedrows + ")");
-				System.out.print("  Applying Rule K ... ");
-				affectedrows = affectedrows + runRuleKsconint(curstep_nonsco,maxstep);
-				System.out.println("(" + affectedrows + ")");
-				System.out.print("  Applying Rule L ... ");
-				affectedrows = affectedrows + runRuleLsconint(curstep_nonsco,maxstep);
-				System.out.println("(" + affectedrows + ")");
-				System.out.print("  Applying Rule M ... ");
-				affectedrows = affectedrows + runRuleMscol(curstep_nonsco,maxstep);
-				System.out.println("(" + affectedrows + ")");
-				System.out.print("  Applying Rule N ... ");
-				affectedrows = affectedrows + runRuleNscol(curstep_nonsco,maxstep);
-				System.out.println("(" + affectedrows + ")");
-				System.out.print("  Applying Rule O ... ");
-				affectedrows = affectedrows + runRuleOscol(curstep_sco,maxstep);
-				System.out.println("(" + affectedrows + ")");
-				System.out.print("  Applying Rule P ... ");
-				affectedrows = affectedrows + runRulePscol(curstep_sco,maxstep);
-				System.out.println("(" + affectedrows + ")");
-				System.out.print("  Applying Rule Q ... ");
-				affectedrows = affectedrows + runRuleQsvl(curstep_sco,maxstep);
-				System.out.println("(" + affectedrows + ")");
-				System.out.print("  Applying Rule R ... ");
-				affectedrows = affectedrows + runRuleRsvl(curstep_sco,maxstep);
-				System.out.println("(" + affectedrows + ")");
-				System.out.print("  Applying Rule S ... ");
-				affectedrows = affectedrows + runRuleSsvl(curstep_sco,maxstep);
-				System.out.println("(" + affectedrows + ")");
+				affectedrows = bridge.runRule("Hn",curstep_nonsco,maxstep);
+				affectedrows = affectedrows + bridge.runRule("Hl",curstep_nonsco,maxstep);
+				affectedrows = affectedrows + bridge.runRule("I",curstep_nonsco,maxstep);
+				affectedrows = affectedrows + bridge.runRule("Jn",curstep_nonsco,maxstep);
+				affectedrows = affectedrows + bridge.runRule("Jl",curstep_nonsco,maxstep);
+				affectedrows = affectedrows + bridge.runRule("K",curstep_nonsco,maxstep);
+				affectedrows = affectedrows + bridge.runRule("L",curstep_nonsco,maxstep);
+				affectedrows = affectedrows + bridge.runRule("M",curstep_nonsco,maxstep);
+				affectedrows = affectedrows + bridge.runRule("N",curstep_nonsco,maxstep);
+				affectedrows = affectedrows + bridge.runRule("O",curstep_nonsco,maxstep);
+				affectedrows = affectedrows + bridge.runRule("P",curstep_nonsco,maxstep);
+				affectedrows = affectedrows + bridge.runRule("Qn",curstep_nonsco,maxstep);
+				affectedrows = affectedrows + bridge.runRule("Ql",curstep_nonsco,maxstep);
+				affectedrows = affectedrows + bridge.runRule("P",curstep_nonsco,maxstep);
+				affectedrows = affectedrows + bridge.runRule("Sn",curstep_nonsco,maxstep);
+				affectedrows = affectedrows + bridge.runRule("Sl",curstep_nonsco,maxstep);
 				curstep_nonsco = maxstep+1;
 				if (affectedrows > 0) { // some other new statements, just increase step counter directly
 					System.out.println("  Number of rows affected in above rules: " + affectedrows + ". Continue iteration.");
@@ -393,7 +275,7 @@ public class BasicStore {
 		}
 		System.out.println("Done in " + (System.currentTimeMillis() - sTime) + "ms.");
 		System.out.println("Times used:");
-		System.out.println("Rule D: " + timeRuleD);
+		/*System.out.println("Rule D: " + timeRuleD);
 		System.out.println("Rule E: " + timeRuleE);
 		System.out.println("Rule F: " + timeRuleF);
 		System.out.println("Rule G: " + timeRuleG);
@@ -408,7 +290,7 @@ public class BasicStore {
 		System.out.println("Rule P: " + timeRuleP);
 		System.out.println("Rule Q: " + timeRuleQ);
 		System.out.println("Rule R: " + timeRuleR);
-		System.out.println("Rule S: " + timeRuleS);
+		System.out.println("Rule S: " + timeRuleS);*/
 		System.out.println("Sco transitivity materialisation total: " + timetrans);
 		System.out.println("Sco repair total: " + timerepair);
 	}
@@ -470,6 +352,34 @@ public class BasicStore {
 			// TODO recursion (even if donotassert==true we need to assert the subchains here)
 		}
 	}
+
+	protected void loadClassAssertion(OWLIndividual i, OWLClassExpression c, boolean donotassert) throws SQLException {
+		//System.err.println("Calling subclass of.");
+		int id1 = bridge.getID(i);
+		int id2 = bridge.getID(c);
+		if (donotassert == false) {
+			bridge.insertIdsToTable("sco",id1,id2);
+		}
+		createBodyFacts(id1,i);
+		createHeadFacts(id2,c);
+	}
+
+	protected void loadPropertyAssertion(OWLIndividual s, OWLObjectProperty p, OWLIndividual o, boolean donotassert) throws SQLException {
+		//System.err.println("Calling subclass of.");
+		int sid = bridge.getID(s);
+		int pid = bridge.getID(p);
+		int oid = bridge.getID(o);
+		if (donotassert == false) {
+			bridge.insertIdsToTable("sv",sid,pid,oid);
+		}
+		createBodyFacts(sid,s);
+		createHeadFacts(oid,o);
+	}
+	
+	protected void createBodyFacts(int id, OWLIndividual i) throws SQLException {
+		bridge.insertIdsToTable("nominal",id);
+		bridge.insertIdsToTable("nonempty",id);
+	}
 	
 	protected void createBodyFacts(int id, OWLClassExpression d) throws SQLException {
 		if (d instanceof OWLClass) {
@@ -482,7 +392,9 @@ public class BasicStore {
 			int sid = bridge.getID(filler);
 			bridge.insertIdsToTable("subsomevalues",pid,sid,id);
 			createBodyFacts(sid,filler);
-		} // TODO: add more description types
+		} else {// TODO: add more description types
+			System.err.println("Unsupported body class expression: " + d.toString());
+		}
 	}
 	
 	protected void createConjunctionBodyFacts(int id, Object[] ops) throws SQLException {
@@ -508,6 +420,11 @@ public class BasicStore {
 		}
 	}
 
+	protected void createHeadFacts(int id, OWLIndividual i) throws SQLException {
+		bridge.insertIdsToTable("nominal",id);
+		bridge.insertIdsToTable("nonempty",id);
+	}
+
 	protected void createHeadFacts(int sid, OWLClassExpression d) throws SQLException {
 		if (d instanceof OWLClass) {
 			// nothing to do here
@@ -527,6 +444,8 @@ public class BasicStore {
 			int oid = bridge.getID(filler);
 			bridge.insertIdsToTable("sv",sid,pid,oid);
 			createHeadFacts(oid,filler);
+		} else {// TODO: add more description types
+			System.err.println("Unsupported head class expression: " + d.toString());
 		}
 	}
 	
@@ -617,37 +536,16 @@ public class BasicStore {
 	}
 	
 	protected void materializePropertyHierarchy() throws SQLException {
-		// Rule A: subPropertyOf(x,z) :- subPropertyOf(x,y), subPropertyOf(x,z)
-		// tail recursive, usage: (i,i-1)		
-		PreparedStatement rule_A = con.prepareStatement(
-				"INSERT IGNORE INTO subpropertyof (s_id, o_id, step) " +
-				"SELECT DISTINCT t1.s_id AS s_id, t2.o_id AS o_id, ? AS step " +
-				"FROM subpropertyof AS t1 INNER JOIN subpropertyof AS t2 ON t1.o_id=t2.s_id AND t1.step=0 AND t2.step=?");
-		
 		int i = 1;
 		int affectedrows = 1;
 		while (affectedrows != 0 ) {
-			rule_A.setInt(1, i);
-			rule_A.setInt(2, i-1);
-			affectedrows = rule_A.executeUpdate();
+			affectedrows = bridge.runRule("prop-1", i-1, i-1);
 			i++;
 		}
-
-		Statement stmt = con.createStatement();
-		// Rule B: subPropertyChainOf(u,v2,w) :- subPropertyChainOf(v1,v2,w), subPropertyOf(u,v1)
-		stmt.executeUpdate(
-			"INSERT IGNORE INTO subpropertychain (s1_id, s2_id, o_id, step) " +
-			"SELECT DISTINCT t2.s_id AS s1_id, t1.s2_id AS s2_id, t1.o_id AS o_id, \"1\" AS step " +
-			"FROM subpropertychain AS t1 INNER JOIN subpropertyof AS t2 ON t2.o_id=t1.s1_id"
-		);
-		// Rule C: subPropertyChainOf(v1,u,w) :- subPropertyChainOf(v1,v2,w), subPropertyOf(u,v2)
-		stmt.executeUpdate(
-			"INSERT IGNORE INTO subpropertychain (s1_id, s2_id, o_id, step) " +
-			"SELECT DISTINCT t1.s1_id AS s1_id, t2.s_id AS s2_id, t1.o_id AS o_id, \"1\" AS step " +
-			"FROM subpropertychain AS t1 INNER JOIN subpropertyof AS t2 ON t2.o_id=t1.s2_id"
-		);
+		bridge.runRule("prop-2", i);
+		bridge.runRule("prop-3", i);
 	}
-	
+
 	/**
 	 * Materialize all consequences of Rule D (transitivity of subclassOf) starting 
 	 * from the given step counter (inserting new results after this counter). The
@@ -662,7 +560,7 @@ public class BasicStore {
 		long starttime = System.currentTimeMillis();
 		int affectedrows = 1;
 		while (affectedrows != 0 ) {
-			affectedrows = runRuleDsconl(curstep);
+			affectedrows = bridge.runRule("trans",curstep,curstep);
 			curstep++;
 			System.out.println("    Updated " + affectedrows + " rows.");
 		}
@@ -686,42 +584,26 @@ public class BasicStore {
 	 */
 	protected int repairMaterializeSubclassOfTransitivity(int step) throws SQLException {
 		long starttime = System.currentTimeMillis();
-		// Rule D (joining with base old facts), tail recursive, reflexivity avoiding, usage (i,i-initialstep-1) 
-		final PreparedStatement rule_D = con.prepareStatement(
-				"INSERT IGNORE INTO sco_nl (s_id, o_id, step) " +
-				"SELECT DISTINCT t1.s_id AS s_id, t2.o_id AS o_id, ? AS step " +
-				"FROM sco_nl AS t1 INNER JOIN sco_nl AS t2 ON t1.o_id=t2.s_id AND t1.step<=0 AND t2.step=? WHERE t1.s_id!=t2.o_id"
-		);
-		// Rule D repair (joining with new base facts), tail recursive (using new base facts instead of old ones), reflexivity avoiding, usage (i,i-initialstep-1) or (i,i-1)
-		final PreparedStatement rule_D_repair = con.prepareStatement(
-				"INSERT IGNORE INTO sco_nl (s_id, o_id, step) " +
-				"SELECT DISTINCT t1.s_id AS s_id, t2.o_id AS o_id, ? AS step " +
-				"FROM sco_nl AS t1 INNER JOIN sco_nl AS t2 ON t1.o_id=t2.s_id AND t1.step=\"" + step + 
-					"\" AND t2.step=? WHERE t1.s_id!=t2.o_id"
-		);
-		
-		final PreparedStatement addNewSCOFacts = con.prepareStatement(
-				"UPDATE sco_nl SET step=\"-1\" WHERE step=?"
-		);
-		
 		// repeat all sco_nl Rule D iterations that happened so far, but only recompute results that
 		// rely on the newly added facts
 		System.out.print("    ");
 		int affectedrows, curstep=step;
+		int[] params1 = new int[1];
+		int[] params2 = new int[2];
 		boolean prevaffected = true;
 		for (int i=1; i<step; i++) {
 			// join new base facts with old level i facts:
-			rule_D_repair.setInt(1, curstep+1);
-			rule_D_repair.setInt(2, i);
-			affectedrows = rule_D_repair.executeUpdate();
+			params2[0] = step;
+			params2[1] = i;
+			affectedrows = bridge.runRule("trans_repair2" , curstep+1, params2 );
+			///rule_D_repair.executeUpdate();
 			if (prevaffected) {
 				// joins with new level i facts only needed if new level i facts were added:
-				rule_D_repair.setInt(1, curstep+1);
-				rule_D_repair.setInt(2, curstep);				
-				affectedrows = affectedrows + rule_D_repair.executeUpdate();
-				rule_D.setInt(1, curstep+1);
-				rule_D.setInt(2, i);
-				affectedrows = affectedrows + rule_D.executeUpdate();
+				params2[0] = step;
+				params2[1] = curstep;
+				affectedrows = affectedrows + bridge.runRule("trans_repair2" , curstep+1, params2 );
+				params1[0] = i;
+				affectedrows = affectedrows + bridge.runRule("trans_repair1" , curstep+1, params1 );
 			}
 			prevaffected = (affectedrows > 0);
 			if (prevaffected) {
@@ -733,6 +615,9 @@ public class BasicStore {
 		}
 		System.out.println(" Done.");
 		// move the new facts down to the base level
+		final PreparedStatement addNewSCOFacts = con.prepareStatement(
+				"UPDATE sco_nl SET step=\"-1\" WHERE step=?"
+		);
 		addNewSCOFacts.setInt(1, step);
 		addNewSCOFacts.executeUpdate();
 		step = curstep;
@@ -740,815 +625,83 @@ public class BasicStore {
 		return step;
 	}
 
-	/**
-	 * Run Rule D:
-	 * subClassOfNL(x,z) :- subClassOfNL(x,y), subClassOfNL(y,z)
-	 * @param step
-	 * @return number of computed results (affected rows)
-	 * @throws SQLException
-	 */
-	protected int runRuleDsconl(int curstep) throws SQLException {
-		long starttime = System.currentTimeMillis();
-		// Rule D, reflexivity avoiding, tail recursive, usage (step,curstep)
-		final PreparedStatement rule_D = con.prepareStatement(
-				"INSERT IGNORE INTO sco_nl (s_id, o_id, step) " +
-				"SELECT DISTINCT t1.s_id AS s_id, t2.o_id AS o_id, ? AS step " +
-				"FROM sco_nl AS t1 INNER JOIN sco_nl AS t2 ON t1.o_id=t2.s_id AND t1.step<=0 AND t2.step=? WHERE t1.s_id!=t2.o_id"
-		);
-		rule_D.setInt(1, curstep+1);
-		rule_D.setInt(2, curstep);
-		int result = rule_D.executeUpdate();
-		timeRuleD = timeRuleD + System.currentTimeMillis() - starttime;
-		return result;
+
+	protected BasicStoreDBBridge getStoreBridge() {
+		if (bridge == null) {
+			bridge = new BasicStoreDBBridge(con);
+			bridge.registerPredicate( new PredicateDeclaration("sco",2,true,false) );
+			bridge.registerPredicate( new PredicateDeclaration("sco_nl",2,true,false) );
+			bridge.registerPredicate( new PredicateDeclaration("sv",3,true,false) );
+			bridge.registerPredicate( new PredicateDeclaration("sv_nl",3,true,false) );
+			bridge.registerPredicate( new PredicateDeclaration("subconjunctionof",3,false,false) );
+			bridge.registerPredicate( new PredicateDeclaration("subconint",3,true,false) );
+			bridge.registerPredicate( new PredicateDeclaration("subsomevalues",3,false,false) );
+			bridge.registerPredicate( new PredicateDeclaration("subpropertychain",3,true,false) );
+			bridge.registerPredicate( new PredicateDeclaration("subpropertyof",2,true,false) );
+			bridge.registerPredicate( new PredicateDeclaration("nominal",1,false,false) );
+			bridge.registerPredicate( new PredicateDeclaration("nonempty",1,true,false) );
+		}
+		return bridge;
 	}
 
-	/**
-	 * Run Rule E:
-	 * subClassOfNL(x,z) :- subConjunctionOf(y1,y2,z), subClassOfNL(x,y1), subClassOfNL(x,y2)
-	 * @param min_cur_step the earliest derivations not considered as "current" in this rule yet  
-	 * @param max_cur_step the latest derivations before this call
-	 * @return number of computed results (affected rows)
-	 * @throws SQLException
-	 */
-	protected int runRuleEsconl(int min_cur_step, int max_cur_step) throws SQLException {
-		long starttime = System.currentTimeMillis();
-		// Rule E, reflexivity avoiding, usage (i)
-		// Semi-naive evaluation: do not consider all sco_nl rows, but only recently derived ("new") ones
+	protected void registerInferenceRules() {
+		getStoreBridge(); // make sure we have the bridge
+		HashMap<String,String> rules = new HashMap<String,String>();
+		// make the rule declaration as readable as possible;
+		// it is crucial to have this error free and customisable
+		rules.put("prop-1", "subpropertyof(x,z) :- subpropertyof(x,y,0), subpropertyof(y,z)");
+		rules.put("prop-2", "subpropertychain(u,v2,w) :- subpropertyof(u,v1), subpropertychain(v1,v2,w)");
+		rules.put("prop-3", "subpropertychain(v1,u,w) :- subpropertyof(u,v2), subpropertychain(v1,v2,w)");
 		
-		// Rule 1 of semi-naive evaluation; usage (step, min_cur_step, max_cur_step)
-		final PreparedStatement rule_E_1 = con.prepareStatement(
-				"INSERT IGNORE INTO sco_nl (s_id, o_id, step) " +
-				"SELECT DISTINCT t1.s_id AS s_id, tc.o_id AS o_id, ? AS step " +
-				"FROM subconjunctionof AS tc INNER JOIN sco_nl AS t1 ON t1.step>=? AND t1.step<=? AND tc.s1_id=t1.o_id " +
-				"INNER JOIN sco_nl AS t2 ON t1.s_id=t2.s_id AND t2.o_id=tc.s2_id WHERE tc.o_id!=t1.s_id"
-		);
-		// Rule 2 of semi-naive evaluation; usage (step, min_cur_step, min_cur_step, max_cur_step)
-		final PreparedStatement rule_E_2 = con.prepareStatement(
-				"INSERT IGNORE INTO sco_nl (s_id, o_id, step) " +
-				"SELECT DISTINCT t1.s_id AS s_id, tc.o_id AS o_id, ? AS step " +
-				"FROM subconjunctionof AS tc INNER JOIN sco_nl AS t1 ON t1.step<? AND tc.s1_id=t1.o_id " +
-				"INNER JOIN sco_nl AS t2 ON t2.step>=? AND t2.step<=? AND t1.s_id=t2.s_id AND t2.o_id=tc.s2_id WHERE tc.o_id!=t1.s_id"
-		);
+		rules.put("trans",  "sco_nl(x,z)  :- sco_nl(x,y,0), sco_nl(y,z)");
+		rules.put("trans-repair1",  "sco_nl(x,z)  :- sco_nl(x,y,0), sco_nl(y,z,?)");
+		rules.put("trans-repair2",  "sco_nl(x,z)  :- sco_nl(x,y,?), sco_nl(y,z,?)");
+		rules.put("E",      "sco_nl(x,z)  :- subconjunctionof(y1,y2,z), sco_nl(x,y1), sco_nl(x,y2)");
+		rules.put("E ref1", "sco_nl(x,z)  :- subconjunctionof(x,y,z), sco_nl(x,y)");
+		rules.put("E ref2", "sco_nl(x,z)  :- subconjunctionof(y,x,z), sco_nl(x,y)");
+		rules.put("E ref3", "sco_nl(x,z)  :- subconjunctionof(x,x,z)");
+		rules.put("F",      "sco_nl(x,y)  :- sv_nl(x,v,z), subsomevalues(v,z,y)");
+		rules.put("G",      "sco_nl(x,y)  :- sv_nl(x,v,z), subpropertyof(v,u), subsomevalues(u,z,y)");
+		rules.put("Hn",     "sv_nl(x,w,z) :- sv_nl(x,v1,y), sv_nl(y,v2,z), subpropertychain(v1,v2,w)");
+		rules.put("Hl",     "sv_nl(x,w,z) :- sv_nl(x,v1,y), sv(y,v2,z), subpropertychain(v1,v2,w)");
+		rules.put("I",      "sv_nl(x,v,z) :- sco_nl(x,y), sv_nl(y,v,z)");
+		rules.put("Jn",     "sv_nl(x,v,z) :- sv_nl(x,v,y), sco(y,z)");
+		rules.put("Jl",     "sv_nl(x,v,z) :- sv(x,v,y), sco(y,z)");
+		rules.put("K",      "subconint(x,z,w) :- sco(x,y), subconjunctionof(y,z,w)");
+		rules.put("L",      "subconint(x,z,w) :- sco(x,y), sco_nl(y,y1), subconjunctionof(y1,z,w)");
+		rules.put("M",      "sco(x,w)     :- subconint(x,z,w), sco(x,z)");
+		rules.put("N",      "sco(x,w)     :- subconint(x,z,w), sco(x,z1), sco_nl(z1,z)");
+		rules.put("O",      "sco(x,y)     :- sv(x,v,z), subsomevalues(v,z,y)");
+		rules.put("P",      "sco(x,y)     :- sv(x,v,z), subpropertyof(v,u), subsomevalues(u,z,y)");
+		rules.put("Qn",     "sv(x,w,z)    :- sv(x,v1,y), sv_nl(y,v2,z), subpropertychain(v1,v2,w)");
+		rules.put("Ql",     "sv(x,w,z)    :- sv(x,v1,y), sv(y,v2,z), subpropertychain(v1,v2,w)");
+		rules.put("R",      "sv(x,v,z)    :- sco(x,y), sv_nl(y,v,z)");
+		rules.put("Sn",     "sv(x,v,z)    :- sv(x,v,y), sco_nl(y,z)");
+		rules.put("Sl",     "sv(x,v,z)    :- sv(x,v,y), sco(y,z)");
 		
-		// The extra ref rules to simulate reflexivity statements in sco_nl that are not stored explicitly
-		// Case 1: subClassOf(x,z) :- subClassOf(x,y), subConjunctionOf(x,y,z)
-		// usage (step, min_cur_step, max_cur_step)
-		final PreparedStatement rule_E_ref1 = con.prepareStatement(
-				"INSERT IGNORE INTO sco_nl (s_id, o_id, step) " +
-				"SELECT DISTINCT t.s_id AS s_id, tc.o_id AS o_id, ? AS step " +
-				"FROM subconjunctionof AS tc INNER JOIN sco_nl AS t ON t.step>=? AND t.step<=? AND tc.s1_id=t.o_id AND tc.s2_id=t.s_id WHERE tc.o_id!=t.s_id"
-		);
-		// Case 2: subClassOf(x,z) :- subClassOf(x,y), subConjunctionOf(y,x,z)
-		// usage (step, min_cur_step, max_cur_step)
-		final PreparedStatement rule_E_ref2 = con.prepareStatement(
-				"INSERT IGNORE INTO sco_nl (s_id, o_id, step) " +
-				"SELECT DISTINCT t.s_id AS s_id, tc.o_id AS o_id, ? AS step " +
-				"FROM subconjunctionof AS tc INNER JOIN sco_nl AS t ON t.step>=? AND t.step<=? AND tc.s2_id=t.o_id AND tc.s1_id=t.s_id WHERE tc.o_id!=t.s_id"
-		);
-		// Case 3: subClassOf(x,z) :- subConjunctionOf(x,x,z)
-		// TODO We may want to do this only once, given that there are no inferred subConjunctionOf statements to be considered
-		final PreparedStatement rule_E_ref12 = con.prepareStatement(
-				"INSERT IGNORE INTO sco_nl (s_id, o_id, step) " +
-				"SELECT DISTINCT tc.s1_id AS s_id, tc.o_id AS o_id, ? AS step " +
-				"FROM subconjunctionof AS tc WHERE tc.s1_id=tc.s2_id AND tc.o_id!=tc.s1_id"
-		);
-		rule_E_1.setInt(1, max_cur_step+1);
-		rule_E_1.setInt(2, min_cur_step);
-		rule_E_1.setInt(3, max_cur_step);
-		rule_E_2.setInt(1, max_cur_step+1);
-		rule_E_2.setInt(2, min_cur_step);
-		rule_E_2.setInt(3, min_cur_step);
-		rule_E_2.setInt(4, max_cur_step);
-		rule_E_ref1.setInt(1, max_cur_step+1);
-		rule_E_ref1.setInt(2, min_cur_step);
-		rule_E_ref1.setInt(3, max_cur_step);
-		rule_E_ref2.setInt(1, max_cur_step+1);
-		rule_E_ref2.setInt(2, min_cur_step);
-		rule_E_ref2.setInt(3, max_cur_step);
-		rule_E_ref12.setInt(1, max_cur_step+1);
+		rules.put("Nom 1n", "sco_nl(y,x) :- sco_nl(x,y), nonempty(x), nominal(y)");
+		rules.put("Nom 1l", "sco_nl(y,x) :- sco(x,y), nonempty(x), nominal(y)");
+		rules.put("Nom 2n", "nonempty(y) :- sco_nl(x,y), nonempty(x)");
+		rules.put("Nom 2l", "nonempty(y) :- sco(x,y), nonempty(x)");
+		rules.put("Nom 3n", "nonempty(y) :- sv_nl(x,v,y), nonempty(x)");
+		rules.put("Nom 3l", "nonempty(y) :- sv(x,v,y), nonempty(x)");
 		
-		int result = rule_E_1.executeUpdate() + rule_E_2.executeUpdate() + rule_E_ref1.executeUpdate() + rule_E_ref2.executeUpdate() + rule_E_ref12.executeUpdate();
-		timeRuleE = timeRuleE + System.currentTimeMillis() - starttime;
-		return result;
+		//rules.put("test", "subconint(x,z,w) :- sco(x,y), sco_nl(y,y1), subconjunctionof(y1,z,w)");
+		
+		// now register those rules:
+		Iterator<String> nameit = rules.keySet().iterator();
+		String name;
+		while (nameit.hasNext()) {
+			name = nameit.next();
+			bridge.registerInferenceRule(InferenceRuleDeclaration.buildFromString(name,rules.get(name)));
+		}
 	}
 	
-	/**
-	 * Run Rule F:
-	 * subClassOfNL(x,y) :- someValuesOfNL(x,v,z), subSomeValuesOf(v,z,y)
-	 * @param min_cur_step the earliest derivations not considered as "current" in this rule yet  
-	 * @param max_cur_step the latest derivations before this call
-	 * @return number of computed results (affected rows)
-	 * @throws SQLException
-	 */
-	protected int runRuleFsconl(int min_cur_step, int max_cur_step) throws SQLException {
-		long starttime = System.currentTimeMillis();
-		// Rule F, reflexivity avoiding, usage (step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_F = con.prepareStatement(
-			"INSERT IGNORE INTO sco_nl (s_id, o_id, step) " +
-			"SELECT DISTINCT t1.s_id AS s_id, t2.o_id AS o_id, ? AS step " +
-			"FROM sv_nl AS t1 INNER JOIN subsomevalues AS t2 ON t1.step>=? AND t1.step<=? AND t1.p_id=t2.p_id AND t1.o_id=t2.s_id AND t1.s_id!=t2.o_id"
-		);
-		rule_F.setInt(1, max_cur_step+1);
-		rule_F.setInt(2, min_cur_step);
-		rule_F.setInt(3, max_cur_step);
-		int result = rule_F.executeUpdate();
-		timeRuleF = timeRuleF + System.currentTimeMillis() - starttime;
-		return result;
-	}
-	
-	/**
-	 * Run Rule G:
-	 * subClassOfNL(x,y) :- someValuesOfNL(x,v,z), subPropertyOf(v,u), subSomeValuesOf(u,z,y)
-	 * @param min_cur_step the earliest derivations not considered as "current" in this rule yet  
-	 * @param max_cur_step the latest derivations before this call
-	 * @return number of computed results (affected rows)
-	 * @throws SQLException
-	 */
-	protected int runRuleGsconl(int min_cur_step, int max_cur_step) throws SQLException {
-		long starttime = System.currentTimeMillis();
-		// Rule G, reflexivity avoiding, usage (step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_G = con.prepareStatement(
-			"INSERT IGNORE INTO sco_nl (s_id, o_id, step) " +
-			"SELECT DISTINCT t1.s_id AS s_id, t2.o_id AS o_id, ? AS step " +
-			"FROM sv_nl AS t1 INNER JOIN subpropertyof AS tp ON t1.step>=? AND t1.step<=? AND t1.p_id=tp.s_id INNER JOIN subsomevalues AS t2 ON tp.o_id=t2.p_id AND t1.o_id=t2.s_id AND t1.s_id!=t2.o_id"
-		);
-		rule_G.setInt(1, max_cur_step+1);
-		rule_G.setInt(2, min_cur_step);
-		rule_G.setInt(3, max_cur_step);
-		int result = rule_G.executeUpdate();
-		timeRuleG = timeRuleG + System.currentTimeMillis() - starttime;
-		return result;
-	}
-
-	/**
-	 * Run Rule H:
-	 * svNL(x,w,z) :- svNL(x,v1,y), sv(y,v2,z), subPropertyChain(v1,v2,w)
-	 * @param min_cur_step the earliest derivations not considered as "current" in this rule yet  
-	 * @param max_cur_step the latest derivations before this call
-	 * @return number of computed results (affected rows)
-	 * @throws SQLException
-	 */
-	protected int runRuleHsvnl(int min_cur_step, int max_cur_step) throws SQLException {
-		long starttime = System.currentTimeMillis();
-		// Rule H for NL case
-		// Rule 1 of semi-naive evaluation, usage (step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_H_NL_1 = con.prepareStatement(
-			"INSERT IGNORE INTO sv_nl (s_id, p_id, o_id, step) " +
-			"SELECT DISTINCT t1.s_id AS s_id, sc.o_id AS p_id, t2.o_id AS o_id, ? AS step " +
-			"FROM subpropertychain AS sc INNER JOIN sv_nl AS t1 ON t1.step>=? AND t1.step<=? AND t1.p_id=sc.s1_id " +
-			"INNER JOIN sv_nl AS t2 ON t2.s_id=t1.o_id AND t2.p_id=sc.s2_id AND t1.o_id=t2.s_id AND t1.s_id!=t2.o_id"
-		);
-		// Rule 2 of semi-naive evaluation, usage (step,min_cur_step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_H_NL_2 = con.prepareStatement(
-			"INSERT IGNORE INTO sv_nl (s_id, p_id, o_id, step) " +
-			"SELECT DISTINCT t1.s_id AS s_id, sc.o_id AS p_id, t2.o_id AS o_id, ? AS step " +
-			"FROM subpropertychain AS sc INNER JOIN sv_nl AS t1 ON t1.step<? AND t1.p_id=sc.s1_id " +
-			"INNER JOIN sv_nl AS t2 ON t2.step>=? AND t2.step<=? AND t2.s_id=t1.o_id AND t2.p_id=sc.s2_id AND t1.o_id=t2.s_id AND t1.s_id!=t2.o_id"
-		);
-		// Rule H for L case
-		// Rule 1 of semi-naive evaluation, usage (step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_H_L_1 = con.prepareStatement(
-			"INSERT IGNORE INTO sv_nl (s_id, p_id, o_id, step) " +
-			"SELECT DISTINCT t1.s_id AS s_id, sc.o_id AS p_id, t2.o_id AS o_id, ? AS step " +
-			"FROM subpropertychain AS sc INNER JOIN sv_nl AS t1 ON t1.step>=? AND t1.step<=? AND t1.p_id=sc.s1_id " +
-			"INNER JOIN sv AS t2 ON t2.s_id=t1.o_id AND t2.p_id=sc.s2_id AND t1.o_id=t2.s_id AND t1.s_id!=t2.o_id"
-		);
-		// Rule 2 of semi-naive evaluation, usage (step,min_cur_step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_H_L_2 = con.prepareStatement(
-			"INSERT IGNORE INTO sv_nl (s_id, p_id, o_id, step) " +
-			"SELECT DISTINCT t1.s_id AS s_id, sc.o_id AS p_id, t2.o_id AS o_id, ? AS step " +
-			"FROM subpropertychain AS sc INNER JOIN sv_nl AS t1 ON t1.step<? AND t1.p_id=sc.s1_id " +
-			"INNER JOIN sv AS t2 ON t2.step>=? AND t2.step<=? AND t2.s_id=t1.o_id AND t2.p_id=sc.s2_id AND t1.o_id=t2.s_id AND t1.s_id!=t2.o_id"
-		);
-		rule_H_NL_1.setInt(1, max_cur_step+1);
-		rule_H_NL_1.setInt(2, min_cur_step);
-		rule_H_NL_1.setInt(3, max_cur_step);
-		rule_H_NL_2.setInt(1, max_cur_step+1);
-		rule_H_NL_2.setInt(2, min_cur_step);
-		rule_H_NL_2.setInt(3, min_cur_step);
-		rule_H_NL_2.setInt(4, max_cur_step);
-		rule_H_L_1.setInt(1, max_cur_step+1);
-		rule_H_L_1.setInt(2, min_cur_step);
-		rule_H_L_1.setInt(3, max_cur_step);
-		rule_H_L_2.setInt(1, max_cur_step+1);
-		rule_H_L_2.setInt(2, min_cur_step);
-		rule_H_L_2.setInt(3, min_cur_step);
-		rule_H_L_2.setInt(4, max_cur_step);
-		int result = rule_H_NL_1.executeUpdate() + rule_H_NL_2.executeUpdate() + rule_H_L_1.executeUpdate() + rule_H_L_2.executeUpdate();
-		timeRuleH = timeRuleH + System.currentTimeMillis() - starttime;
-		return result;
-	}
-
-	/**
-	 * Run Rule I:
-	 * svNL(x,v,z) :- subClassOfNL(x,y), svNL(y,v,z)
-	 * @param min_cur_step the earliest derivations not considered as "current" in this rule yet  
-	 * @param max_cur_step the latest derivations before this call
-	 * @return number of computed results (affected rows)
-	 * @throws SQLException
-	 */
-	protected int runRuleIsvnl(int min_cur_step, int max_cur_step) throws SQLException {
-		long starttime = System.currentTimeMillis();
-		// Rule I
-		// Rule 1 of semi-naive evaluation, usage (step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_I_1 = con.prepareStatement(
-			"INSERT IGNORE INTO sv_nl (s_id, p_id, o_id, step) " +
-			"SELECT DISTINCT t1.s_id AS s_id, t2.p_id AS p_id, t2.o_id AS o_id, ? AS step " +
-			"FROM sco_nl AS t1 INNER JOIN sv_nl AS t2 ON t1.step>=? AND t1.step<=? AND t1.o_id=t2.s_id"
-		);
-		// Rule 2 of semi-naive evaluation, usage (step,min_cur_step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_I_2 = con.prepareStatement(
-			"INSERT IGNORE INTO sv_nl (s_id, p_id, o_id, step) " +
-			"SELECT DISTINCT t1.s_id AS s_id, t2.p_id AS p_id, t2.o_id AS o_id, ? AS step " +
-			"FROM sco_nl AS t1 INNER JOIN sv_nl AS t2 ON t1.step<? AND t2.step>=? AND t2.step<=? AND t1.o_id=t2.s_id"
-		);
-		rule_I_1.setInt(1, max_cur_step+1);
-		rule_I_1.setInt(2, min_cur_step);
-		rule_I_1.setInt(3, max_cur_step);
-		rule_I_2.setInt(1, max_cur_step+1);
-		rule_I_2.setInt(2, min_cur_step);
-		rule_I_2.setInt(3, min_cur_step);
-		rule_I_2.setInt(4, max_cur_step);
-		int result = rule_I_1.executeUpdate() + rule_I_2.executeUpdate();
-		timeRuleI = timeRuleI + System.currentTimeMillis() - starttime;
-		return result;
-	}
-
-	/**
-	 * Run Rule J:
-	 * svNL(x,v,z) :- sv(x,v,y), subClassOfNL(y,x)
-	 * @param min_cur_step the earliest derivations not considered as "current" in this rule yet  
-	 * @param max_cur_step the latest derivations before this call
-	 * @return number of computed results (affected rows)
-	 * @throws SQLException
-	 */
-	protected int runRuleJsvnl(int min_cur_step, int max_cur_step) throws SQLException {
-		long starttime = System.currentTimeMillis();
-		// Rule J for NL case
-		// Rule 1 of semi-naive evaluation, usage (step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_J_NL_1 = con.prepareStatement(
-			"INSERT IGNORE INTO sv_nl (s_id, p_id, o_id, step) " +
-			"SELECT DISTINCT t1.s_id AS s_id, t1.p_id AS p_id, t2.o_id AS o_id, ? AS step " +
-			"FROM sv_nl AS t1 INNER JOIN sco_nl AS t2 ON t1.step>=? AND t1.step<=? AND t1.o_id=t2.s_id"
-		);
-		// Rule 2 of semi-naive evaluation, usage (step,min_cur_step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_J_NL_2 = con.prepareStatement(
-			"INSERT IGNORE INTO sv_nl (s_id, p_id, o_id, step) " +
-			"SELECT DISTINCT t1.s_id AS s_id, t1.p_id AS p_id, t2.o_id AS o_id, ? AS step " +
-			"FROM sv_nl AS t1 INNER JOIN sco_nl AS t2 ON t1.step<? AND t2.step>=? AND t2.step<=? AND t1.o_id=t2.s_id"
-		);
-		// Rule J for L case
-		// Rule 1 of semi-naive evaluation, usage (step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_J_L_1 = con.prepareStatement(
-			"INSERT IGNORE INTO sv_nl (s_id, p_id, o_id, step) " +
-			"SELECT DISTINCT t1.s_id AS s_id, t1.p_id AS p_id, t2.o_id AS o_id, ? AS step " +
-			"FROM sv_nl AS t1 INNER JOIN sco AS t2 ON t1.step>=? AND t1.step<=? AND t1.o_id=t2.s_id"
-		);
-		// Rule 2 of semi-naive evaluation, usage (step,min_cur_step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_J_L_2 = con.prepareStatement(
-			"INSERT IGNORE INTO sv_nl (s_id, p_id, o_id, step) " +
-			"SELECT DISTINCT t1.s_id AS s_id, t1.p_id AS p_id, t2.o_id AS o_id, ? AS step " +
-			"FROM sv_nl AS t1 INNER JOIN sco AS t2 ON t1.step<? AND t2.step>=? AND t2.step<=? AND t1.o_id=t2.s_id"
-		);
-		rule_J_NL_1.setInt(1, max_cur_step+1);
-		rule_J_NL_1.setInt(2, min_cur_step);
-		rule_J_NL_1.setInt(3, max_cur_step);
-		rule_J_NL_2.setInt(1, max_cur_step+1);
-		rule_J_NL_2.setInt(2, min_cur_step);
-		rule_J_NL_2.setInt(3, min_cur_step);
-		rule_J_NL_2.setInt(4, max_cur_step);
-		rule_J_L_1.setInt(1, max_cur_step+1);
-		rule_J_L_1.setInt(2, min_cur_step);
-		rule_J_L_1.setInt(3, max_cur_step);
-		rule_J_L_2.setInt(1, max_cur_step+1);
-		rule_J_L_2.setInt(2, min_cur_step);
-		rule_J_L_2.setInt(3, min_cur_step);
-		rule_J_L_2.setInt(4, max_cur_step);
-		int result = rule_J_NL_1.executeUpdate() + rule_J_NL_2.executeUpdate() + rule_J_L_1.executeUpdate() + rule_J_L_2.executeUpdate();
-		timeRuleJ = timeRuleJ + System.currentTimeMillis() - starttime;
-		return result;
-	}
-
-	/**
-	 * Run Rule K:
-	 * subConjIntermediate(x,z,w) :- subClassOfL(x,y), subConjunctionOf(y,z,w)
-	 * @param min_cur_step the earliest derivations not considered as "current" in this rule yet  
-	 * @param max_cur_step the latest derivations before this call
-	 * @return number of computed results (affected rows)
-	 * @throws SQLException
-	 */
-	protected int runRuleKsconint(int min_cur_step, int max_cur_step) throws SQLException {
-		long starttime = System.currentTimeMillis();
-		// Rule K, usage (step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_K = con.prepareStatement(
-			"INSERT IGNORE INTO subconint (s1_id, s2_id, o_id, step) " +
-			"SELECT DISTINCT t1.s_id AS s1_id, tc.s2_id AS s2_id, tc.o_id AS o_id, ? AS step " +
-			"FROM sco AS t1 INNER JOIN subconjunctionof AS tc ON t1.step>=? AND t1.step<=? AND t1.o_id=tc.s2_id"
-		);
-		rule_K.setInt(1, max_cur_step+1);
-		rule_K.setInt(2, min_cur_step);
-		rule_K.setInt(3, max_cur_step);
-		int result = rule_K.executeUpdate();
-		timeRuleK = timeRuleK + System.currentTimeMillis() - starttime;
-		return result;
-	}
-
-	/**
-	 * Run Rule L:
-	 * subConjIntermediate(x,z,w) :- subClassOfL(x,y), subClassOfNL(y,y1), subConjunctionOf(y1,z,w)
-	 * @param min_cur_step the earliest derivations not considered as "current" in this rule yet  
-	 * @param max_cur_step the latest derivations before this call
-	 * @return number of computed results (affected rows)
-	 * @throws SQLException
-	 */
-	protected int runRuleLsconint(int min_cur_step, int max_cur_step) throws SQLException {
-		long starttime = System.currentTimeMillis();
-		// Rule L
-		// Rule 1 of semi-naive evaluation, usage (step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_L_1 = con.prepareStatement(
-			"INSERT IGNORE INTO subconint (s1_id, s2_id, o_id, step) " +
-			"SELECT DISTINCT t1.s_id AS s1_id, tc.s2_id AS s2_id, tc.o_id AS o_id, ? AS step " +
-			"FROM sco AS t1 INNER JOIN sco_nl AS t2 ON t1.step>=? AND t1.step<=? AND t1.o_id=t2.s_id " +
-			"INNER JOIN subconjunctionof AS tc ON t2.o_id=tc.s2_id"
-		);
-		// Rule 2 of semi-naive evaluation, usage (step,min_cur_step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_L_2 = con.prepareStatement(
-			"INSERT IGNORE INTO subconint (s1_id, s2_id, o_id, step) " +
-			"SELECT DISTINCT t1.s_id AS s1_id, tc.s2_id AS s2_id, tc.o_id AS o_id, ? AS step " +
-			"FROM sco AS t1 INNER JOIN sco_nl AS t2 ON t1.step<? AND t2.step>=? AND t2.step<=? AND t1.o_id=t2.s_id " +
-			"INNER JOIN subconjunctionof AS tc ON t2.o_id=tc.s2_id"
-		);
-		rule_L_1.setInt(1, max_cur_step+1);
-		rule_L_1.setInt(2, min_cur_step);
-		rule_L_1.setInt(3, max_cur_step);
-		rule_L_2.setInt(1, max_cur_step+1);
-		rule_L_2.setInt(2, min_cur_step);
-		rule_L_2.setInt(3, min_cur_step);
-		rule_L_2.setInt(4, max_cur_step);
-		int result = rule_L_1.executeUpdate() + rule_L_2.executeUpdate();
-		timeRuleL = timeRuleL + System.currentTimeMillis() - starttime;
-		return result;
-	}
-
-	/**
-	 * Run Rule M:
-	 * subClassOfL(x,w) :- subConjIntermediate(x,z,w), subClassOfL(x,z)
-	 * @param min_cur_step the earliest derivations not considered as "current" in this rule yet  
-	 * @param max_cur_step the latest derivations before this call
-	 * @return number of computed results (affected rows)
-	 * @throws SQLException
-	 */
-	protected int runRuleMscol(int min_cur_step, int max_cur_step) throws SQLException {
-		long starttime = System.currentTimeMillis();
-		// Rule M, reflexivity avoiding
-		// Rule 1 of semi-naive evaluation, usage (step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_M_1 = con.prepareStatement(
-			"INSERT IGNORE INTO sco (s_id, o_id, step) " +
-			"SELECT DISTINCT t1.s_id AS s_id, tci.o_id AS o_id, ? AS step " +
-			"FROM subconint AS tci INNER JOIN sco AS t1 ON tci.step>=? AND tci.step<=? AND tci.s1_id=t1.s_id AND tci.s2_id=t1.o_id " +
-			"WHERE t1.s_id!=tci.o_id"
-		);
-		// Rule 2 of semi-naive evaluation, usage (step,min_cur_step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_M_2 = con.prepareStatement(
-			"INSERT IGNORE INTO sco (s_id, o_id, step) " +
-			"SELECT DISTINCT t1.s_id AS s_id, tci.o_id AS o_id, ? AS step " +
-			"FROM subconint AS tci INNER JOIN sco AS t1 ON tci.step<? AND t1.step>=? AND t1.step<=? AND tci.s1_id=t1.s_id AND tci.s2_id=t1.o_id " +
-			"WHERE t1.s_id!=tci.o_id"
-		);
-		rule_M_1.setInt(1, max_cur_step+1);
-		rule_M_1.setInt(2, min_cur_step);
-		rule_M_1.setInt(3, max_cur_step);
-		rule_M_2.setInt(1, max_cur_step+1);
-		rule_M_2.setInt(2, min_cur_step);
-		rule_M_2.setInt(3, min_cur_step);
-		rule_M_2.setInt(4, max_cur_step);
-		int result = rule_M_1.executeUpdate() + rule_M_2.executeUpdate();
-		timeRuleM = timeRuleM + System.currentTimeMillis() - starttime;
-		return result;
-	}
-
-	/**
-	 * Run Rule N:
-	 * subClassOfL(x,w) :- subConjIntermediate(x,z,w), subClassOfL(x,z1), subClassOfNL(z1,z)
-	 * @param min_cur_step the earliest derivations not considered as "current" in this rule yet  
-	 * @param max_cur_step the latest derivations before this call
-	 * @return number of computed results (affected rows)
-	 * @throws SQLException
-	 */
-	protected int runRuleNscol(int min_cur_step, int max_cur_step) throws SQLException {
-		long starttime = System.currentTimeMillis();
-		// Rule N, reflexivity avoiding
-		// Rule 1 of semi-naive evaluation, usage (step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_N_1 = con.prepareStatement(
-			"INSERT IGNORE INTO sco (s_id, o_id, step) " +
-			"SELECT DISTINCT t1.s_id AS s_id, tci.o_id AS o_id, ? AS step " +
-			"FROM subconint AS tci INNER JOIN sco AS t1 ON tci.step>=? AND tci.step<=? AND tci.s1_id=t1.s_id " +
-			"INNER JOIN sco_nl AS t2 ON t1.o_id=t2.s_id AND tci.s2_id=t2.o_id WHERE t1.s_id!=tci.o_id"
-		);
-		// Rule 2 of semi-naive evaluation, usage (step,min_cur_step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_N_2 = con.prepareStatement(
-			"INSERT IGNORE INTO sco (s_id, o_id, step) " +
-			"SELECT DISTINCT t1.s_id AS s_id, tci.o_id AS o_id, ? AS step " +
-			"FROM subconint AS tci INNER JOIN sco AS t1 ON tci.step<? AND t1.step>=? AND t1.step<=? AND tci.s1_id=t1.s_id " +
-			"INNER JOIN sco_nl AS t2 ON t1.o_id=t2.s_id AND tci.s2_id=t2.o_id WHERE t1.s_id!=tci.o_id"
-		);
-		// Rule 3 of semi-naive evaluation, usage (step,min_cur_step,min_cur_step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_N_3 = con.prepareStatement(
-			"INSERT IGNORE INTO sco (s_id, o_id, step) " +
-			"SELECT DISTINCT t1.s_id AS s_id, tci.o_id AS o_id, ? AS step " +
-			"FROM subconint AS tci INNER JOIN sco AS t1 ON tci.step<? AND t1.step<? AND tci.s1_id=t1.s_id " +
-			"INNER JOIN sco_nl AS t2 ON t2.step>=? AND t2.step<=? AND t1.o_id=t2.s_id AND tci.s2_id=t2.o_id WHERE t1.s_id!=tci.o_id"
-		);
-		rule_N_1.setInt(1, max_cur_step+1);
-		rule_N_1.setInt(2, min_cur_step);
-		rule_N_1.setInt(3, max_cur_step);
-		rule_N_2.setInt(1, max_cur_step+1);
-		rule_N_2.setInt(2, min_cur_step);
-		rule_N_2.setInt(3, min_cur_step);
-		rule_N_2.setInt(4, max_cur_step);
-		rule_N_3.setInt(1, max_cur_step+1);
-		rule_N_3.setInt(2, min_cur_step);
-		rule_N_3.setInt(3, min_cur_step);
-		rule_N_3.setInt(4, min_cur_step);
-		rule_N_3.setInt(5, max_cur_step);
-		long time = System.currentTimeMillis();
-		int result = rule_N_1.executeUpdate();
-		System.out.print("[" + (System.currentTimeMillis()-time) + "]");
-		time = System.currentTimeMillis();
-		result = result + rule_N_2.executeUpdate();
-		System.out.print("[" + (System.currentTimeMillis()-time) + "]");
-		time = System.currentTimeMillis();
-		result = result + rule_N_3.executeUpdate();
-		System.out.print("[" + (System.currentTimeMillis()-time) + "]");
-		timeRuleN = timeRuleN + System.currentTimeMillis() - starttime;
-		return result;
-	}
-
-	/**
-	 * Run Rule O:
-	 * subClassOfL(x,y) :- someValuesOfL(x,v,z), subSomeValuesOf(v,z,y)
-	 * @param min_cur_step the earliest derivations not considered as "current" in this rule yet  
-	 * @param max_cur_step the latest derivations before this call
-	 * @return number of computed results (affected rows)
-	 * @throws SQLException
-	 */
-	protected int runRuleOscol(int min_cur_step, int max_cur_step) throws SQLException {
-		long starttime = System.currentTimeMillis();
-		// Rule O, reflexivity avoiding, usage (step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_O = con.prepareStatement(
-			"INSERT IGNORE INTO sco (s_id, o_id, step) " +
-			"SELECT DISTINCT t1.s_id AS s_id, t2.o_id AS o_id, ? AS step " +
-			"FROM sv AS t1 INNER JOIN subsomevalues AS t2 ON t1.step>=? AND t1.step<=? AND t1.p_id=t2.p_id AND t1.o_id=t2.s_id AND t1.s_id!=t2.o_id"
-		);
-		rule_O.setInt(1, max_cur_step+1);
-		rule_O.setInt(2, min_cur_step);
-		rule_O.setInt(3, max_cur_step);
-		int result = rule_O.executeUpdate();
-		timeRuleO = timeRuleO + System.currentTimeMillis() - starttime;
-		return result;
-	}
-	
-	/**
-	 * Run Rule P:
-	 * subClassOfL(x,y) :- someValuesOfL(x,v,z), subPropertyOf(v,u), subSomeValuesOf(u,z,y)
-	 * @param min_cur_step the earliest derivations not considered as "current" in this rule yet  
-	 * @param max_cur_step the latest derivations before this call
-	 * @return number of computed results (affected rows)
-	 * @throws SQLException
-	 */
-	protected int runRulePscol(int min_cur_step, int max_cur_step) throws SQLException {
-		long starttime = System.currentTimeMillis();
-		// Rule P, reflexivity avoiding, usage (step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_P = con.prepareStatement(
-			"INSERT IGNORE INTO sco (s_id, o_id, step) " +
-			"SELECT DISTINCT t1.s_id AS s_id, t2.o_id AS o_id, ? AS step " +
-			"FROM sv AS t1 INNER JOIN subpropertyof AS tp ON t1.step>=? AND t1.step<=? AND t1.p_id=tp.s_id INNER JOIN subsomevalues AS t2 ON tp.o_id=t2.p_id AND t1.o_id=t2.s_id AND t1.s_id!=t2.o_id"
-		);
-		rule_P.setInt(1, max_cur_step+1);
-		rule_P.setInt(2, min_cur_step);
-		rule_P.setInt(3, max_cur_step);
-		int result = rule_P.executeUpdate();
-		timeRuleP = timeRuleP + System.currentTimeMillis() - starttime;
-		return result;
-	}
-
-	/**
-	 * Run Rule Q:
-	 * svL(x,w,z) :- svL(x,v1,y), sv(y,v2,z), subPropertyChain(v1,v2,w)
-	 * @param min_cur_step the earliest derivations not considered as "current" in this rule yet  
-	 * @param max_cur_step the latest derivations before this call
-	 * @return number of computed results (affected rows)
-	 * @throws SQLException
-	 */
-	protected int runRuleQsvl(int min_cur_step, int max_cur_step) throws SQLException {
-		long starttime = System.currentTimeMillis();
-		// Rule Q for NL case
-		// Rule 1 of semi-naive evaluation, usage (step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_Q_NL_1 = con.prepareStatement(
-			"INSERT IGNORE INTO sv (s_id, p_id, o_id, step) " +
-			"SELECT DISTINCT t1.s_id AS s_id, sc.o_id AS p_id, t2.o_id AS o_id, ? AS step " +
-			"FROM subpropertychain AS sc INNER JOIN sv AS t1 ON t1.step>=? AND t1.step<=? AND t1.p_id=sc.s1_id " +
-			"INNER JOIN sv_nl AS t2 ON t2.s_id=t1.o_id AND t2.p_id=sc.s2_id AND t1.o_id=t2.s_id AND t1.s_id!=t2.o_id"
-		);
-		// Rule 2 of semi-naive evaluation, usage (step,min_cur_step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_Q_NL_2 = con.prepareStatement(
-			"INSERT IGNORE INTO sv (s_id, p_id, o_id, step) " +
-			"SELECT DISTINCT t1.s_id AS s_id, sc.o_id AS p_id, t2.o_id AS o_id, ? AS step " +
-			"FROM subpropertychain AS sc INNER JOIN sv AS t1 ON t1.step<? AND t1.p_id=sc.s1_id " +
-			"INNER JOIN sv_nl AS t2 ON t2.step>=? AND t2.step<=? AND t2.s_id=t1.o_id AND t2.p_id=sc.s2_id AND t1.o_id=t2.s_id AND t1.s_id!=t2.o_id"
-		);
-		// Rule Q for L case
-		// Rule 1 of semi-naive evaluation, usage (step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_Q_L_1 = con.prepareStatement(
-			"INSERT IGNORE INTO sv (s_id, p_id, o_id, step) " +
-			"SELECT DISTINCT t1.s_id AS s_id, sc.o_id AS p_id, t2.o_id AS o_id, ? AS step " +
-			"FROM subpropertychain AS sc INNER JOIN sv AS t1 ON t1.step>=? AND t1.step<=? AND t1.p_id=sc.s1_id " +
-			"INNER JOIN sv AS t2 ON t2.s_id=t1.o_id AND t2.p_id=sc.s2_id AND t1.o_id=t2.s_id AND t1.s_id!=t2.o_id"
-		);
-		// Rule 2 of semi-naive evaluation, usage (step,min_cur_step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_Q_L_2 = con.prepareStatement(
-			"INSERT IGNORE INTO sv (s_id, p_id, o_id, step) " +
-			"SELECT DISTINCT t1.s_id AS s_id, sc.o_id AS p_id, t2.o_id AS o_id, ? AS step " +
-			"FROM subpropertychain AS sc INNER JOIN sv AS t1 ON t1.step<? AND t1.p_id=sc.s1_id " +
-			"INNER JOIN sv AS t2 ON t2.step>=? AND t2.step<=? AND t2.s_id=t1.o_id AND t2.p_id=sc.s2_id AND t1.o_id=t2.s_id AND t1.s_id!=t2.o_id"
-		);
-		rule_Q_NL_1.setInt(1, max_cur_step+1);
-		rule_Q_NL_1.setInt(2, min_cur_step);
-		rule_Q_NL_1.setInt(3, max_cur_step);
-		rule_Q_NL_2.setInt(1, max_cur_step+1);
-		rule_Q_NL_2.setInt(2, min_cur_step);
-		rule_Q_NL_2.setInt(3, min_cur_step);
-		rule_Q_NL_2.setInt(4, max_cur_step);
-		rule_Q_L_1.setInt(1, max_cur_step+1);
-		rule_Q_L_1.setInt(2, min_cur_step);
-		rule_Q_L_1.setInt(3, max_cur_step);
-		rule_Q_L_2.setInt(1, max_cur_step+1);
-		rule_Q_L_2.setInt(2, min_cur_step);
-		rule_Q_L_2.setInt(3, min_cur_step);
-		rule_Q_L_2.setInt(4, max_cur_step);
-		int result = rule_Q_NL_1.executeUpdate() + rule_Q_NL_2.executeUpdate() + rule_Q_L_1.executeUpdate() + rule_Q_L_2.executeUpdate();
-		timeRuleQ = timeRuleQ + System.currentTimeMillis() - starttime;
-		return result;
-	}
-
-	/**
-	 * Run Rule R:
-	 * svL(x,v,z) :- subClassOfL(x,y), svNL(y,v,z)
-	 * @param min_cur_step the earliest derivations not considered as "current" in this rule yet  
-	 * @param max_cur_step the latest derivations before this call
-	 * @return number of computed results (affected rows)
-	 * @throws SQLException
-	 */
-	protected int runRuleRsvl(int min_cur_step, int max_cur_step) throws SQLException {
-		long starttime = System.currentTimeMillis();
-		// Rule R
-		// Rule 1 of semi-naive evaluation, usage (step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_R_1 = con.prepareStatement(
-			"INSERT IGNORE INTO sv (s_id, p_id, o_id, step) " +
-			"SELECT DISTINCT t1.s_id AS s_id, t2.p_id AS p_id, t2.o_id AS o_id, ? AS step " +
-			"FROM sco AS t1 INNER JOIN sv_nl AS t2 ON t1.step>=? AND t1.step<=? AND t1.o_id=t2.s_id"
-		);
-		// Rule 2 of semi-naive evaluation, usage (step,min_cur_step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_R_2 = con.prepareStatement(
-			"INSERT IGNORE INTO sv (s_id, p_id, o_id, step) " +
-			"SELECT DISTINCT t1.s_id AS s_id, t2.p_id AS p_id, t2.o_id AS o_id, ? AS step " +
-			"FROM sco AS t1 INNER JOIN sv_nl AS t2 ON t1.step<? AND t2.step>=? AND t2.step<=? AND t1.o_id=t2.s_id"
-		);
-		rule_R_1.setInt(1, max_cur_step+1);
-		rule_R_1.setInt(2, min_cur_step);
-		rule_R_1.setInt(3, max_cur_step);
-		rule_R_2.setInt(1, max_cur_step+1);
-		rule_R_2.setInt(2, min_cur_step);
-		rule_R_2.setInt(3, min_cur_step);
-		rule_R_2.setInt(4, max_cur_step);
-		int result = rule_R_1.executeUpdate() + rule_R_2.executeUpdate();
-		timeRuleR = timeRuleR + System.currentTimeMillis() - starttime;
-		return result;
-	}
-
-	/**
-	 * Run Rule S:
-	 * svL(x,v,z) :- svL(x,v,y), subClassOf(y,x)
-	 * @param min_cur_step the earliest derivations not considered as "current" in this rule yet  
-	 * @param max_cur_step the latest derivations before this call
-	 * @return number of computed results (affected rows)
-	 * @throws SQLException
-	 */
-	protected int runRuleSsvl(int min_cur_step, int max_cur_step) throws SQLException {
-		long starttime = System.currentTimeMillis();
-		// Rule S for NL case
-		// Rule 1 of semi-naive evaluation, usage (step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_S_NL_1 = con.prepareStatement(
-			"INSERT IGNORE INTO sv (s_id, p_id, o_id, step) " +
-			"SELECT DISTINCT t1.s_id AS s_id, t1.p_id AS p_id, t2.o_id AS o_id, ? AS step " +
-			"FROM sv AS t1 INNER JOIN sco_nl AS t2 ON t1.step>=? AND t1.step<=? AND t1.o_id=t2.s_id"
-		);
-		// Rule 2 of semi-naive evaluation, usage (step,min_cur_step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_S_NL_2 = con.prepareStatement(
-			"INSERT IGNORE INTO sv (s_id, p_id, o_id, step) " +
-			"SELECT DISTINCT t1.s_id AS s_id, t1.p_id AS p_id, t2.o_id AS o_id, ? AS step " +
-			"FROM sv AS t1 INNER JOIN sco_nl AS t2 ON t1.step<? AND t2.step>=? AND t2.step<=? AND t1.o_id=t2.s_id"
-		);
-		// Rule S for L case
-		// Rule 1 of semi-naive evaluation, usage (step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_S_L_1 = con.prepareStatement(
-			"INSERT IGNORE INTO sv (s_id, p_id, o_id, step) " +
-			"SELECT DISTINCT t1.s_id AS s_id, t1.p_id AS p_id, t2.o_id AS o_id, ? AS step " +
-			"FROM sv AS t1 INNER JOIN sco AS t2 ON t1.step>=? AND t1.step<=? AND t1.o_id=t2.s_id"
-		);
-		// Rule 2 of semi-naive evaluation, usage (step,min_cur_step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_S_L_2 = con.prepareStatement(
-			"INSERT IGNORE INTO sv (s_id, p_id, o_id, step) " +
-			"SELECT DISTINCT t1.s_id AS s_id, t1.p_id AS p_id, t2.o_id AS o_id, ? AS step " +
-			"FROM sv AS t1 INNER JOIN sco AS t2 ON t1.step<? AND t2.step>=? AND t2.step<=? AND t1.o_id=t2.s_id"
-		);
-		rule_S_NL_1.setInt(1, max_cur_step+1);
-		rule_S_NL_1.setInt(2, min_cur_step);
-		rule_S_NL_1.setInt(3, max_cur_step);
-		rule_S_NL_2.setInt(1, max_cur_step+1);
-		rule_S_NL_2.setInt(2, min_cur_step);
-		rule_S_NL_2.setInt(3, min_cur_step);
-		rule_S_NL_2.setInt(4, max_cur_step);
-		rule_S_L_1.setInt(1, max_cur_step+1);
-		rule_S_L_1.setInt(2, min_cur_step);
-		rule_S_L_1.setInt(3, max_cur_step);
-		rule_S_L_2.setInt(1, max_cur_step+1);
-		rule_S_L_2.setInt(2, min_cur_step);
-		rule_S_L_2.setInt(3, min_cur_step);
-		rule_S_L_2.setInt(4, max_cur_step);
-		int result = rule_S_NL_1.executeUpdate() + rule_S_NL_2.executeUpdate() + rule_S_L_1.executeUpdate() + rule_S_L_2.executeUpdate();
-		timeRuleS = timeRuleS + System.currentTimeMillis() - starttime;
-		return result;
-	}
-
-	/**
-	 * Run Rule NA:
-	 * subClassOfNL(y,x) :- subClassOf(x,y), Nonempty(x), Nominal(y)
-	 * TODO Check the leaf/non-leaf interactions for this rule.
-	 * @param min_cur_step the earliest derivations not considered as "current" in this rule yet  
-	 * @param max_cur_step the latest derivations before this call
-	 * @return number of computed results (affected rows)
-	 * @throws SQLException
-	 */
-	protected int runRuleNAsconl(int min_cur_step, int max_cur_step) throws SQLException {
-		//long starttime = System.currentTimeMillis();
-		// Rule NA, non-leaf case
-		// Rule 1 of semi-naive eval, usage (step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_NA_NL_1 = con.prepareStatement(
-			"INSERT IGNORE INTO sco_nl (s_id, o_id, step) " +
-			"SELECT DISTINCT t.o_id AS s_id, t.s_id AS o_id, ? AS step " +
-			"FROM sco_nl AS t INNER JOIN nonempty AS ne ON t.step>=? AND t.step<=? AND t.s_id=ne.id " +
-			"INNER JOIN nominal AS nom ON t.o_id=nom.id"
-		);
-		// Rule 2 of semi-naive eval, usage (step,min_cur_step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_NA_NL_2 = con.prepareStatement(
-			"INSERT IGNORE INTO sco_nl (s_id, o_id, step) " +
-			"SELECT DISTINCT t.o_id AS s_id, t.s_id AS o_id, ? AS step " +
-			"FROM sco_nl AS t INNER JOIN nonempty AS ne ON t.step<? AND ne.step>=? AND ne.step<=? AND t.s_id=ne.id " +
-			"INNER JOIN nominal AS nom ON t.o_id=nom.id"
-		);
-		// Rule NA, leaf case
-		// Rule 1 of semi-naive eval, usage (step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_NA_L_1 = con.prepareStatement(
-			"INSERT IGNORE INTO sco_nl (s_id, o_id, step) " +
-			"SELECT DISTINCT t.o_id AS s_id, t.s_id AS o_id, ? AS step " +
-			"FROM sco AS t INNER JOIN nonempty AS ne ON t.step>=? AND t.step<=? AND t.s_id=ne.id " +
-			"INNER JOIN nominal AS nom ON t.o_id=nom.id"
-		);
-		// Rule 2 of semi-naive eval, usage (step,min_cur_step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_NA_L_2 = con.prepareStatement(
-			"INSERT IGNORE INTO sco_nl (s_id, o_id, step) " +
-			"SELECT DISTINCT t.o_id AS s_id, t.s_id AS o_id, ? AS step " +
-			"FROM sco AS t INNER JOIN nonempty AS ne ON t.step<? AND ne.step>=? AND ne.step<=? AND t.s_id=ne.id " +
-			"INNER JOIN nominal AS nom ON t.o_id=nom.id"
-		);
-		rule_NA_NL_1.setInt(1, max_cur_step+1);
-		rule_NA_NL_1.setInt(2, min_cur_step);
-		rule_NA_NL_1.setInt(3, max_cur_step);
-		rule_NA_NL_2.setInt(1, max_cur_step+1);
-		rule_NA_NL_2.setInt(2, min_cur_step);
-		rule_NA_NL_2.setInt(3, min_cur_step);
-		rule_NA_NL_2.setInt(4, max_cur_step);
-		rule_NA_L_1.setInt(1, max_cur_step+1);
-		rule_NA_L_1.setInt(2, min_cur_step);
-		rule_NA_L_1.setInt(3, max_cur_step);
-		rule_NA_L_2.setInt(1, max_cur_step+1);
-		rule_NA_L_2.setInt(2, min_cur_step);
-		rule_NA_L_2.setInt(3, min_cur_step);
-		rule_NA_L_2.setInt(4, max_cur_step);
-		int result = rule_NA_NL_1.executeUpdate() + rule_NA_NL_2.executeUpdate() + rule_NA_L_1.executeUpdate() + rule_NA_L_2.executeUpdate();
-		//timeRuleR = timeRuleR + System.currentTimeMillis() - starttime;
-		return result;
-	}
-
-	/**
-	 * Run Rule NB:
-	 * Nonempty(y) :- subClassOf(x,y), Nonempty(x)
-	 * @param min_cur_step the earliest derivations not considered as "current" in this rule yet  
-	 * @param max_cur_step the latest derivations before this call
-	 * @return number of computed results (affected rows)
-	 * @throws SQLException
-	 */
-	protected int runRuleNBsconl(int min_cur_step, int max_cur_step) throws SQLException {
-		//long starttime = System.currentTimeMillis();
-		// Rule NB, non-leaf case
-		// Rule 1 of semi-naive eval, usage (step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_NB_NL_1 = con.prepareStatement(
-			"INSERT IGNORE INTO nonempty (id, step) " +
-			"SELECT DISTINCT t.o_id AS id, ? AS step " +
-			"FROM sco_nl AS t INNER JOIN nonempty AS ne ON t.step>=? AND t.step<=? AND t.s_id=ne.id"
-		);
-		// Rule 2 of semi-naive eval, usage (step,min_cur_step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_NB_NL_2 = con.prepareStatement(
-			"INSERT IGNORE INTO nonempty (id, step) " +
-			"SELECT DISTINCT t.o_id AS id, ? AS step " +
-			"FROM sco_nl AS t INNER JOIN nonempty AS ne ON t.step<? AND ne.step>=? AND ne.step<=? AND t.s_id=ne.id"
-		);
-		// Rule NB, leaf case
-		// Rule 1 of semi-naive eval, usage (step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_NB_L_1 = con.prepareStatement(
-			"INSERT IGNORE INTO nonempty (id, step) " +
-			"SELECT DISTINCT t.o_id AS id, ? AS step " +
-			"FROM sco AS t INNER JOIN nonempty AS ne ON t.step>=? AND t.step<=? AND t.s_id=ne.id"
-		);
-		// Rule 2 of semi-naive eval, usage (step,min_cur_step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_NB_L_2 = con.prepareStatement(
-			"INSERT IGNORE INTO nonempty (id, step) " +
-			"SELECT DISTINCT t.o_id AS id, ? AS step " +
-			"FROM sco AS t INNER JOIN nonempty AS ne ON t.step<? AND ne.step>=? AND ne.step<=? AND t.s_id=ne.id"
-		);
-		rule_NB_NL_1.setInt(1, max_cur_step+1);
-		rule_NB_NL_1.setInt(2, min_cur_step);
-		rule_NB_NL_1.setInt(3, max_cur_step);
-		rule_NB_NL_2.setInt(1, max_cur_step+1);
-		rule_NB_NL_2.setInt(2, min_cur_step);
-		rule_NB_NL_2.setInt(3, min_cur_step);
-		rule_NB_NL_2.setInt(4, max_cur_step);
-		rule_NB_L_1.setInt(1, max_cur_step+1);
-		rule_NB_L_1.setInt(2, min_cur_step);
-		rule_NB_L_1.setInt(3, max_cur_step);
-		rule_NB_L_2.setInt(1, max_cur_step+1);
-		rule_NB_L_2.setInt(2, min_cur_step);
-		rule_NB_L_2.setInt(3, min_cur_step);
-		rule_NB_L_2.setInt(4, max_cur_step);
-		int result = rule_NB_NL_1.executeUpdate() + rule_NB_NL_2.executeUpdate() + rule_NB_L_1.executeUpdate() + rule_NB_L_2.executeUpdate();
-		//timeRuleR = timeRuleR + System.currentTimeMillis() - starttime;
-		return result;
-	}
-
-	/**
-	 * Run Rule NC:
-	 * Nonempty(y) :- sv(x,v,y), Nonempty(x)
-	 * @param min_cur_step the earliest derivations not considered as "current" in this rule yet  
-	 * @param max_cur_step the latest derivations before this call
-	 * @return number of computed results (affected rows)
-	 * @throws SQLException
-	 */
-	protected int runRuleNCsconl(int min_cur_step, int max_cur_step) throws SQLException {
-		//long starttime = System.currentTimeMillis();
-		// Rule NC, non-leaf case
-		// Rule 1 of semi-naive eval, usage (step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_NC_NL_1 = con.prepareStatement(
-			"INSERT IGNORE INTO nonempty (id, step) " +
-			"SELECT DISTINCT t.o_id AS id, ? AS step " +
-			"FROM sv_nl AS t INNER JOIN nonempty AS ne ON t.step>=? AND t.step<=? AND t.s_id=ne.id"
-		);
-		// Rule 2 of semi-naive eval, usage (step,min_cur_step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_NC_NL_2 = con.prepareStatement(
-			"INSERT IGNORE INTO nonempty (id, step) " +
-			"SELECT DISTINCT t.o_id AS id, ? AS step " +
-			"FROM sv_nl AS t INNER JOIN nonempty AS ne ON t.step<? AND ne.step>=? AND ne.step<=? AND t.s_id=ne.id"
-		);
-		// Rule NC, leaf case
-		// Rule 1 of semi-naive eval, usage (step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_NC_L_1 = con.prepareStatement(
-			"INSERT IGNORE INTO nonempty (id, step) " +
-			"SELECT DISTINCT t.o_id AS id, ? AS step " +
-			"FROM sv AS t INNER JOIN nonempty AS ne ON t.step>=? AND t.step<=? AND t.s_id=ne.id"
-		);
-		// Rule 2 of semi-naive eval, usage (step,min_cur_step,min_cur_step,max_cur_step)
-		final PreparedStatement rule_NC_L_2 = con.prepareStatement(
-			"INSERT IGNORE INTO nonempty (id, step) " +
-			"SELECT DISTINCT t.o_id AS id, ? AS step " +
-			"FROM sv AS t INNER JOIN nonempty AS ne ON t.step<? AND ne.step>=? AND ne.step<=? AND t.s_id=ne.id"
-		);
-		rule_NC_NL_1.setInt(1, max_cur_step+1);
-		rule_NC_NL_1.setInt(2, min_cur_step);
-		rule_NC_NL_1.setInt(3, max_cur_step);
-		rule_NC_NL_2.setInt(1, max_cur_step+1);
-		rule_NC_NL_2.setInt(2, min_cur_step);
-		rule_NC_NL_2.setInt(3, min_cur_step);
-		rule_NC_NL_2.setInt(4, max_cur_step);
-		rule_NC_L_1.setInt(1, max_cur_step+1);
-		rule_NC_L_1.setInt(2, min_cur_step);
-		rule_NC_L_1.setInt(3, max_cur_step);
-		rule_NC_L_2.setInt(1, max_cur_step+1);
-		rule_NC_L_2.setInt(2, min_cur_step);
-		rule_NC_L_2.setInt(3, min_cur_step);
-		rule_NC_L_2.setInt(4, max_cur_step);
-		int result = rule_NC_NL_1.executeUpdate() + rule_NC_NL_2.executeUpdate() + rule_NC_L_1.executeUpdate() + rule_NC_L_2.executeUpdate();
-		//timeRuleR = timeRuleR + System.currentTimeMillis() - starttime;
-		return result;
+	public void closeStoreBridge() throws SQLException {
+		if (bridge != null) {
+			bridge.close();
+			bridge = null;
+		}
 	}
 
 }
