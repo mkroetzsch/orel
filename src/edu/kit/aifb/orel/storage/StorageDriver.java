@@ -20,6 +20,8 @@ public interface StorageDriver {
 	
 	public void drop() throws Exception;
 	
+	public void dumpStatistics();
+	
 	public void clear(boolean onlyderived) throws Exception;
 	public void clear(String predicate, boolean onlyderived) throws Exception;
 	

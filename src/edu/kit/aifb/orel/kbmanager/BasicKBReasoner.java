@@ -39,7 +39,7 @@ public class BasicKBReasoner {
 		rules.put("trans-repair1",  "sco(x,z)  :- sco(x,y,0), sco(y,z,?,?)");
 		rules.put("trans-repair2",  "sco(x,z)  :- sco(x,y,?,?), sco(y,z,?,?)");
 		
-		rules.put("del-ref",  "-sco(x,x) :- sco(x,x)");
+		rules.put("del-ref",  "-sco(x,x) :- ");
 		
 		rules.put("trans",  "sco(x,z)  :- sco(x,y,0), sco(y,z)");
 		rules.put("E",      "sco(x,z)  :- subconjunctionof(y1,y2,z), sco(x,y1), sco(x,y2)");
@@ -86,6 +86,7 @@ public class BasicKBReasoner {
 			if (maxstep>=curstep_scotra) {
 				System.out.println(" Materialising transitivity for step " + curstep_scotra + "... ");
 				maxstep = materializeSubclassOfTransitivity(curstep_scotra);
+				storage.runRule("del-ref",curstep_scotra+1,maxstep); // clean up reflexive subClassOfs
 				curstep_scotra = maxstep + 1; // for now we are done; only future results will matter to scotra
 				System.out.println(" Done.");
 			} else if (maxstep>=curstep_sco) {
@@ -108,12 +109,14 @@ public class BasicKBReasoner {
 				}
 				if (affectedrows > 0) { // new sconl statements; update result of transitivity materialisation
 					System.out.println(" Number of rows affected in above rules: " + affectedrows + ". Starting sco repair for steps " + auxcurstep + " to " + curstep_sco + " ... ");
+					storage.runRule("del-ref",auxcurstep,curstep_sco); // clean up reflexive subClassOfs
 					// Before moving the new facts downwards to become base facts, make sure that the remaining rules have seen them:
 					affectedrows = storage.runRule("Hn",curstep_nonsco,curstep_sco);
 					affectedrows = affectedrows + storage.runRule("Jn",curstep_nonsco,curstep_sco);
 					curstep_nonsco = curstep_sco+1;
 					// now do the actual repair (and increase of maxstep)
 					maxstep = repairMaterializeSubclassOfTransitivity(auxcurstep,curstep_sco); // always increases step counter
+					storage.runRule("del-ref",curstep_sco+1,maxstep); // clean up reflexive subClassOfs
 					curstep_scotra = maxstep; // scotra can continue here
 					System.out.println(" Done.");
 				}
@@ -134,6 +137,7 @@ public class BasicKBReasoner {
 		System.out.println("Times used:");
 		System.out.println("Sco transitivity materialisation total: " + timetrans);
 		System.out.println("Sco repair total: " + timerepair);
+		storage.dumpStatistics();
 	}
 
 	/**
