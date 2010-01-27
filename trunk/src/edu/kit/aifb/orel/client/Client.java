@@ -6,10 +6,13 @@ import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.model.OWLOntology;
 import org.semanticweb.owlapi.model.OWLOntologyManager;
 
-import edu.kit.aifb.orel.db.BasicStore;
+import edu.kit.aifb.orel.kbmanager.BasicKBManager;
+import edu.kit.aifb.orel.storage.MySQLStorageDriver;
+import edu.kit.aifb.orel.storage.StorageDriver;
 
 public class Client {
-	protected static BasicStore store;
+	protected static StorageDriver storage;
+	protected static BasicKBManager kbmanager; 
 
 	/**
 	 * @param args
@@ -70,28 +73,29 @@ public class Client {
 
 		long sTime=System.currentTimeMillis();
 		try {
-			Client.store = new BasicStore(Settings.getDBServer(),Settings.getDBName(),Settings.getDBUser(),Settings.getDBPassword());
+			storage = new MySQLStorageDriver(Settings.getDBServer(),Settings.getDBName(),Settings.getDBUser(),Settings.getDBPassword());
+			kbmanager = new BasicKBManager(storage);
 			if (operation.equals("init")) {
 				System.out.println("Initialising store ... ");
-				Client.store.initialize();
+				kbmanager.initialize();
 			} else if (operation.equals("drop")) {
 				System.out.println("Deleting all database tables ...");
 				Thread.sleep(1000);
 				System.out.println("(CTRL+C to abort within the next 5 seconds!)");
 				Thread.sleep(5000);
-				Client.store.drop();
+				kbmanager.drop();
 			} else if (operation.equals("clear")) {
 				System.out.println("Deleting derived database content ...");
 				Thread.sleep(1000);
 				System.out.println("(CTRL+C to abort within the next 3 seconds!)");
 				Thread.sleep(3000);
-				Client.store.clearDatabase(true);
+				kbmanager.clearDatabase(true);
 			} else if (operation.equals("clearall")) {
 				System.out.println("Deleting ALL database content ...");
 				Thread.sleep(1000);
 				System.out.println("(CTRL+C to abort within the next 3 seconds!)");
 				Thread.sleep(3000);
-				Client.store.clearDatabase(false);
+				kbmanager.clearDatabase(false);
 			} else if (operation.equals("load")) {
 				System.out.println("Loading ontology ...");
 				if (inputfile.equals("")) {
@@ -107,7 +111,7 @@ public class Client {
 				System.out.println("Ontology loaded in " + (loadeTime-loadsTime) + " ms.");
 				System.out.println("Storing ontology ...");
 				loadsTime=System.currentTimeMillis();
-				Client.store.loadOntology(ontology);
+				kbmanager.loadOntology(ontology);
 				loadeTime=System.currentTimeMillis();
 				System.out.println("Ontology stored in " + (loadeTime-loadsTime) + " ms.");
 				manager.removeOntology(ontology);
@@ -126,7 +130,7 @@ public class Client {
 				System.out.println("Ontology loaded in " + (loadeTime-loadsTime) + " ms.");
 				System.out.println("Processing ontology ...");
 				loadsTime=System.currentTimeMillis();
-				if (Client.store.checkEntailment(ontology)) {
+				if (kbmanager.checkEntailment(ontology)) {
 					System.out.println("Ontology is entailed.");
 				} else {
 					System.out.println("Ontology is not entailed.");
@@ -136,7 +140,7 @@ public class Client {
 				manager.removeOntology(ontology);
 			} else if (operation.equals("materialize")) {
 				System.out.println("Materialising consequences ...");
-				Client.store.materialize();
+				kbmanager.materialize();
 			}
 		} catch (Exception e) {
 			System.err.println(e.toString());
