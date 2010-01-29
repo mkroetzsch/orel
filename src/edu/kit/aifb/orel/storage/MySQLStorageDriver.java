@@ -21,6 +21,7 @@ import org.semanticweb.owlapi.model.OWLClassExpression;
 import org.semanticweb.owlapi.model.OWLIndividual;
 import org.semanticweb.owlapi.model.OWLNaryBooleanClassExpression;
 import org.semanticweb.owlapi.model.OWLObjectIntersectionOf;
+import org.semanticweb.owlapi.model.OWLObjectOneOf;
 import org.semanticweb.owlapi.model.OWLObjectPropertyExpression;
 
 import edu.kit.aifb.orel.inferencing.InferenceRuleDeclaration;
@@ -732,6 +733,10 @@ public class MySQLStorageDriver implements StorageDriver {
 	protected String getCanonicalName(OWLClassExpression description) {
 		if (description.isOWLNothing()) {
 			return StorageDriver.OP_NOTHING;
+		} else if (description instanceof OWLObjectOneOf) {
+			ArrayList<OWLClassExpression> ops = new ArrayList<OWLClassExpression>(((OWLNaryBooleanClassExpression) description).getOperands());
+			Collections.sort(ops); // make sure that we have a defined order; cannot have random changes between prepare and check!
+			return getCanonicalName(StorageDriver.OP_OBJECT_ONE_OF,ops);
 		} else if (description instanceof OWLNaryBooleanClassExpression) {
 			String opname;
 			if (description instanceof OWLObjectIntersectionOf) {
@@ -750,7 +755,7 @@ public class MySQLStorageDriver implements StorageDriver {
 	
 	protected String getCanonicalName(OWLIndividual individual) {
 		// treat individuals like nominals
-		return "oneOf( " + individual.toString() + " )";
+		return  StorageDriver.OP_OBJECT_ONE_OF + "( " + individual.toString() + " )";
 	}
 	
 	/**
