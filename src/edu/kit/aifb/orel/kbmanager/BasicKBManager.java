@@ -74,7 +74,7 @@ public class BasicKBManager {
 	 */
 	public boolean checkEntailment(OWLOntology ontology) throws Exception {
 		loadOntology(ontology,true);
-		BasicKBReasoner reasoner = new BasicKBReasoner(storage);
+		NaiveKBReasoner reasoner = new NaiveKBReasoner(storage);
 		return reasoner.checkEntailment(ontology);
 	}
 
@@ -82,7 +82,7 @@ public class BasicKBManager {
 	 * Compute all materialized statements on the database.
 	 */
 	public void materialize() throws Exception {
-		BasicKBReasoner reasoner = new BasicKBReasoner(storage);
+		NaiveKBReasoner reasoner = new NaiveKBReasoner(storage);
 		reasoner.materialize();
 	}
 	
