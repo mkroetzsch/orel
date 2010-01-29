@@ -16,6 +16,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.semanticweb.owlapi.model.OWLObject;
 import org.semanticweb.owlapi.model.OWLClassExpression;
 import org.semanticweb.owlapi.model.OWLIndividual;
 import org.semanticweb.owlapi.model.OWLNaryBooleanClassExpression;
@@ -716,10 +717,14 @@ public class MySQLStorageDriver implements StorageDriver {
 	 * For commutative operators like ObjectIntersectionOf, the operands should be sorted
 	 * before being passed to this method, so as to ensure a consistent representation.
 	 */
-	protected String getCanonicalName(String opname, List<OWLClassExpression> operands) {
+	protected String getCanonicalName(String opname, List<? extends OWLObject> operands) {
 		String result = opname + "(";
 		for (int i=0; i<operands.size(); i++) {
-			result = result + " " + getCanonicalName(operands.get(i));
+			if (operands.get(i) instanceof OWLIndividual) {
+				result = result + " " + getCanonicalName((OWLIndividual)operands.get(i));
+			} else if (operands.get(i) instanceof OWLClassExpression) {
+				result = result + " " + getCanonicalName((OWLClassExpression)operands.get(i));
+			}
 		}
 		return result + " )";
 	}
@@ -743,12 +748,17 @@ public class MySQLStorageDriver implements StorageDriver {
 		}
 	}
 	
+	protected String getCanonicalName(OWLIndividual individual) {
+		// treat individuals like nominals
+		return "oneOf( " + individual.toString() + " )";
+	}
+	
 	/**
 	 * Produce an id based on the given operator name and operand list.
 	 * For commutative operators like ObjectIntersectionOf, the operands should be sorted
 	 * before being passed to this method, so as to ensure a consistent representation.
 	 */
-	public int getIDForNaryExpression(String opname, List<OWLClassExpression> operands) throws SQLException {
+	public int getIDForNaryExpression(String opname, List<? extends OWLObject> operands) throws SQLException {
 		return getIDForString(getCanonicalName(opname, operands));
 	}
 	

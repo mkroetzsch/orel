@@ -128,11 +128,9 @@ public class BasicKBLoader {
 			OWLObjectPropertyAssertionAxiom pa = (OWLObjectPropertyAssertionAxiom) axiom;
 			result = processPropertyAssertion( pa.getSubject(), pa.getProperty(), pa.getObject(),todos); 
 		} else if (axiom instanceof OWLSameIndividualAxiom) {
-			result = false; // TODO
-			System.err.println("The following axiom is not supported: " + axiom + "\n");
+			result = processSameIndividuals(((OWLSameIndividualAxiom)axiom).getIndividuals(),todos);
 		} else if (axiom instanceof OWLDifferentIndividualsAxiom) {
-			result = false; // TODO
-			System.err.println("The following axiom is not supported: " + axiom + "\n");
+			result = processDifferentIndividuals(((OWLDifferentIndividualsAxiom)axiom).getIndividuals(),todos);
 		} else if (axiom instanceof OWLNegativeObjectPropertyAssertionAxiom) {
 			result = false; // TODO
 			System.err.println("The following axiom is not supported: " + axiom + "\n");
@@ -287,6 +285,64 @@ public class BasicKBLoader {
 		return result;
 	}
 	
+	protected boolean processSameIndividuals(OWLIndividual i1, OWLIndividual i2, int todos) throws Exception {
+		boolean result = true;
+		int id1 = storage.getID(i1);
+		int id2 = storage.getID(i2);
+		if ( (todos & BasicKBLoader.ASSERT) != 0 ) {
+			storage.makePredicateAssertion("sco",id1,id2);
+		}
+		if ( (todos & BasicKBLoader.CHECK) != 0 ) {
+			result = storage.checkPredicateAssertion("sco",id1,id2);
+		}
+		if ( (todos & BasicKBLoader.PREPARE) != 0 ) {
+			createBodyFacts(id1,i1);
+			createHeadFacts(id2,i2);
+		}
+		return result;
+	}
+
+	protected boolean processDifferentIndividuals(Set<OWLIndividual> individuals, int todos) throws Exception {
+		Object[] inds = individuals.toArray();
+		boolean result = true;
+		int botid = storage.getIDForNothing();
+		ArrayList<OWLIndividual> ops;
+		for (int i=0; i<inds.length; i++) {
+			int oid1 = storage.getID((OWLIndividual)inds[i]);
+			for (int j=i+1; j<inds.length; j++) {
+				ops = new ArrayList<OWLIndividual>(2);
+				ops.add((OWLIndividual)inds[i]);
+				ops.add((OWLIndividual)inds[j]);
+				Collections.sort(ops);
+				int interid = storage.getIDForNaryExpression(StorageDriver.OP_OBJECT_INTERSECTION, ops);
+				if ( (todos & BasicKBLoader.ASSERT) != 0 ) {
+					storage.makePredicateAssertion("sco",interid,botid);
+				}
+				if ( (todos & BasicKBLoader.CHECK) != 0 ) {
+					result = result && storage.checkPredicateAssertion("sco",interid,botid);
+				}
+				if ( (todos & BasicKBLoader.PREPARE) != 0 ) {
+					// (nothing to prepare for bottom)
+					int oid2 = storage.getID((OWLIndividual)inds[j]);
+					storage.makePredicateAssertion("subconjunctionof",oid1,oid2,interid);
+				}
+			}
+			createBodyFacts(oid1,(OWLIndividual)inds[i]);
+		}
+		return result;
+	}
+	
+	protected boolean processSameIndividuals(Set<OWLIndividual> individuals, int todos) throws Exception {
+		Object[] inds = individuals.toArray();
+		int j;
+		boolean result = true;
+		for (int i=0;i<inds.length;i++) {
+			j = ((i+1)%inds.length);
+			result = result && processSameIndividuals((OWLIndividual)inds[i],(OWLIndividual)inds[j], todos);
+		}
+		return result;
+	}
+	
 
 	protected void createBodyFacts(int id, OWLIndividual i) throws Exception {
 		storage.makePredicateAssertion("nominal",id);
@@ -313,12 +369,12 @@ public class BasicKBLoader {
 	
 	protected void createConjunctionBodyFacts(int id, List<OWLClassExpression> ops) throws Exception {
 		if (ops.size() <= 0) return;
-		int oid1 = storage.getID((OWLClassExpression)ops.get(0));
-		createBodyFacts(oid1,(OWLClassExpression)ops.get(0));
+		int oid1 = storage.getID(ops.get(0));
+		createBodyFacts(oid1,ops.get(0));
 		if (ops.size() == 2) {
-			int oid2 = storage.getID((OWLClassExpression)ops.get(1));
+			int oid2 = storage.getID(ops.get(1));
 			storage.makePredicateAssertion("subconjunctionof",oid1,oid2,id);
-			createBodyFacts(oid2,(OWLClassExpression)ops.get(1));
+			createBodyFacts(oid2,ops.get(1));
 		} else { // recursion
 			ArrayList<OWLClassExpression> newops = new ArrayList<OWLClassExpression>(ops.size()-1);
 			for (int i=1; i<ops.size(); i++) {

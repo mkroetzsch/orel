@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.semanticweb.owlapi.model.OWLClassExpression;
 import org.semanticweb.owlapi.model.OWLIndividual;
+import org.semanticweb.owlapi.model.OWLObject;
 import org.semanticweb.owlapi.model.OWLObjectPropertyExpression;
 
 import edu.kit.aifb.orel.inferencing.InferenceRuleDeclaration;
@@ -49,7 +50,7 @@ public interface StorageDriver {
 	public int runRule(String rulename, int newstep, int[] params);
 	public int runRule(String rulename, int min_cur_step, int max_cur_step);
 	
-	public int getIDForNaryExpression(String opname, List<OWLClassExpression> operands) throws Exception;
+	public int getIDForNaryExpression(String opname, List<? extends OWLObject> operands) throws Exception;
 	public int getIDForNothing() throws Exception;
 	public int getID(OWLClassExpression description) throws Exception;
 	public int getID(OWLIndividual individual) throws Exception;
