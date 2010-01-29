@@ -63,12 +63,11 @@ public class BasicKBLoader {
 			result = false;
 			System.err.println("The following axiom is not supported: " + axiom + "\n");
 		} else if (axiom instanceof OWLSubObjectPropertyOfAxiom) {
-			result = processSubpropertyOf(((OWLSubObjectPropertyOfAxiom) axiom).getSubProperty(), ((OWLSubPropertyAxiom<OWLObjectProperty>) axiom).getSuperProperty(),todos);
+			result = processSubObjectPropertyOf(((OWLSubObjectPropertyOfAxiom) axiom).getSubProperty(), ((OWLSubPropertyAxiom<OWLObjectProperty>) axiom).getSuperProperty(),todos);
 		} else if (axiom instanceof OWLSubPropertyChainOfAxiom) {
 			result = processSubpropertyChainOf(((OWLSubPropertyChainOfAxiom) axiom).getPropertyChain(), ((OWLSubPropertyChainOfAxiom) axiom).getSuperProperty(),todos);
 		} else if (axiom instanceof OWLEquivalentObjectPropertiesAxiom) {	
-			result = false;
-			System.err.println("The following axiom is not supported: " + axiom + "\n");
+			result = processEquivalentObjectProperties(((OWLEquivalentObjectPropertiesAxiom) axiom).getProperties(),todos);
 		} else if (axiom instanceof OWLInverseObjectPropertiesAxiom) {
 			result = false;
 			System.err.println("The following axiom is not supported: " + axiom + "\n");
@@ -172,7 +171,7 @@ public class BasicKBLoader {
 		int j;
 		boolean result = true;
 		for (int i=0;i<descs.length;i++) {
-			j = (i%(descs.length-1))+1;
+			j = ((i+1)%descs.length);
 			result = result && processSubclassOf((OWLClassExpression)descs[i],(OWLClassExpression)descs[j], todos);
 		}
 		return result;
@@ -205,7 +204,7 @@ public class BasicKBLoader {
 		return result;
 	}
 
-	protected boolean processSubpropertyOf(OWLObjectPropertyExpression p1, OWLObjectPropertyExpression p2, int todos) throws Exception {
+	protected boolean processSubObjectPropertyOf(OWLObjectPropertyExpression p1, OWLObjectPropertyExpression p2, int todos) throws Exception {
 		if ( (todos & (BasicKBLoader.ASSERT | BasicKBLoader.CHECK) ) == 0 ) return true; // nothing to do
 		boolean result = true;
 		int pid1 = storage.getID(p1), pid2 = storage.getID(p2);
@@ -214,6 +213,17 @@ public class BasicKBLoader {
 		}
 		if ( (todos & BasicKBLoader.CHECK) != 0 ) {
 			result = storage.checkPredicateAssertion("subpropertyof", pid1, pid2);
+		}
+		return result;
+	}
+
+	protected boolean processEquivalentObjectProperties(Set<OWLObjectPropertyExpression> properties, int todos) throws Exception {
+		Object[] props = properties.toArray();
+		int j;
+		boolean result = true;
+		for (int i=0;i<props.length;i++) {
+			j = ((i+1)%props.length);
+			result = result && processSubObjectPropertyOf((OWLObjectPropertyExpression)props[i],(OWLObjectPropertyExpression)props[j], todos);
 		}
 		return result;
 	}
