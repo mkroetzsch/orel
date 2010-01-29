@@ -9,13 +9,17 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.semanticweb.owlapi.model.OWLClassExpression;
 import org.semanticweb.owlapi.model.OWLIndividual;
+import org.semanticweb.owlapi.model.OWLNaryBooleanClassExpression;
+import org.semanticweb.owlapi.model.OWLObjectIntersectionOf;
 import org.semanticweb.owlapi.model.OWLObjectPropertyExpression;
 
 import edu.kit.aifb.orel.inferencing.InferenceRuleDeclaration;
@@ -33,6 +37,7 @@ import edu.kit.aifb.orel.inferencing.PredicateTerm;
  * @author Markus Krötzsch
  */
 public class MySQLStorageDriver implements StorageDriver {
+	
 	protected HashMap<String,PredicateDeclaration> predicates;
 	protected HashMap<String,InferenceRuleDeclaration> inferencerules;
 	protected HashMap<String,ArrayList<PreparedStatement>> inferencerulestmts;
@@ -353,6 +358,10 @@ public class MySQLStorageDriver implements StorageDriver {
 		} else { 
 			return null;
 		}
+	}
+	
+	public boolean checkPredicateAssertion(String predicate, int id1) throws SQLException {
+		return checkPredicateAssertion(predicate,id1,-1,-1);
 	}
 	
 	public boolean checkPredicateAssertion(String predicate, int id1, int id2) throws SQLException {
@@ -696,20 +705,66 @@ public class MySQLStorageDriver implements StorageDriver {
 
 	/* *** Id management *** */
 	
+	/**
+	 * Produce a canonical string name based on the given operator name and operand list.
+	 * For commutative operators like ObjectIntersectionOf, the operands should be sorted
+	 * before being passed to this method, so as to ensure a consistent representation.
+	 */
+	protected String getCanonicalName(String opname, List<OWLClassExpression> operands) {
+		String result = opname + "(";
+		for (int i=0; i<operands.size(); i++) {
+			result = result + " " + getCanonicalName(operands.get(i));
+		}
+		return result + " )";
+	}
+	
+	protected String getCanonicalName(OWLClassExpression description) {
+		if (description.isOWLNothing()) {
+			return StorageDriver.OP_NOTHING;
+		} else if (description instanceof OWLNaryBooleanClassExpression) {
+			String opname;
+			if (description instanceof OWLObjectIntersectionOf) {
+				opname = StorageDriver.OP_OBJECT_INTERSECTION;
+			} else {
+				System.err.println("Unsupported nary class expression " + description.toString());
+				return description.toString();
+			}
+			ArrayList<OWLClassExpression> ops = new ArrayList<OWLClassExpression>(((OWLNaryBooleanClassExpression) description).getOperands());
+			Collections.sort(ops); // make sure that we have a defined order; cannot have random changes between prepare and check!
+			return getCanonicalName(opname,ops);
+		} else {
+			return description.toString();
+		}
+	}
+	
+	/**
+	 * Produce an id based on the given operator name and operand list.
+	 * For commutative operators like ObjectIntersectionOf, the operands should be sorted
+	 * before being passed to this method, so as to ensure a consistent representation.
+	 */
+	public int getIDForNaryExpression(String opname, List<OWLClassExpression> operands) throws SQLException {
+		return getIDForString(getCanonicalName(opname, operands));
+	}
+	
 	public int getID(OWLClassExpression description) throws SQLException {
-		return getID(description.toString());
+		return getIDForString(getCanonicalName(description));
 	}
 
 	public int getID(OWLIndividual individual) throws SQLException {
-		return getID(individual.toString());
+		return getIDForString(individual.toString());
 	}
 	
 	public int getID(OWLObjectPropertyExpression property) throws SQLException {
-		return getID(property.toString());
+		return getIDForString(property.toString());
 	}
 	
-	public int getID(String description) throws SQLException {
+	public int getIDForNothing() throws SQLException {
+		return getIDForString(StorageDriver.OP_NOTHING);
+	}
+	
+	protected int getIDForString(String description) throws SQLException {
 		int id = 0;
+		//System.out.println("Getting id for " + description); // debug
 		String hash;
 		if (description.toCharArray().length < namefieldlength) { // try to keep names intact ...
 			hash = description;
@@ -735,9 +790,9 @@ public class MySQLStorageDriver implements StorageDriver {
 						if (prelocids == null) {
 							String insertvals = "(NULL,\"-\")";
 							for (int i=1; i<prelocsize; i++) {
-								insertvals = insertvals.concat(",NULL,\"-\")");
+								insertvals = insertvals.concat(",(NULL,\"-\")");
 							}
-							prelocids = con.prepareStatement("INSERT INTO ids VALUES " + insertvals);//,Statement.RETURN_GENERATED_KEYS);
+							prelocids = con.prepareStatement("INSERT INTO ids VALUES " + insertvals, Statement.RETURN_GENERATED_KEYS);
 						}
 						if (prelocatedids != null) prelocatedids.close();						
 						prelocids.executeUpdate();

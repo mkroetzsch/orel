@@ -70,6 +70,7 @@ public class NaiveKBReasoner {
 			for (int i=0; i<inferencerules.size(); i++) {
 				affectedrows = affectedrows + storage.runRule(inferencerules.get(i),curstep,curstep);
 			}
+			curstep++;
 		}
 		System.out.println("Done in " + (System.currentTimeMillis() - sTime) + "ms.");
 		storage.dumpStatistics();
@@ -84,6 +85,10 @@ public class NaiveKBReasoner {
 		BasicKBLoader loader = new BasicKBLoader(storage);
 		loader.processOntology(ontology, BasicKBLoader.PREPARE );
 		materialize();
+		// inconsistent ontologies entail anything
+		if (storage.checkPredicateAssertion("nonempty",storage.getIDForNothing())) {
+			return true;
+		}
 		return loader.processOntology(ontology, BasicKBLoader.CHECK );
 	}
 	

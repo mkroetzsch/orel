@@ -1,25 +1,12 @@
 package edu.kit.aifb.orel.kbmanager;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
-import org.semanticweb.owlapi.model.AxiomType;
-import org.semanticweb.owlapi.model.OWLClass;
-import org.semanticweb.owlapi.model.OWLClassAssertionAxiom;
-import org.semanticweb.owlapi.model.OWLClassExpression;
-import org.semanticweb.owlapi.model.OWLEquivalentClassesAxiom;
-import org.semanticweb.owlapi.model.OWLIndividual;
-import org.semanticweb.owlapi.model.OWLLogicalAxiom;
-import org.semanticweb.owlapi.model.OWLObjectIntersectionOf;
-import org.semanticweb.owlapi.model.OWLObjectProperty;
-import org.semanticweb.owlapi.model.OWLObjectPropertyExpression;
-import org.semanticweb.owlapi.model.OWLObjectSomeValuesFrom;
-import org.semanticweb.owlapi.model.OWLOntology;
-import org.semanticweb.owlapi.model.OWLPropertyAssertionAxiom;
-import org.semanticweb.owlapi.model.OWLSubClassOfAxiom;
-import org.semanticweb.owlapi.model.OWLSubPropertyAxiom;
-import org.semanticweb.owlapi.model.OWLSubPropertyChainOfAxiom;
+import org.semanticweb.owlapi.model.*;
 
 import edu.kit.aifb.orel.storage.StorageDriver;
 
@@ -64,20 +51,98 @@ public class BasicKBLoader {
 	
 	@SuppressWarnings("unchecked")
 	protected boolean processLogicalAxiom(OWLLogicalAxiom axiom, int todos) throws Exception {
+		//System.out.println("Processing axiom " + axiom.toString()); // debug
 		boolean result;
-		if (axiom.getAxiomType() == AxiomType.SUBCLASS) {
+		if (axiom instanceof OWLSubClassOfAxiom) {
 			result = processSubclassOf(((OWLSubClassOfAxiom) axiom).getSubClass(), ((OWLSubClassOfAxiom) axiom).getSuperClass(),todos);
-		} else if (axiom.getAxiomType() == AxiomType.EQUIVALENT_CLASSES) {
+		} else if (axiom instanceof OWLEquivalentClassesAxiom) {
 			result = processEquivalentClasses(((OWLEquivalentClassesAxiom)axiom).getClassExpressions(),todos);
-		} else if (axiom.getAxiomType() == AxiomType.SUB_OBJECT_PROPERTY) {
-			result = processSubpropertyOf(((OWLSubPropertyAxiom<OWLObjectProperty>) axiom).getSubProperty(), ((OWLSubPropertyAxiom<OWLObjectProperty>) axiom).getSuperProperty(),todos);
-		} else if (axiom.getAxiomType() == AxiomType.SUB_PROPERTY_CHAIN_OF) {
+		} else if (axiom instanceof OWLDisjointClassesAxiom) {
+			result = processDisjointClasses(((OWLDisjointClassesAxiom)axiom).getClassExpressions(),todos);
+		} else if (axiom instanceof OWLDisjointUnionAxiom) {
+			result = false;
+			System.err.println("The following axiom is not supported: " + axiom + "\n");
+		} else if (axiom instanceof OWLSubObjectPropertyOfAxiom) {
+			result = processSubpropertyOf(((OWLSubObjectPropertyOfAxiom) axiom).getSubProperty(), ((OWLSubPropertyAxiom<OWLObjectProperty>) axiom).getSuperProperty(),todos);
+		} else if (axiom instanceof OWLSubPropertyChainOfAxiom) {
 			result = processSubpropertyChainOf(((OWLSubPropertyChainOfAxiom) axiom).getPropertyChain(), ((OWLSubPropertyChainOfAxiom) axiom).getSuperProperty(),todos);
-		} else if (axiom.getAxiomType() == AxiomType.CLASS_ASSERTION) {
+		} else if (axiom instanceof OWLEquivalentObjectPropertiesAxiom) {	
+			result = false;
+			System.err.println("The following axiom is not supported: " + axiom + "\n");
+		} else if (axiom instanceof OWLInverseObjectPropertiesAxiom) {
+			result = false;
+			System.err.println("The following axiom is not supported: " + axiom + "\n");
+		} else if (axiom instanceof OWLFunctionalObjectPropertyAxiom) {
+			result = false;
+			System.err.println("The following axiom is not supported: " + axiom + "\n");
+		} else if (axiom instanceof OWLInverseFunctionalObjectPropertyAxiom) {
+			result = false;
+			System.err.println("The following axiom is not supported: " + axiom + "\n");
+		} else if (axiom instanceof OWLSymmetricObjectPropertyAxiom) {
+			result = false;
+			System.err.println("The following axiom is not supported: " + axiom + "\n");
+		} else if (axiom instanceof OWLAsymmetricObjectPropertyAxiom) {
+			result = false;
+			System.err.println("The following axiom is not supported: " + axiom + "\n");
+		} else if (axiom instanceof OWLTransitiveObjectPropertyAxiom) {
+			result = false;
+			System.err.println("The following axiom is not supported: " + axiom + "\n");
+		} else if (axiom instanceof OWLReflexiveObjectPropertyAxiom) {
+			result = false;
+			System.err.println("The following axiom is not supported: " + axiom + "\n");
+		} else if (axiom instanceof OWLIrreflexiveObjectPropertyAxiom) {
+			result = false;
+			System.err.println("The following axiom is not supported: " + axiom + "\n");
+		} else if (axiom instanceof OWLObjectPropertyDomainAxiom) {
+			result = false;
+			System.err.println("The following axiom is not supported: " + axiom + "\n");
+		} else if (axiom instanceof OWLObjectPropertyRangeAxiom) {
+			result = false;
+			System.err.println("The following axiom is not supported: " + axiom + "\n");
+		} else if (axiom instanceof OWLDisjointObjectPropertiesAxiom) {
+			result = false;
+			System.err.println("The following axiom is not supported: " + axiom + "\n");
+		} else if (axiom instanceof OWLEquivalentDataPropertiesAxiom) {
+			result = false;
+			System.err.println("The following axiom is not supported: " + axiom + "\n");
+		} else if (axiom instanceof OWLSubDataPropertyOfAxiom) {
+			result = false;
+			System.err.println("The following axiom is not supported: " + axiom + "\n");
+		} else if (axiom instanceof OWLFunctionalDataPropertyAxiom) {
+			result = false;
+			System.err.println("The following axiom is not supported: " + axiom + "\n");
+		} else if (axiom instanceof OWLDataPropertyDomainAxiom) {
+			result = false;
+			System.err.println("The following axiom is not supported: " + axiom + "\n");
+		} else if (axiom instanceof OWLDataPropertyRangeAxiom) {
+			result = false;
+			System.err.println("The following axiom is not supported: " + axiom + "\n");
+		} else if (axiom instanceof OWLDisjointDataPropertiesAxiom) {
+			result = false;
+			System.err.println("The following axiom is not supported: " + axiom + "\n");
+		} else if (axiom instanceof OWLHasKeyAxiom) {
+			result = false;
+			System.err.println("The following axiom is not supported: " + axiom + "\n");
+		} else if (axiom instanceof OWLClassAssertionAxiom) {
 			result = processClassAssertion( ((OWLClassAssertionAxiom) axiom).getIndividual(), ((OWLClassAssertionAxiom) axiom).getClassExpression(),todos); 
-		} else if (axiom.getAxiomType() == AxiomType.OBJECT_PROPERTY_ASSERTION) {
-			OWLPropertyAssertionAxiom<OWLObjectProperty,OWLIndividual> pa = ((OWLPropertyAssertionAxiom<OWLObjectProperty,OWLIndividual>) axiom);
+		} else if (axiom instanceof OWLObjectPropertyAssertionAxiom) {
+			OWLObjectPropertyAssertionAxiom pa = (OWLObjectPropertyAssertionAxiom) axiom;
 			result = processPropertyAssertion( pa.getSubject(), pa.getProperty(), pa.getObject(),todos); 
+		} else if (axiom instanceof OWLSameIndividualAxiom) {
+			result = false;
+			System.err.println("The following axiom is not supported: " + axiom + "\n");
+		} else if (axiom instanceof OWLDifferentIndividualsAxiom) {
+			result = false;
+			System.err.println("The following axiom is not supported: " + axiom + "\n");
+		} else if (axiom instanceof OWLNegativeObjectPropertyAssertionAxiom) {
+			result = false;
+			System.err.println("The following axiom is not supported: " + axiom + "\n");
+		} else if (axiom instanceof OWLDataPropertyAssertionAxiom) {
+			result = false;
+			System.err.println("The following axiom is not supported: " + axiom + "\n");
+		} else if (axiom instanceof OWLNegativeDataPropertyAssertionAxiom) {
+			result = false;
+			System.err.println("The following axiom is not supported: " + axiom + "\n");
 		} else {
 			result = false;
 			System.err.println("The following axiom is not supported: " + axiom + "\n");
@@ -109,6 +174,33 @@ public class BasicKBLoader {
 		for (int i=0;i<descs.length;i++) {
 			j = (i%(descs.length-1))+1;
 			result = result && processSubclassOf((OWLClassExpression)descs[i],(OWLClassExpression)descs[j], todos);
+		}
+		return result;
+	}
+	
+	protected boolean processDisjointClasses(Set<OWLClassExpression> descriptions, int todos) throws Exception {
+		Object[] descs = descriptions.toArray();
+		boolean result = true;
+		int botid = storage.getIDForNothing();
+		ArrayList<OWLClassExpression> ops;
+		for (int i=0; i<descs.length; i++) {
+			for (int j=i+1; j<descs.length; j++) {
+				ops = new ArrayList<OWLClassExpression>(2);
+				ops.add((OWLClassExpression)descs[i]);
+				ops.add((OWLClassExpression)descs[j]);
+				Collections.sort(ops);
+				int interid = storage.getIDForNaryExpression(StorageDriver.OP_OBJECT_INTERSECTION, ops);
+				if ( (todos & BasicKBLoader.ASSERT) != 0 ) {
+					storage.makePredicateAssertion("sco",interid,botid);
+				}
+				if ( (todos & BasicKBLoader.CHECK) != 0 ) {
+					result = result && storage.checkPredicateAssertion("sco",interid,botid);
+				}
+				if ( (todos & BasicKBLoader.PREPARE) != 0 ) {
+					// (nothing to prepare for bottom)
+					createConjunctionBodyFacts(interid,ops);
+				}
+			}
 		}
 		return result;
 	}
@@ -161,7 +253,7 @@ public class BasicKBLoader {
 		return result;
 	}
 
-	protected boolean processPropertyAssertion(OWLIndividual s, OWLObjectProperty p, OWLIndividual o, int todos) throws Exception {
+	protected boolean processPropertyAssertion(OWLIndividual s, OWLObjectPropertyExpression p, OWLIndividual o, int todos) throws Exception {
 		boolean result = true;
 		int sid = storage.getID(s);
 		int pid = storage.getID(p);
@@ -186,11 +278,12 @@ public class BasicKBLoader {
 	}
 	
 	protected void createBodyFacts(int id, OWLClassExpression d) throws Exception {
-		id = storage.getID(d); //test
 		if (d instanceof OWLClass) {
 			// nothing to do here
 		} else if (d instanceof OWLObjectIntersectionOf) {
-			createConjunctionBodyFacts(id, ((OWLObjectIntersectionOf) d).getOperands().toArray());
+			ArrayList<OWLClassExpression> ops = new ArrayList<OWLClassExpression>(((OWLObjectIntersectionOf) d).getOperands());
+			Collections.sort(ops); // make sure that we have a defined order; cannot have random changes between prepare and check!
+			createConjunctionBodyFacts(id, ops);
 		} else if (d instanceof OWLObjectSomeValuesFrom) {
 			int pid = storage.getID(((OWLObjectSomeValuesFrom)d).getProperty());
 			OWLClassExpression filler = ((OWLObjectSomeValuesFrom)d).getFiller();
@@ -202,24 +295,20 @@ public class BasicKBLoader {
 		}
 	}
 	
-	protected void createConjunctionBodyFacts(int id, Object[] ops) throws Exception {
-		// TODO maybe sort ops first to increase likeliness of finding the same sub-ops again
-		if (ops.length <= 0) return;
-		int oid1 = storage.getID((OWLClassExpression)ops[0]);
-		createBodyFacts(oid1,(OWLClassExpression)ops[0]);
-		if (ops.length == 2) {
-			int oid2 = storage.getID((OWLClassExpression)ops[1]);
+	protected void createConjunctionBodyFacts(int id, List<OWLClassExpression> ops) throws Exception {
+		if (ops.size() <= 0) return;
+		int oid1 = storage.getID((OWLClassExpression)ops.get(0));
+		createBodyFacts(oid1,(OWLClassExpression)ops.get(0));
+		if (ops.size() == 2) {
+			int oid2 = storage.getID((OWLClassExpression)ops.get(1));
 			storage.makePredicateAssertion("subconjunctionof",oid1,oid2,id);
-			createBodyFacts(oid2,(OWLClassExpression)ops[1]);
+			createBodyFacts(oid2,(OWLClassExpression)ops.get(1));
 		} else { // recursion
-			String opsidstring = "IntersectionOf(";
-			Object[] newops = new Object[ops.length-1];
-			for (int i=1; i<ops.length; i++) {
-				opsidstring = new String(opsidstring + " " + ops[i].toString());
-				newops[i-1] = ops[i];
+			ArrayList<OWLClassExpression> newops = new ArrayList<OWLClassExpression>(ops.size()-1);
+			for (int i=1; i<ops.size(); i++) {
+				newops.add(ops.get(i));
 			}
-			opsidstring = opsidstring + ')';
-			int oid2 = storage.getID(opsidstring);
+			int oid2 = storage.getIDForNaryExpression(StorageDriver.OP_OBJECT_INTERSECTION, ops);
 			storage.makePredicateAssertion("subconjunctionof",oid1,oid2,id);
 			createConjunctionBodyFacts(oid2,newops);
 		}
@@ -231,7 +320,6 @@ public class BasicKBLoader {
 	}
 
 	protected void createHeadFacts(int sid, OWLClassExpression d) throws Exception {
-		sid = storage.getID(d); //test
 		if (d instanceof OWLClass) {
 			// nothing to do here
 		} else if (d instanceof OWLObjectIntersectionOf){
