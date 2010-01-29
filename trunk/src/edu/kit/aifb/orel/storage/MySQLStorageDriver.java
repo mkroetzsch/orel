@@ -45,12 +45,15 @@ public class MySQLStorageDriver implements StorageDriver {
 	// keep prepared statements in a map to process them with less code
 	protected HashMap<String,PreparedStatement> prepinsertstmts;
 	protected HashMap<String,Integer> prepinsertstmtsizes;
-	protected HashMap<String,PreparedStatement> prepcheckstmts;	
+	protected HashMap<String,PreparedStatement> prepcheckstmts;
+	
+	// true if we are in bulk loading, auto commit=off mode
+	protected boolean loadmode = false;
 	
 	// the remaining fields are for ID management
 	protected int curid = 0; // optionally do your own counting instead of using auto increment: faster but not multi-thread safe
 	// (a value of 0 indicates that AUTO INCREMENT should be used)
-	protected int maxid = -1; // maximum id that is currently reserved (only used for committing batches right now) 
+	protected int maxid = -1; // maximum id that is currently reserved (only used for committing batches right now)
 	
 	protected int namefieldlength = 50; // maximal length of the VARCHAR in the ids table
 	protected Connection con = null;
@@ -235,7 +238,7 @@ public class MySQLStorageDriver implements StorageDriver {
 		if (makeids != null) makeids.executeBatch();
 		Statement stmt = con.createStatement();
 		stmt.execute("DELETE FROM ids WHERE name=\"-\""); // delete any unused pre-allocated ids
-		con.commit();
+		if (loadmode) con.commit();
 	}
 	
 	/**
@@ -280,6 +283,7 @@ public class MySQLStorageDriver implements StorageDriver {
 		} catch (SQLException e) {
 			System.err.println(e.toString());
 		}
+		loadmode=true;
 	}
 	
 	/**
@@ -287,6 +291,7 @@ public class MySQLStorageDriver implements StorageDriver {
 	 * operation initiated with beginLoading().
 	 */
 	public void endLoading() {
+		if (!loadmode) return;
 		curid=0; // back to AUTO INCREMENT
 		try {
 			commit();
@@ -295,6 +300,7 @@ public class MySQLStorageDriver implements StorageDriver {
 		} catch (SQLException e) {
 			System.err.println(e.toString());
 		}
+		loadmode=false;
 	}
 
 	protected void enableKeys(boolean ek) throws SQLException {
@@ -789,7 +795,7 @@ public class MySQLStorageDriver implements StorageDriver {
 					if (curid == 0) { // rely on AUTO INCREMENT
 						if (prelocids == null) {
 							String insertvals = "(NULL,\"-\")";
-							for (int i=1; i<prelocsize; i++) {
+							for (int i=1; (loadmode && (i<prelocsize)); i++) {
 								insertvals = insertvals.concat(",(NULL,\"-\")");
 							}
 							prelocids = con.prepareStatement("INSERT INTO ids VALUES " + insertvals, Statement.RETURN_GENERATED_KEYS);
@@ -805,7 +811,7 @@ public class MySQLStorageDriver implements StorageDriver {
 						makeids.executeBatch();
 						unwrittenids.clear();
 					}
-					con.commit(); // needed to ensure that above SELECTs will be correct now that unwrittenids is empty again
+					if (loadmode) con.commit(); // needed to ensure that above SELECTs will be correct now that unwrittenids is empty again
 				}
 				// add a new id to the current batch and unwritten id cache
 				if (curid == 0) {
