@@ -52,19 +52,11 @@ public class BasicKBManager {
 	/**
 	 * Load the content of some ontology to the database.   
 	 * @param ontology
-	 */
-	public void loadOntology(OWLOntology ontology) throws Exception {
-		loadOntology(ontology, false);
-	}
-	
-	/**
-	 * Load the content of some ontology to the database.   
-	 * @param ontology
 	 * @param donotassert if true then only load the relevant subexpressions without asserting the axioms 
 	 */
-	public void loadOntology(OWLOntology ontology, boolean donotassert) throws Exception {
+	public void loadOntology(OWLOntology ontology) throws Exception {
 		BasicKBLoader loader = new BasicKBLoader(storage);
-		loader.loadOntology(ontology, donotassert);
+		loader.processOntology(ontology, (BasicKBLoader.PREPARE | BasicKBLoader.ASSERT) );
 	}
 
 	/**
@@ -73,7 +65,6 @@ public class BasicKBManager {
 	 * @param ontology
 	 */
 	public boolean checkEntailment(OWLOntology ontology) throws Exception {
-		loadOntology(ontology,true);
 		NaiveKBReasoner reasoner = new NaiveKBReasoner(storage);
 		return reasoner.checkEntailment(ontology);
 	}

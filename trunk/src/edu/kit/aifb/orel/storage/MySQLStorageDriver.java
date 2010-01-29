@@ -310,31 +310,31 @@ public class MySQLStorageDriver implements StorageDriver {
 	
 	/* *** Basic data access *** */
 
-	public void insertIdsToTable(String tablename, int id1) throws SQLException {
-		insertIdsToTable(tablename,id1,-1,-1);
+	public void makePredicateAssertion(String predicate, int id1) throws SQLException {
+		makePredicateAssertion(predicate,id1,-1,-1);
 	}
 	
-	public void insertIdsToTable(String tablename, int id1, int id2) throws SQLException {
-		insertIdsToTable(tablename,id1,id2,-1);
+	public void makePredicateAssertion(String predicate, int id1, int id2) throws SQLException {
+		makePredicateAssertion(predicate,id1,id2,-1);
 	}
 
-	public void insertIdsToTable(String tablename, int id1, int id2, int id3) throws SQLException {
-		PreparedStatement stmt = prepinsertstmts.get(tablename);
+	public void makePredicateAssertion(String predicate, int id1, int id2, int id3) throws SQLException {
+		PreparedStatement stmt = prepinsertstmts.get(predicate);
 		if (stmt == null) {
-			stmt = getPreparedInsertStatement(tablename);
-			prepinsertstmts.put(tablename, stmt);
-			prepinsertstmtsizes.put(tablename, 0);
+			stmt = getPreparedInsertStatement(predicate);
+			prepinsertstmts.put(predicate, stmt);
+			prepinsertstmtsizes.put(predicate, 0);
 		}
 		if (id1 >= 0) stmt.setInt(1, id1);
 		if (id2 >= 0) stmt.setInt(2, id2);
 		if (id3 >= 0) stmt.setInt(3, id3);
 		stmt.addBatch();
-		int cursize = prepinsertstmtsizes.get(tablename)+1;
+		int cursize = prepinsertstmtsizes.get(predicate)+1;
 		if (cursize >= maxbatchsize) {
 			stmt.executeBatch();
-			prepinsertstmtsizes.put(tablename,0);
+			prepinsertstmtsizes.put(predicate,0);
 		} else {
-			prepinsertstmtsizes.put(tablename,cursize);
+			prepinsertstmtsizes.put(predicate,cursize);
 		}
 	}
 	
@@ -355,16 +355,16 @@ public class MySQLStorageDriver implements StorageDriver {
 		}
 	}
 	
-	public boolean checkIdsInTable(String tablename, int id1, int id2) throws SQLException {
-		return checkIdsInTable(tablename,id1,id2,-1);
+	public boolean checkPredicateAssertion(String predicate, int id1, int id2) throws SQLException {
+		return checkPredicateAssertion(predicate,id1,id2,-1);
 	}
 
-	public boolean checkIdsInTable(String tablename, int id1, int id2, int id3) throws SQLException {
-		PreparedStatement stmt = prepcheckstmts.get(tablename);
+	public boolean checkPredicateAssertion(String predicate, int id1, int id2, int id3) throws SQLException {
+		PreparedStatement stmt = prepcheckstmts.get(predicate);
 		if (stmt == null) {
-			stmt = getPreparedCheckStatement(tablename);
-			prepinsertstmts.put(tablename, stmt);
-			prepinsertstmtsizes.put(tablename, 0);
+			stmt = getPreparedCheckStatement(predicate);
+			prepinsertstmts.put(predicate, stmt);
+			prepinsertstmtsizes.put(predicate, 0);
 		}
 		if (id1 >= 0) stmt.setInt(1, id1);
 		if (id2 >= 0) stmt.setInt(2, id2);
@@ -375,24 +375,19 @@ public class MySQLStorageDriver implements StorageDriver {
 		return result;
 	}
 
-	/// TODO: update to use predicate declarations
 	protected PreparedStatement getPreparedCheckStatement(String tablename) throws SQLException {
-		if (tablename.equals("sco")) {
-			return con.prepareStatement("SELECT * FROM sco WHERE s_id=? AND o_id=? LIMIT 1");
-		} else if (tablename.equals("sv")) {
-			return null;
-		} else if (tablename.equals("subconjunctionof")) {
-			return null;
-		} else if (tablename.equals("subpropertyof")) {
-			return con.prepareStatement("SELECT * FROM subpropertyof WHERE s_id=? AND o_id=? LIMIT 1");
-		} else if (tablename.equals("subpropertychain")) {
-			return con.prepareStatement("SELECT * FROM subpropertychain WHERE s1_id=? AND s2_id=? AND o_id=? LIMIT 1");
-		} else if (tablename.equals("subsomevalues")) {
-			return null;
-		} else if (tablename.equals("ids")) {
+		if (predicates.containsKey(tablename)) {
+			PredicateDeclaration pd = predicates.get(tablename);
+			String sql = "SELECT * FROM " + tablename + " WHERE ";
+			for (int i=0; i<pd.getFieldCount(); i++) {
+				if (i>0) sql = sql + " AND ";
+				sql = sql + "f" + (i) + "=?";
+			}
+			sql = sql + " LIMIT 1";
+			return con.prepareStatement(sql);
+		} else { 
 			return null;
 		}
-		return null;
 	}
 	
 	public int changeStep(String predicate, int oldstep, int newstep) throws SQLException {
