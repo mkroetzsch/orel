@@ -30,12 +30,12 @@ public interface StorageDriver {
 	
 	public void endLoading();
 	
-	public void insertIdsToTable(String tablename, int id1) throws Exception;
-	public void insertIdsToTable(String tablename, int id1, int id2) throws Exception;
-	public void insertIdsToTable(String tablename, int id1, int id2, int id3) throws Exception;
+	public void makePredicateAssertion(String predicate, int id1) throws Exception;
+	public void makePredicateAssertion(String predicate, int id1, int id2) throws Exception;
+	public void makePredicateAssertion(String predicate, int id1, int id2, int id3) throws Exception;
 	
-	public boolean checkIdsInTable(String tablename, int id1, int id2) throws Exception;
-	public boolean checkIdsInTable(String tablename, int id1, int id2, int id3) throws Exception;
+	public boolean checkPredicateAssertion(String predicate, int id1, int id2) throws Exception;
+	public boolean checkPredicateAssertion(String predicate, int id1, int id2, int id3) throws Exception;
 	public int changeStep(String predicate, int oldstep, int newstep) throws Exception;
 
 	public void registerInferenceRule(InferenceRuleDeclaration rd);

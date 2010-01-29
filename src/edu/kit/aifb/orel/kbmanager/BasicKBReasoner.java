@@ -158,7 +158,7 @@ public class BasicKBReasoner {
 			if (axiom.getAxiomType() == AxiomType.SUBCLASS) {
 				id1 = storage.getID(((OWLSubClassOfAxiom) axiom).getSubClass());
 				id2 = storage.getID(((OWLSubClassOfAxiom) axiom).getSuperClass());
-				if ( (id1 != id2) && (!storage.checkIdsInTable("sco",id1,id2)) ) return false;
+				if ( (id1 != id2) && (!storage.checkPredicateAssertion("sco",id1,id2)) ) return false;
 			} else if (axiom.getAxiomType() == AxiomType.EQUIVALENT_CLASSES) {
 				Object[] descs = ((OWLEquivalentClassesAxiom)axiom).getClassExpressions().toArray();
 				int j;
@@ -166,18 +166,18 @@ public class BasicKBReasoner {
 					j=(i%(descs.length-1))+1;
 					id1 = storage.getID((OWLClassExpression)descs[i]);
 					id2 = storage.getID((OWLClassExpression)descs[j]);
-					if ( (id1 != id2) && (!storage.checkIdsInTable("sco",id1,id2)) ) return false;
+					if ( (id1 != id2) && (!storage.checkPredicateAssertion("sco",id1,id2)) ) return false;
 				}
 			} else if (axiom.getAxiomType() == AxiomType.SUB_OBJECT_PROPERTY) {
 				id1 = storage.getID(((OWLSubPropertyAxiom<OWLObjectProperty>) axiom).getSubProperty());
 				id2 = storage.getID(((OWLSubPropertyAxiom<OWLObjectProperty>) axiom).getSuperProperty());
-				if ( (id1 != id2) && (!storage.checkIdsInTable("subpropertyof",id1,id2)) ) return false;
+				if ( (id1 != id2) && (!storage.checkPredicateAssertion("subpropertyof",id1,id2)) ) return false;
 			} else if (axiom.getAxiomType() == AxiomType.SUB_PROPERTY_CHAIN_OF) {
 				List<OWLObjectPropertyExpression> chain = ((OWLSubPropertyChainOfAxiom) axiom).getPropertyChain();
 				if (chain.size() == 2) {
 					id1 = storage.getID(chain.get(0));
 					id2 = storage.getID(chain.get(1));
-					if (!storage.checkIdsInTable("subpropertychain",id1,id2,storage.getID(((OWLSubPropertyChainOfAxiom) axiom).getSuperProperty()))) return false;
+					if (!storage.checkPredicateAssertion("subpropertychain",id1,id2,storage.getID(((OWLSubPropertyChainOfAxiom) axiom).getSuperProperty()))) return false;
 				} else {
 					//return false;
 					// TODO
