@@ -2,19 +2,8 @@ package edu.kit.aifb.orel.kbmanager;
 
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
 
-import org.semanticweb.owlapi.model.AxiomType;
-import org.semanticweb.owlapi.model.OWLClassExpression;
-import org.semanticweb.owlapi.model.OWLEquivalentClassesAxiom;
-import org.semanticweb.owlapi.model.OWLLogicalAxiom;
-import org.semanticweb.owlapi.model.OWLObjectProperty;
-import org.semanticweb.owlapi.model.OWLObjectPropertyExpression;
 import org.semanticweb.owlapi.model.OWLOntology;
-import org.semanticweb.owlapi.model.OWLSubClassOfAxiom;
-import org.semanticweb.owlapi.model.OWLSubPropertyAxiom;
-import org.semanticweb.owlapi.model.OWLSubPropertyChainOfAxiom;
 
 import edu.kit.aifb.orel.inferencing.InferenceRuleDeclaration;
 import edu.kit.aifb.orel.storage.StorageDriver;
@@ -169,50 +158,11 @@ public class BasicLeafKBReasoner {
 	 * Unsupported axioms will be ignored, and the result will be as if they had not been given.   
 	 * @param ontology
 	 */
-	@SuppressWarnings("unchecked")
 	public boolean checkEntailment(OWLOntology ontology) throws Exception {
+		BasicKBLoader loader = new BasicKBLoader(storage);
+		loader.processOntology(ontology, BasicKBLoader.PREPARE );
 		materialize();
-		// now check entailment of all axioms
-		Set<OWLLogicalAxiom> axiomset = ontology.getLogicalAxioms();
-		Iterator<OWLLogicalAxiom> axiomiterator = axiomset.iterator();
-		OWLLogicalAxiom axiom;
-		int id1,id2;
-		while(axiomiterator.hasNext()){
-			axiom = axiomiterator.next();
-			if (axiom.getAxiomType() == AxiomType.SUBCLASS) {
-				id1 = storage.getID(((OWLSubClassOfAxiom) axiom).getSubClass());
-				id2 = storage.getID(((OWLSubClassOfAxiom) axiom).getSuperClass());
-				if ( (id1 != id2) && (!storage.checkPredicateAssertion("sco",id1,id2)) ) return false;
-			} else if (axiom.getAxiomType() == AxiomType.EQUIVALENT_CLASSES) {
-				Object[] descs = ((OWLEquivalentClassesAxiom)axiom).getClassExpressions().toArray();
-				int j;
-				for(int i=0;i<descs.length;i++){
-					j=(i%(descs.length-1))+1;
-					id1 = storage.getID((OWLClassExpression)descs[i]);
-					id2 = storage.getID((OWLClassExpression)descs[j]);
-					if ( (id1 != id2) && (!storage.checkPredicateAssertion("sco",id1,id2)) ) return false;
-				}
-			} else if (axiom.getAxiomType() == AxiomType.SUB_OBJECT_PROPERTY) {
-				id1 = storage.getID(((OWLSubPropertyAxiom<OWLObjectProperty>) axiom).getSubProperty());
-				id2 = storage.getID(((OWLSubPropertyAxiom<OWLObjectProperty>) axiom).getSuperProperty());
-				if ( (id1 != id2) && (!storage.checkPredicateAssertion("subpropertyof",id1,id2)) ) return false;
-			} else if (axiom.getAxiomType() == AxiomType.SUB_PROPERTY_CHAIN_OF) {
-				List<OWLObjectPropertyExpression> chain = ((OWLSubPropertyChainOfAxiom) axiom).getPropertyChain();
-				if (chain.size() == 2) {
-					id1 = storage.getID(chain.get(0));
-					id2 = storage.getID(chain.get(1));
-					if (!storage.checkPredicateAssertion("subpropertychain",id1,id2,storage.getID(((OWLSubPropertyChainOfAxiom) axiom).getSuperProperty()))) return false;
-				} else {
-					//return false;
-					// TODO
-				}
-			} else if (axiom.getAxiomType() == AxiomType.CLASS_ASSERTION) {
-				//return false;
-			} else {
-				System.err.println("The following axiom is not supported: " + axiom + "\n");
-			}
-		}
-		return true;
+		return loader.processOntology(ontology, BasicKBLoader.CHECK );
 	}
 	
 	/**
