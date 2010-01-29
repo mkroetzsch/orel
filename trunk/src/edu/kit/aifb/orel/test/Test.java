@@ -6,6 +6,8 @@ import org.semanticweb.owlapi.io.OWLOntologyInputSource;
 import org.semanticweb.owlapi.io.StringInputSource;
 import org.semanticweb.owlapi.model.*;
 
+import edu.kit.aifb.orel.kbmanager.BasicKBManager;
+
 import java.net.URI;
 import java.sql.SQLException;
 import java.util.Iterator;
@@ -30,7 +32,7 @@ public class Test {
 	public Test(String file) throws OWLOntologyCreationException, SQLException, IOException {
 		this.file = file;
 		loadOntology();
-		convert();
+		
 	}
 	private void loadOntology() throws OWLOntologyCreationException {
 		manager = OWLManager.createOWLOntologyManager();
@@ -49,7 +51,7 @@ public class Test {
 		return conclusionOntology;
 	}
 
-	public void convert() throws SQLException, IOException, OWLOntologyCreationException{
+	public void test(BasicKBManager kbmanager) throws Exception{
 		Set<OWLClassAssertionAxiom> axiomset=ontology.getAxioms(AxiomType.CLASS_ASSERTION);
 		Set<OWLDataPropertyAssertionAxiom> dataset=ontology.getAxioms(AxiomType.DATA_PROPERTY_ASSERTION);
 		Iterator<OWLDataPropertyAssertionAxiom> dataIterator;
@@ -64,17 +66,16 @@ public class Test {
 				while(dataIterator.hasNext()){
 					dataAxiom=dataIterator.next();
 					if(dataAxiom.getSubject().equals(classAssert.getIndividual())) {
-						System.out.println(dataAxiom.getProperty());
 						if(dataAxiom.getProperty().toString().equals("<http://www.w3.org/2007/OWL/testOntology#rdfXmlPremiseOntology>")){
-							System.out.println("PremiseOntology:");
-							System.out.println(dataAxiom.getObject().getLiteral());
+//							System.out.println("PremiseOntology:");
+//							System.out.println(dataAxiom.getObject().getLiteral());
 							String ontStr=dataAxiom.getObject().getLiteral();
 							OWLOntologyManager man=OWLManager.createOWLOntologyManager();
 							premiseOntology =man.loadOntology((OWLOntologyInputSource)new  StringInputSource(ontStr));
 													}
 						else if(dataAxiom.getProperty().toString().equals("<http://www.w3.org/2007/OWL/testOntology#rdfXmlConclusionOntology>")){
-							System.out.println("ConclusionOntology:");
-							System.out.println(dataAxiom.getObject().getLiteral());
+//							System.out.println("ConclusionOntology:");
+//							System.out.println(dataAxiom.getObject().getLiteral());
 							String ontStr=dataAxiom.getObject().getLiteral();
 							OWLOntologyManager man=OWLManager.createOWLOntologyManager();
 							conclusionOntology =man.loadOntology((OWLOntologyInputSource)new  StringInputSource(ontStr));
@@ -82,10 +83,20 @@ public class Test {
 					}
 
 				}
+				kbmanager.loadOntology(premiseOntology);
+				if(kbmanager.checkEntailment(conclusionOntology)){
+					System.out.println("Entailed");
+				}
+				else{
+					System.out.println("Not Entailed");
+				}
+				kbmanager.drop();
+				kbmanager.initialize();
 
 			}
 		}
-	}		
+	}
+	
 }	
 
 

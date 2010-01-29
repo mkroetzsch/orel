@@ -20,16 +20,9 @@ public class RunTest {
 		StorageDriver storage = new MySQLStorageDriver(Settings.getDBServer(),Settings.getDBName(),Settings.getDBUser(),Settings.getDBPassword());
 		BasicKBManager kbmanager = new BasicKBManager(storage);
 		kbmanager.initialize();
-		Test test=new Test("syntax-dl.rdf");
-		OWLOntology premise=test.getPremiseOntology();
-		OWLOntology conclusion=test.getConclusionOntology();
-		kbmanager.loadOntology(premise);
-		if(kbmanager.checkEntailment(conclusion)){
-			System.out.println("Entailed");
-		}
-		else{
-			System.out.println("Not Entailed");
-		}
+		Test test=new Test("profile-EL.rdf");
+		test.test(kbmanager);
+	
 	}
 
 }
