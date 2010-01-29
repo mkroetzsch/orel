@@ -60,7 +60,7 @@ public class BasicKBLoader {
 		} else if (axiom instanceof OWLDisjointClassesAxiom) {
 			result = processDisjointClasses(((OWLDisjointClassesAxiom)axiom).getClassExpressions(),todos);
 		} else if (axiom instanceof OWLDisjointUnionAxiom) {
-			result = false;
+			result = false; // no disjoint unions in OWL RL/EL
 			System.err.println("The following axiom is not supported: " + axiom + "\n");
 		} else if (axiom instanceof OWLSubObjectPropertyOfAxiom) {
 			result = processSubObjectPropertyOf(((OWLSubObjectPropertyOfAxiom) axiom).getSubProperty(), ((OWLSubPropertyAxiom<OWLObjectProperty>) axiom).getSuperProperty(),todos);
@@ -69,58 +69,58 @@ public class BasicKBLoader {
 		} else if (axiom instanceof OWLEquivalentObjectPropertiesAxiom) {	
 			result = processEquivalentObjectProperties(((OWLEquivalentObjectPropertiesAxiom) axiom).getProperties(),todos);
 		} else if (axiom instanceof OWLInverseObjectPropertiesAxiom) {
-			result = false;
+			result = false; // TODO
 			System.err.println("The following axiom is not supported: " + axiom + "\n");
 		} else if (axiom instanceof OWLFunctionalObjectPropertyAxiom) {
-			result = false;
+			result = false; // TODO
 			System.err.println("The following axiom is not supported: " + axiom + "\n");
 		} else if (axiom instanceof OWLInverseFunctionalObjectPropertyAxiom) {
-			result = false;
+			result = false; // TODO
 			System.err.println("The following axiom is not supported: " + axiom + "\n");
 		} else if (axiom instanceof OWLSymmetricObjectPropertyAxiom) {
-			result = false;
+			result = false; // TODO
 			System.err.println("The following axiom is not supported: " + axiom + "\n");
 		} else if (axiom instanceof OWLAsymmetricObjectPropertyAxiom) {
-			result = false;
+			result = false; // TODO
 			System.err.println("The following axiom is not supported: " + axiom + "\n");
 		} else if (axiom instanceof OWLTransitiveObjectPropertyAxiom) {
-			result = false;
+			result = false; // TODO
 			System.err.println("The following axiom is not supported: " + axiom + "\n");
 		} else if (axiom instanceof OWLReflexiveObjectPropertyAxiom) {
-			result = false;
+			result = false; // TODO
 			System.err.println("The following axiom is not supported: " + axiom + "\n");
 		} else if (axiom instanceof OWLIrreflexiveObjectPropertyAxiom) {
-			result = false;
+			result = false; // TODO
 			System.err.println("The following axiom is not supported: " + axiom + "\n");
 		} else if (axiom instanceof OWLObjectPropertyDomainAxiom) {
-			result = false;
+			result = false; // TODO
 			System.err.println("The following axiom is not supported: " + axiom + "\n");
 		} else if (axiom instanceof OWLObjectPropertyRangeAxiom) {
-			result = false;
+			result = false; // TODO
 			System.err.println("The following axiom is not supported: " + axiom + "\n");
 		} else if (axiom instanceof OWLDisjointObjectPropertiesAxiom) {
-			result = false;
+			result = false; // TODO
 			System.err.println("The following axiom is not supported: " + axiom + "\n");
 		} else if (axiom instanceof OWLEquivalentDataPropertiesAxiom) {
-			result = false;
+			result = false; // TODO
 			System.err.println("The following axiom is not supported: " + axiom + "\n");
 		} else if (axiom instanceof OWLSubDataPropertyOfAxiom) {
-			result = false;
+			result = false; // TODO
 			System.err.println("The following axiom is not supported: " + axiom + "\n");
 		} else if (axiom instanceof OWLFunctionalDataPropertyAxiom) {
-			result = false;
+			result = false; // TODO
 			System.err.println("The following axiom is not supported: " + axiom + "\n");
 		} else if (axiom instanceof OWLDataPropertyDomainAxiom) {
-			result = false;
+			result = false; // TODO
 			System.err.println("The following axiom is not supported: " + axiom + "\n");
 		} else if (axiom instanceof OWLDataPropertyRangeAxiom) {
-			result = false;
+			result = false; // TODO
 			System.err.println("The following axiom is not supported: " + axiom + "\n");
 		} else if (axiom instanceof OWLDisjointDataPropertiesAxiom) {
-			result = false;
+			result = false; // TODO
 			System.err.println("The following axiom is not supported: " + axiom + "\n");
 		} else if (axiom instanceof OWLHasKeyAxiom) {
-			result = false;
+			result = false; // TODO
 			System.err.println("The following axiom is not supported: " + axiom + "\n");
 		} else if (axiom instanceof OWLClassAssertionAxiom) {
 			result = processClassAssertion( ((OWLClassAssertionAxiom) axiom).getIndividual(), ((OWLClassAssertionAxiom) axiom).getClassExpression(),todos); 
@@ -128,19 +128,19 @@ public class BasicKBLoader {
 			OWLObjectPropertyAssertionAxiom pa = (OWLObjectPropertyAssertionAxiom) axiom;
 			result = processPropertyAssertion( pa.getSubject(), pa.getProperty(), pa.getObject(),todos); 
 		} else if (axiom instanceof OWLSameIndividualAxiom) {
-			result = false;
+			result = false; // TODO
 			System.err.println("The following axiom is not supported: " + axiom + "\n");
 		} else if (axiom instanceof OWLDifferentIndividualsAxiom) {
-			result = false;
+			result = false; // TODO
 			System.err.println("The following axiom is not supported: " + axiom + "\n");
 		} else if (axiom instanceof OWLNegativeObjectPropertyAssertionAxiom) {
-			result = false;
+			result = false; // TODO
 			System.err.println("The following axiom is not supported: " + axiom + "\n");
 		} else if (axiom instanceof OWLDataPropertyAssertionAxiom) {
-			result = false;
+			result = false; // TODO
 			System.err.println("The following axiom is not supported: " + axiom + "\n");
 		} else if (axiom instanceof OWLNegativeDataPropertyAssertionAxiom) {
-			result = false;
+			result = false; // TODO
 			System.err.println("The following axiom is not supported: " + axiom + "\n");
 		} else {
 			result = false;
@@ -153,11 +153,14 @@ public class BasicKBLoader {
 		boolean result = true;
 		int id1 = storage.getID(c1);
 		int id2 = storage.getID(c2);
-		if ( (todos & BasicKBLoader.ASSERT) != 0 ) {
-			storage.makePredicateAssertion("sco",id1,id2);
+		if ( (todos & BasicKBLoader.ASSERT) != 0 ) { 
+			// trivial cases not stored
+			if (id1 != id2)	storage.makePredicateAssertion("sco",id1,id2);
 		}
 		if ( (todos & BasicKBLoader.CHECK) != 0 ) {
-			result = storage.checkPredicateAssertion("sco",id1,id2);
+			if ( (id1 != id2) && (!c1.isOWLNothing()) && (!c2.isOWLThing()) ) { // no need to check if trivial
+				result = storage.checkPredicateAssertion("sco",id1,id2);
+			}
 		}
 		if ( (todos & BasicKBLoader.PREPARE) != 0 ) {
 			createBodyFacts(id1,c1);
@@ -209,10 +212,13 @@ public class BasicKBLoader {
 		boolean result = true;
 		int pid1 = storage.getID(p1), pid2 = storage.getID(p2);
 		if ( (todos & BasicKBLoader.ASSERT) != 0 ) {
-			storage.makePredicateAssertion("subpropertyof", pid1, pid2);				
+			// trivial cases not stored
+			if (pid1 != pid2) storage.makePredicateAssertion("subpropertyof", pid1, pid2);				
 		}
 		if ( (todos & BasicKBLoader.CHECK) != 0 ) {
-			result = storage.checkPredicateAssertion("subpropertyof", pid1, pid2);
+			if (pid1 != pid2) { // no need to check if trivial
+				result = storage.checkPredicateAssertion("subpropertyof", pid1, pid2);
+			}
 		}
 		return result;
 	}
