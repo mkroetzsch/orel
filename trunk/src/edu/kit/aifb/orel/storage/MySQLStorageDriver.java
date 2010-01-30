@@ -608,7 +608,7 @@ public class MySQLStorageDriver implements StorageDriver {
 		while (keyit.hasNext()) {
 			key = keyit.next();
 			for (int i=0; i<constequalities.get(key).size(); i++) {
-				if (!on.equals("")) on = on + " AND ";
+				if (!on.equals("")) on = on + " AND "; else on = on_op + " ";
 				if (key.equals("?")) { // keep as parameter
 					on = on + key + constequalities.get(key).get(i);
 					hasParameterConstants = true;
@@ -622,7 +622,7 @@ public class MySQLStorageDriver implements StorageDriver {
 		while (fieldsit.hasNext()) {
 			fields = fieldsit.next();
 			for (int i=1; i<fields.size(); i++) {
-				if (!on.equals("")) on = on + " AND ";
+				if (!on.equals("")) on = on + " AND "; else on = on_op + " ";
 				on = on + fields.get(i) + "=" + fields.get((i+1)%fields.size());
 			}
 		}
@@ -631,7 +631,7 @@ public class MySQLStorageDriver implements StorageDriver {
 		// always make step-less version at index 0
 		try {
 			//System.out.println(rd.getName() + ":\n " + insert + select + " FROM " + from + on_op + on + "\n\n"); // DEBUG
-			result.add(con.prepareStatement( insert + select + " FROM " + from + on_op + on));
+			result.add(con.prepareStatement( insert + select + " FROM " + from + on));
 		} catch (SQLException e) { // bug in the above code, just print it
 			System.err.println(e.toString()); 
 		}
@@ -640,12 +640,13 @@ public class MySQLStorageDriver implements StorageDriver {
 		if ( (inferredTables.size() > 0) && (!hasParameterConstants) ) {
 			// make rule variants for semi-naive evaluation			
 			for (int i=0; i<inferredTables.size(); i++) {
-				sql = insert + select + " FROM " + from + on_op + on;
+				sql = insert + select + " FROM " + from + on;
+				if (on.equals("")) on_op = " WHERE "; else on_op = " AND ";
 				for (int j=0; j<=i; j++) {
 					if (j<i) {
-						sql = sql + " AND " + inferredTables.get(j) + ".step<?";
+						sql = sql + on_op + inferredTables.get(j) + ".step<?";
 					} else {
-						sql = sql + " AND " + inferredTables.get(j) + ".step>=? AND " + inferredTables.get(j) + ".step<=?";
+						sql = sql + on_op + inferredTables.get(j) + ".step>=? AND " + inferredTables.get(j) + ".step<=?";
 					}
 				}
 				//System.out.println(sql); // DEBUG
@@ -765,7 +766,7 @@ public class MySQLStorageDriver implements StorageDriver {
 	
 	protected String getCanonicalName(OWLIndividual individual) {
 		// treat individuals like nominals
-		return  StorageDriver.OP_OBJECT_ONE_OF + "( " + individual.toString() + " )";
+		return  StorageDriver.OP_OBJECT_ONE_OF + "(" + individual.toString() + ")";
 	}
 	
 	/**
