@@ -2,13 +2,12 @@ package edu.kit.aifb.orel.test;
 
 
 import org.semanticweb.owlapi.apibinding.*;
-import org.semanticweb.owlapi.io.OWLOntologyInputSource;
-import org.semanticweb.owlapi.io.StringInputSource;
+import org.semanticweb.owlapi.io.OWLOntologyDocumentSource;
+import org.semanticweb.owlapi.io.StringDocumentSource;
 import org.semanticweb.owlapi.model.*;
 
 import edu.kit.aifb.orel.kbmanager.BasicKBManager;
 
-import java.net.URI;
 import java.sql.SQLException;
 import java.util.Iterator;
 import java.util.Set;
@@ -20,7 +19,7 @@ public class Test {
 	 */
 
 	private OWLOntologyManager manager;
-	private  URI physicalURI;
+	private  IRI physicalURI;
 	private OWLOntology ontology;
 	public OWLOntology premiseOntology;
 	public OWLOntology conclusionOntology;
@@ -36,10 +35,10 @@ public class Test {
 	}
 	private void loadOntology() throws OWLOntologyCreationException {
 		manager = OWLManager.createOWLOntologyManager();
-		physicalURI= (new File(System.getProperty("user.dir")+"/"+this.file)).toURI();
+		physicalURI= IRI.create((new File(System.getProperty("user.dir")+"/"+this.file)).toURI());
 		//		physicalURI= URI.create("http://owl.semanticweb.org/exports/proposed/RL-RDF-rules-tests.rdf");
 
-		ontology = manager.loadOntologyFromPhysicalURI(physicalURI);
+		ontology = manager.loadOntologyFromOntologyDocument(physicalURI);
 	}
 	public OWLOntology getPremiseOntology() {
 		return premiseOntology;
@@ -71,14 +70,14 @@ public class Test {
 //							System.out.println(dataAxiom.getObject().getLiteral());
 							String ontStr=dataAxiom.getObject().getLiteral();
 							OWLOntologyManager man=OWLManager.createOWLOntologyManager();
-							premiseOntology =man.loadOntology((OWLOntologyInputSource)new  StringInputSource(ontStr));
+							premiseOntology =man.loadOntologyFromOntologyDocument((OWLOntologyDocumentSource)new StringDocumentSource(ontStr));
 													}
 						else if(dataAxiom.getProperty().toString().equals("<http://www.w3.org/2007/OWL/testOntology#rdfXmlConclusionOntology>")){
 //							System.out.println("ConclusionOntology:");
 //							System.out.println(dataAxiom.getObject().getLiteral());
 							String ontStr=dataAxiom.getObject().getLiteral();
 							OWLOntologyManager man=OWLManager.createOWLOntologyManager();
-							conclusionOntology =man.loadOntology((OWLOntologyInputSource)new  StringInputSource(ontStr));
+							conclusionOntology =man.loadOntologyFromOntologyDocument((OWLOntologyDocumentSource)new StringDocumentSource(ontStr));
 						}
 					}
 
