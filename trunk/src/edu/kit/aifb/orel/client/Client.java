@@ -1,8 +1,7 @@
 package edu.kit.aifb.orel.client;
 
-import java.net.URI;
-
 import org.semanticweb.owlapi.apibinding.OWLManager;
+import org.semanticweb.owlapi.model.IRI;
 import org.semanticweb.owlapi.model.OWLOntology;
 import org.semanticweb.owlapi.model.OWLOntologyManager;
 
@@ -105,8 +104,8 @@ public class Client {
 				long loadsTime=System.currentTimeMillis();
 				OWLOntologyManager manager = OWLManager.createOWLOntologyManager();
 				//URI physicalURI=(new File(uristring)).toURI();
-				URI physicalURI= URI.create(inputfile);
-				OWLOntology ontology = manager.loadOntologyFromPhysicalURI(physicalURI);
+				IRI physicalURI= IRI.create(inputfile);
+				OWLOntology ontology = manager.loadOntologyFromOntologyDocument(physicalURI);
 				long loadeTime=System.currentTimeMillis();
 				System.out.println("Ontology loaded in " + (loadeTime-loadsTime) + " ms.");
 				System.out.println("Storing ontology ...");
@@ -124,8 +123,8 @@ public class Client {
 				long loadsTime=System.currentTimeMillis();
 				OWLOntologyManager manager = OWLManager.createOWLOntologyManager();
 				//URI physicalURI=(new File(uristring)).toURI();
-				URI physicalURI= URI.create(inputfile);
-				OWLOntology ontology = manager.loadOntologyFromPhysicalURI(physicalURI);
+				IRI physicalURI= IRI.create(inputfile);
+				OWLOntology ontology = manager.loadOntologyFromOntologyDocument(physicalURI);
 				long loadeTime=System.currentTimeMillis();
 				System.out.println("Ontology loaded in " + (loadeTime-loadsTime) + " ms.");
 				System.out.println("Processing ontology ...");

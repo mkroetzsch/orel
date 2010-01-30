@@ -2,6 +2,7 @@ package edu.kit.aifb.orel.kbmanager;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -12,6 +13,7 @@ import edu.kit.aifb.orel.storage.StorageDriver;
 
 public class BasicKBLoader {
 	protected StorageDriver storage;
+	protected OWLDataFactory datafactory;
 	
 	/// Flags for more fine-grained control of actions during axiom processing
 	static protected final int CHECK = 1;
@@ -29,6 +31,7 @@ public class BasicKBLoader {
 	 */
 	public boolean processOntology(OWLOntology ontology, int todos) throws Exception {
 		boolean result = true;
+		datafactory = ontology.getOWLOntologyManager().getOWLDataFactory();
 		boolean writing = ( (todos & (BasicKBLoader.ASSERT | BasicKBLoader.PREPARE)) != 0 );
 		if ( writing ) { // initialize bridge and prepare for bulk insert:
 			storage.beginLoading();
@@ -135,8 +138,12 @@ public class BasicKBLoader {
 		} else if (axiom instanceof OWLDifferentIndividualsAxiom) {
 			result = processDifferentIndividuals(((OWLDifferentIndividualsAxiom)axiom).getIndividuals(),todos);
 		} else if (axiom instanceof OWLNegativeObjectPropertyAssertionAxiom) {
-			result = false; // TODO
-			System.err.println("The following axiom is not supported: " + axiom + "\n");
+			OWLNegativeObjectPropertyAssertionAxiom pa = (OWLNegativeObjectPropertyAssertionAxiom) axiom;
+			Set<OWLClassExpression> classes = new HashSet<OWLClassExpression>();
+			classes.add( datafactory.getOWLObjectOneOf(pa.getObject()) );
+			classes.add( datafactory.getOWLObjectSomeValuesFrom(
+					pa.getProperty(), datafactory.getOWLObjectOneOf(pa.getSubject()) ) );
+			result = processDisjointClasses(classes, todos);
 		} else if (axiom instanceof OWLDataPropertyAssertionAxiom) {
 			result = false; // TODO
 			System.err.println("The following axiom is not supported: " + axiom + "\n");
@@ -413,6 +420,9 @@ public class BasicKBLoader {
 			int oid = storage.getID(filler);
 			storage.makePredicateAssertion("sv",sid,pid,oid);
 			createHeadFacts(oid,filler);
+		} else if (d instanceof OWLObjectOneOf) {
+			// TODO
+			
 		} else {// TODO: add more description types
 			System.err.println("Unsupported head class expression: " + d.toString());
 		}
