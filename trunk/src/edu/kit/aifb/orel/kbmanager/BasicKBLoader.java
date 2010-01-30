@@ -84,8 +84,11 @@ public class BasicKBLoader {
 			result = false; // TODO
 			System.err.println("The following axiom is not supported: " + axiom + "\n");
 		} else if (axiom instanceof OWLTransitiveObjectPropertyAxiom) {
-			result = false; // TODO
-			System.err.println("The following axiom is not supported: " + axiom + "\n");
+			ArrayList<OWLObjectPropertyExpression> chain = new ArrayList<OWLObjectPropertyExpression>(2);
+			OWLObjectPropertyExpression p = ((OWLTransitiveObjectPropertyAxiom)axiom).getProperty();
+			chain.add(p);
+			chain.add(p);
+			result = processSubpropertyChainOf(chain, p, todos);
 		} else if (axiom instanceof OWLReflexiveObjectPropertyAxiom) {
 			result = false; // TODO
 			System.err.println("The following axiom is not supported: " + axiom + "\n");
