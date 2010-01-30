@@ -15,6 +15,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.semanticweb.owlapi.model.OWLObject;
 import org.semanticweb.owlapi.model.OWLClassExpression;
@@ -23,6 +24,7 @@ import org.semanticweb.owlapi.model.OWLNaryBooleanClassExpression;
 import org.semanticweb.owlapi.model.OWLObjectIntersectionOf;
 import org.semanticweb.owlapi.model.OWLObjectOneOf;
 import org.semanticweb.owlapi.model.OWLObjectPropertyExpression;
+import org.semanticweb.owlapi.model.OWLObjectUnionOf;
 
 import edu.kit.aifb.orel.inferencing.InferenceRuleDeclaration;
 import edu.kit.aifb.orel.inferencing.PredicateAtom;
@@ -68,7 +70,8 @@ public class MySQLStorageDriver implements StorageDriver {
 	final protected int idcachesize = 1000;
 	final protected int prelocsize = 1000;
 	protected PreparedStatement findid = null; // SELECT id by name
-	protected PreparedStatement makeids = null; // UPDATE prelocated ids with their names 
+	protected PreparedStatement makeids = null; // UPDATE prelocated ids with their names
+	protected PreparedStatement makeid = null; // directly insert a single id string using AUTO INCREMENT to get its key
 	protected PreparedStatement prelocids = null; // prelocate empty id rows
 	protected ResultSet prelocatedids = null; // keys of prelocated ids
 	protected HashMap<String,Integer> unwrittenids = null; // map of yet to be written ids (do not rely on "ids" cache until all is written!)
@@ -717,6 +720,8 @@ public class MySQLStorageDriver implements StorageDriver {
 	 * Produce a canonical string name based on the given operator name and operand list.
 	 * For commutative operators like ObjectIntersectionOf, the operands should be sorted
 	 * before being passed to this method, so as to ensure a consistent representation.
+	 * TODO Check if this is still used for sets of individuals by anybody. Otherwise 
+	 * reduce to class expressions.
 	 */
 	protected String getCanonicalName(String opname, List<? extends OWLObject> operands) {
 		String result = opname + "(";
@@ -734,13 +739,18 @@ public class MySQLStorageDriver implements StorageDriver {
 		if (description.isOWLNothing()) {
 			return StorageDriver.OP_NOTHING;
 		} else if (description instanceof OWLObjectOneOf) {
-			ArrayList<OWLClassExpression> ops = new ArrayList<OWLClassExpression>(((OWLNaryBooleanClassExpression) description).getOperands());
-			Collections.sort(ops); // make sure that we have a defined order; cannot have random changes between prepare and check!
-			return getCanonicalName(StorageDriver.OP_OBJECT_ONE_OF,ops);
+			Set<OWLIndividual> ops = ((OWLObjectOneOf) description).getIndividuals();
+			if (ops.size() == 1) {
+				return getCanonicalName(ops.iterator().next());
+			} else {
+				return getCanonicalName(((OWLObjectOneOf) description).asObjectUnionOf());
+			}
 		} else if (description instanceof OWLNaryBooleanClassExpression) {
 			String opname;
 			if (description instanceof OWLObjectIntersectionOf) {
 				opname = StorageDriver.OP_OBJECT_INTERSECTION;
+			} else if (description instanceof OWLObjectUnionOf) {
+				opname = StorageDriver.OP_OBJECT_UNION;
 			} else {
 				System.err.println("Unsupported nary class expression " + description.toString());
 				return description.toString();
@@ -772,7 +782,7 @@ public class MySQLStorageDriver implements StorageDriver {
 	}
 
 	public int getID(OWLIndividual individual) throws SQLException {
-		return getIDForString(individual.toString());
+		return getIDForString(getCanonicalName(individual));
 	}
 	
 	public int getID(OWLObjectPropertyExpression property) throws SQLException {
@@ -803,14 +813,14 @@ public class MySQLStorageDriver implements StorageDriver {
 			ResultSet res = findid.executeQuery();
 			if (res.next()) {
 				id = res.getInt(1);
-			} else {
+			} else if (loadmode) { // use batch operations and write caching
 				// check if we need to pre-allocate more ids (and commit recently created ids)
 				if ( ( (curid>0) && (curid>maxid) ) || 
 				     ( (curid==0) && ((prelocatedids == null) || (!prelocatedids.next())) ) ) {
 					if (curid == 0) { // rely on AUTO INCREMENT
 						if (prelocids == null) {
 							String insertvals = "(NULL,\"-\")";
-							for (int i=1; (loadmode && (i<prelocsize)); i++) {
+							for (int i=1; (i<prelocsize); i++) {
 								insertvals = insertvals.concat(",(NULL,\"-\")");
 							}
 							prelocids = con.prepareStatement("INSERT INTO ids VALUES " + insertvals, Statement.RETURN_GENERATED_KEYS);
@@ -826,7 +836,7 @@ public class MySQLStorageDriver implements StorageDriver {
 						makeids.executeBatch();
 						unwrittenids.clear();
 					}
-					if (loadmode) con.commit(); // needed to ensure that above SELECTs will be correct now that unwrittenids is empty again
+					con.commit(); // needed to ensure that above SELECTs will be correct now that unwrittenids is empty again
 				}
 				// add a new id to the current batch and unwritten id cache
 				if (curid == 0) {
@@ -842,6 +852,13 @@ public class MySQLStorageDriver implements StorageDriver {
 				}
 				unwrittenids.put(hash,id);
 				makeids.addBatch();
+			} else { // use slow single insert
+				if (makeid == null) makeid = con.prepareStatement("INSERT INTO ids VALUES (NULL,?)", Statement.RETURN_GENERATED_KEYS);
+				makeid.setString(1,hash);
+				makeid.executeUpdate();
+				prelocatedids = makeid.getGeneratedKeys();
+				prelocatedids.next();
+				id = prelocatedids.getInt(1);
 			}
 			res.close();
 			ids.put(hash,id);
