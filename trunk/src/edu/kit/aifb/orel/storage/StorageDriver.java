@@ -18,6 +18,7 @@ import edu.kit.aifb.orel.inferencing.PredicateDeclaration;
 public interface StorageDriver {
 	final public static String OP_NOTHING = "owl:Nothing";
 	final public static String OP_OBJECT_INTERSECTION = "ObjectIntersectionOf";
+	final public static String OP_OBJECT_UNION = "ObjectUnionOf";
 	final public static String OP_OBJECT_ONE_OF = "ObjectOneOf";
 
 	public void registerPredicate(PredicateDeclaration pd);

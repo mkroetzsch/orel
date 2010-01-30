@@ -295,23 +295,6 @@ public class BasicKBLoader {
 		return result;
 	}
 	
-	protected boolean processSameIndividuals(OWLIndividual i1, OWLIndividual i2, int todos) throws Exception {
-		boolean result = true;
-		int id1 = storage.getID(i1);
-		int id2 = storage.getID(i2);
-		if ( (todos & BasicKBLoader.ASSERT) != 0 ) {
-			storage.makePredicateAssertion("sco",id1,id2);
-		}
-		if ( (todos & BasicKBLoader.CHECK) != 0 ) {
-			result = storage.checkPredicateAssertion("sco",id1,id2);
-		}
-		if ( (todos & BasicKBLoader.PREPARE) != 0 ) {
-			createBodyFacts(id1,i1);
-			createHeadFacts(id2,i2);
-		}
-		return result;
-	}
-
 	protected boolean processDifferentIndividuals(Set<OWLIndividual> individuals, int todos) throws Exception {
 		Object[] inds = individuals.toArray();
 		boolean result = true;
@@ -342,6 +325,23 @@ public class BasicKBLoader {
 		return result;
 	}
 	
+	protected boolean processSameIndividuals(OWLIndividual i1, OWLIndividual i2, int todos) throws Exception {
+		boolean result = true;
+		int id1 = storage.getID(i1);
+		int id2 = storage.getID(i2);
+		if ( (todos & BasicKBLoader.ASSERT) != 0 ) {
+			storage.makePredicateAssertion("sco",id1,id2);
+		}
+		if ( (todos & BasicKBLoader.CHECK) != 0 ) {
+			result = storage.checkPredicateAssertion("sco",id1,id2);
+		}
+		if ( (todos & BasicKBLoader.PREPARE) != 0 ) {
+			createBodyFacts(id1,i1);
+			createHeadFacts(id2,i2);
+		}
+		return result;
+	}
+
 	protected boolean processSameIndividuals(Set<OWLIndividual> individuals, int todos) throws Exception {
 		Object[] inds = individuals.toArray();
 		int j;
@@ -354,6 +354,16 @@ public class BasicKBLoader {
 	}
 	
 
+	/**
+	 * Create auxiliary tuples for nominals appearing in body positions, where
+	 * individuals are used to represent nominals. Note that by punning, there can
+	 * be classes of the same IRI. The id generation for individuals therefore
+	 * always encloses them in "ObjectOneOf" and generally ensures a unified
+	 * id selection for all variants in which nominals can occur. 
+	 * @param id
+	 * @param i
+	 * @throws Exception
+	 */
 	protected void createBodyFacts(int id, OWLIndividual i) throws Exception {
 		storage.makePredicateAssertion("nominal",id);
 		storage.makePredicateAssertion("nonempty",id);
@@ -372,6 +382,29 @@ public class BasicKBLoader {
 			int sid = storage.getID(filler);
 			storage.makePredicateAssertion("subsomevalues",pid,sid,id);
 			createBodyFacts(sid,filler);
+		} else if (d instanceof OWLObjectHasValue) {
+			int pid = storage.getID(((OWLObjectHasValue)d).getProperty());
+			OWLIndividual value = ((OWLObjectHasValue)d).getValue();
+			int sid = storage.getID(value);
+			storage.makePredicateAssertion("subsomevalues",pid,sid,id);
+			createBodyFacts(sid,value);
+		} else if (d instanceof OWLObjectUnionOf) {
+			Iterator<OWLClassExpression> opit = ((OWLObjectUnionOf)d).getOperands().iterator();
+			OWLClassExpression op;
+			int sid;
+			while (opit.hasNext()) {
+				op = opit.next();
+				sid = storage.getID(op);
+				storage.makePredicateAssertion("sco",sid,id);
+				createBodyFacts(sid,op);
+			}
+		} else if (d instanceof OWLObjectOneOf) {
+			Set<OWLIndividual> inds = ((OWLObjectOneOf)d).getIndividuals();
+			if (inds.size() == 1) {
+				createBodyFacts(id,inds.iterator().next());
+			} else {
+				createBodyFacts(id,((OWLObjectOneOf)d).asObjectUnionOf());
+			}
 		} else {// TODO: add more description types
 			System.err.println("Unsupported body class expression: " + d.toString());
 		}
@@ -396,6 +429,16 @@ public class BasicKBLoader {
 		}
 	}
 
+	/**
+	 * Create auxiliary tuples for nominals appearing in head positions, where
+	 * individuals are used to represent nominals. Note that by punning, there can
+	 * be classes of the same IRI. The id generation for individuals therefore
+	 * always encloses them in "ObjectOneOf" and generally ensures a unified
+	 * id selection for all variants in which nominals can occur. 
+	 * @param id
+	 * @param i
+	 * @throws Exception
+	 */
 	protected void createHeadFacts(int id, OWLIndividual i) throws Exception {
 		storage.makePredicateAssertion("nominal",id);
 		storage.makePredicateAssertion("nonempty",id);
@@ -420,9 +463,19 @@ public class BasicKBLoader {
 			int oid = storage.getID(filler);
 			storage.makePredicateAssertion("sv",sid,pid,oid);
 			createHeadFacts(oid,filler);
+		} else if (d instanceof OWLObjectHasValue) {
+			int pid = storage.getID(((OWLObjectHasValue)d).getProperty());
+			OWLIndividual value = ((OWLObjectHasValue)d).getValue();
+			int oid = storage.getID(value);
+			storage.makePredicateAssertion("sv",sid,pid,oid);
+			createHeadFacts(oid,value);
 		} else if (d instanceof OWLObjectOneOf) {
-			// TODO
-			
+			Set<OWLIndividual> inds = ((OWLObjectOneOf) d).getIndividuals();
+			if (inds.size() == 1) {
+				createHeadFacts(sid,inds.iterator().next());
+			} else { // only unary nominals can occur in heads
+				System.err.println("Unsupported head class expression: " + d.toString());
+			}
 		} else {// TODO: add more description types
 			System.err.println("Unsupported head class expression: " + d.toString());
 		}
