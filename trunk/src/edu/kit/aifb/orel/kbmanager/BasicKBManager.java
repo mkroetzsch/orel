@@ -56,7 +56,7 @@ public class BasicKBManager {
 	 */
 	public void loadOntology(OWLOntology ontology) throws Exception {
 		BasicKBLoader loader = new BasicKBLoader(storage);
-		loader.processOntology(ontology, (BasicKBLoader.PREPARE | BasicKBLoader.ASSERT) );
+		loader.processOntology(ontology, (BasicKBLoader.PREPAREASSERT | BasicKBLoader.ASSERT) );
 	}
 
 	/**
@@ -83,6 +83,8 @@ public class BasicKBManager {
 		storage.registerPredicate( new PredicateDeclaration("sco_nl",2,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("sv",3,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("sv_nl",3,true,false) );
+		storage.registerPredicate( new PredicateDeclaration("self",2,true,false) );
+		storage.registerPredicate( new PredicateDeclaration("subself",2,false,false) );
 		storage.registerPredicate( new PredicateDeclaration("subconjunctionof",3,false,false) );
 		storage.registerPredicate( new PredicateDeclaration("subconint",3,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("subsomevalues",3,false,false) );
