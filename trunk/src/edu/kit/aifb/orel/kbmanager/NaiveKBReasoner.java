@@ -28,13 +28,13 @@ public class NaiveKBReasoner {
 		HashMap<String,String> rules = new HashMap<String,String>();
 		// make the rule declaration as readable as possible;
 		// it is crucial to have this error free and customizable
-		rules.put("prop-1", "spo(x,z) :- spo(x,y,0), spo(y,z)");
-		//rules.put("prop-2", "spoc(u,v2,w) :- spo(u,v1), spoc(v1,v2,w)");
-		//rules.put("prop-3", "spoc(v1,u,w) :- spo(u,v2), spoc(v1,v2,w)");
+		rules.put("spo", "spo(x,z) :- spo(x,y,0), spo(y,z)");
+		rules.put("chain-spo1", "spoc(u,v2,w) :- spo(u,v1), spoc(v1,v2,w)");
+		rules.put("chain-spo2", "spoc(v1,u,w) :- spo(u,v2), spoc(v1,v2,w)");
 		
 		//rules.put("del-ref",  "-sco(x,x) :- ");
 		
-		rules.put("trans",  "sco(x,z)  :- sco(x,y), sco(y,z)");
+		rules.put("sco",    "sco(x,z)  :- sco(x,y), sco(y,z)");
 		rules.put("con",    "sco(x,z)  :- subconjunctionof(y1,y2,z), sco(x,y1), sco(x,y2)");
 		rules.put("con r1", "sco(x,z)  :- subconjunctionof(x,y,z), sco(x,y)");
 		rules.put("con r2", "sco(x,z)  :- subconjunctionof(y,x,z), sco(x,y)");
@@ -46,16 +46,16 @@ public class NaiveKBReasoner {
 		rules.put("sv-y",   "sv(x,p,z) :- sv(x,p,y), sco(y,z)");
 		rules.put("sv-p",   "sv(x,q,z) :- sv(x,p,y), spo(p,q)");
 		
-		rules.put("Nom 1n", "sco(y,x) :- sco(x,y), nonempty(x), nominal(y)");
-		rules.put("Nom 2n", "nonempty(y) :- sco(x,y), nonempty(x)");
-		rules.put("Nom 3n", "nonempty(y) :- sv(x,v,y), nonempty(x)");
+		rules.put("nom1", "sco(y,x) :- sco(x,y), nonempty(x), nominal(y)");
+		rules.put("nom2", "nonempty(y) :- sco(x,y), nonempty(x)");
+		rules.put("nom3", "nonempty(y) :- sv(x,v,y), nonempty(x)");
 		
 		rules.put("self-weak", "sv(x,p,x) :- self(x,p)");
 		rules.put("self-ind",  "self(x,p) :- sv(x,p,x), nominal(x)");
 		rules.put("self-x",    "self(x,p) :- sco(x,y), self(y,p)");
 		rules.put("self-p",    "self(x,q) :- self(x,p), spo(p,q)");
 		//rules.put("self-ind-sco",  "self(x,p) :- sco(x,y), sv(y,p,x), nominal(x)");
-		rules.put("subself",  "sco(x,y)  :- self(x,p), subself(p,y)");
+		rules.put("subself",   "sco(x,y)  :- self(x,p), subself(p,y)");
 
         //Self(p,x), Range(p,y) -> sCO(x,y)
 		//sV(x,p,y), sV(x,p,z),atMostOne(p,z),Self(p,x) -> sCO(x,y)
