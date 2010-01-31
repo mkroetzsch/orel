@@ -593,6 +593,7 @@ public class MySQLStorageDriver implements StorageDriver {
 					if (varequalities.containsKey(pt.getValue())) {
 						on = on + varequalities.get(pt.getValue()).get(0) + "=?";
 					} // else: no constraints on this variable, nothing to check
+					/// FIXME this is unsound if some variable appears more than once in the head but not in the body
 				} else {
 					on = on + "?=\"" + pt.getValue() + "\"";
 				}
