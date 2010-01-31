@@ -326,24 +326,16 @@ public class MySQLStorageDriver implements StorageDriver {
 	
 	/* *** Basic data access *** */
 
-	public void makePredicateAssertion(String predicate, int id1) throws SQLException {
-		makePredicateAssertion(predicate,id1,-1,-1);
-	}
-	
-	public void makePredicateAssertion(String predicate, int id1, int id2) throws SQLException {
-		makePredicateAssertion(predicate,id1,id2,-1);
-	}
-
-	public void makePredicateAssertion(String predicate, int id1, int id2, int id3) throws SQLException {
+	public void makePredicateAssertion(String predicate, int... ids) throws SQLException {
 		PreparedStatement stmt = prepinsertstmts.get(predicate);
 		if (stmt == null) {
 			stmt = getPreparedInsertStatement(predicate);
 			prepinsertstmts.put(predicate, stmt);
 			prepinsertstmtsizes.put(predicate, 0);
 		}
-		if (id1 >= 0) stmt.setInt(1, id1);
-		if (id2 >= 0) stmt.setInt(2, id2);
-		if (id3 >= 0) stmt.setInt(3, id3);
+		for (int i=0; i<ids.length; i++) {
+			stmt.setInt(i+1, ids[i]);
+		}
 		stmt.addBatch();
 		int cursize = prepinsertstmtsizes.get(predicate)+1;
 		if (cursize >= maxbatchsize) {
@@ -371,24 +363,16 @@ public class MySQLStorageDriver implements StorageDriver {
 		}
 	}
 	
-	public boolean checkPredicateAssertion(String predicate, int id1) throws SQLException {
-		return checkPredicateAssertion(predicate,id1,-1,-1);
-	}
-	
-	public boolean checkPredicateAssertion(String predicate, int id1, int id2) throws SQLException {
-		return checkPredicateAssertion(predicate,id1,id2,-1);
-	}
-
-	public boolean checkPredicateAssertion(String predicate, int id1, int id2, int id3) throws SQLException {
+	public boolean checkPredicateAssertion(String predicate, int... ids) throws SQLException {
 		PreparedStatement stmt = prepcheckstmts.get(predicate);
 		if (stmt == null) {
 			stmt = getPreparedCheckStatement(predicate);
 			prepinsertstmts.put(predicate, stmt);
 			prepinsertstmtsizes.put(predicate, 0);
 		}
-		if (id1 >= 0) stmt.setInt(1, id1);
-		if (id2 >= 0) stmt.setInt(2, id2);
-		if (id3 >= 0) stmt.setInt(3, id3);
+		for (int i=0; i<ids.length; i++) {
+			stmt.setInt(i+1, ids[i]);
+		}
 		ResultSet res = stmt.executeQuery();
 		boolean result = (res.next());
 		res.close();
