@@ -196,8 +196,10 @@ public class BasicKBLoader {
 		Object[] descs = descriptions.toArray();
 		boolean result = true;
 		int botid = storage.getIDForNothing();
+		int id1, id2;
 		ArrayList<OWLClassExpression> ops;
 		for (int i=0; i<descs.length; i++) {
+			id1 = storage.getID((OWLClassExpression)descs[i]);
 			for (int j=i+1; j<descs.length; j++) {
 				ops = new ArrayList<OWLClassExpression>(2);
 				ops.add((OWLClassExpression)descs[i]);
@@ -211,10 +213,19 @@ public class BasicKBLoader {
 					result = result && storage.checkPredicateAssertion("sco",interid,botid);
 				}
 				if ( (todos & BasicKBLoader.PREPARE) != 0 ) {
-					//FIXME
+					// Note: auxiliary body facts created in outer loop (once per class)
 					// (nothing to prepare for bottom)
-					createConjunctionBodyFacts(interid,ops);
+					if ((todos & BasicKBLoader.PREPARECHECK)!=0) {
+						id2 = storage.getID((OWLClassExpression)descs[j]);
+						storage.makePredicateAssertion("sco", interid, id1);
+						storage.makePredicateAssertion("sco", interid, id2);
+					} else {
+						createConjunctionBodyFacts(interid,ops);
+					}
 				}
+			}
+			if ( (todos & BasicKBLoader.PREPARE) != 0 ) {
+				createBodyFacts(id1,(OWLIndividual)descs[i],((todos & BasicKBLoader.PREPARECHECK)!=0));
 			}
 		}
 		return result;
@@ -304,9 +315,10 @@ public class BasicKBLoader {
 		Object[] inds = individuals.toArray();
 		boolean result = true;
 		int botid = storage.getIDForNothing();
+		int oid1,oid2;
 		ArrayList<OWLIndividual> ops;
 		for (int i=0; i<inds.length; i++) {
-			int oid1 = storage.getID((OWLIndividual)inds[i]);
+			oid1 = storage.getID((OWLIndividual)inds[i]);
 			for (int j=i+1; j<inds.length; j++) {
 				ops = new ArrayList<OWLIndividual>(2);
 				ops.add((OWLIndividual)inds[i]);
@@ -320,10 +332,15 @@ public class BasicKBLoader {
 					result = result && storage.checkPredicateAssertion("sco",interid,botid);
 				}
 				if ( (todos & BasicKBLoader.PREPARE) != 0 ) {
-					//FIXME!
+					// Note: auxiliary body facts created in outer loop (once per class)
 					// (nothing to prepare for bottom)
-					int oid2 = storage.getID((OWLIndividual)inds[j]);
-					storage.makePredicateAssertion("subconjunctionof",oid1,oid2,interid);
+					oid2 = storage.getID((OWLIndividual)inds[j]);
+					if ((todos & BasicKBLoader.PREPARECHECK)!=0) {
+						storage.makePredicateAssertion("sco",interid,oid1);
+						storage.makePredicateAssertion("sco",interid,oid2);
+					} else {
+						storage.makePredicateAssertion("subconjunctionof",oid1,oid2,interid);
+					}
 				}
 			}
 			if ( (todos & BasicKBLoader.PREPARE) != 0 ) {
