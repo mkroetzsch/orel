@@ -28,9 +28,12 @@ public class NaiveKBReasoner {
 		HashMap<String,String> rules = new HashMap<String,String>();
 		// make the rule declaration as readable as possible;
 		// it is crucial to have this error free and customizable
+		
+		// recall that these rules are not recursively applied!
 		rules.put("self-p", "self(x,q) :- self(x,p), spo(p,q)");
 		rules.put("sv-p",   "sv(x,q,y) :- sv(x,p,y), spo(p,q)");
-		rules.put("sv-x",   "sv(x,p,z) :- sco(x,y),  sv(y,p,z)");
+		rules.put("sv-x",   "sv(x,p,z) :- sco(x,y), sv(y,p,z)");
+		rules.put("sv-px",  "sv(x,q,z) :- sco(x,y), spo(p,q), sv(y,p,z)");
 		
 		// Unsound test: if x has a p to something, then it has a p to itself
 		//storage.registerInferenceRule(InferenceRuleDeclaration.buildFromString("test","?sco(x,y) :- subself(p,y), sv(x,p,z)"));
