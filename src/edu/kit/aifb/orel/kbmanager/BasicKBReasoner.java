@@ -21,9 +21,9 @@ public class BasicKBReasoner {
 		HashMap<String,String> rules = new HashMap<String,String>();
 		// make the rule declaration as readable as possible;
 		// it is crucial to have this error free and customizable
-		rules.put("prop-1", "subpropertyof(x,z) :- subpropertyof(x,y,0), subpropertyof(y,z)");
-		rules.put("prop-2", "subpropertychain(u,v2,w) :- subpropertyof(u,v1), subpropertychain(v1,v2,w)");
-		rules.put("prop-3", "subpropertychain(v1,u,w) :- subpropertyof(u,v2), subpropertychain(v1,v2,w)");
+		rules.put("prop-1", "spo(x,z) :- spo(x,y,0), spo(y,z)");
+		rules.put("prop-2", "spoc(u,v2,w) :- spo(u,v1), spoc(v1,v2,w)");
+		rules.put("prop-3", "spoc(v1,u,w) :- spo(u,v2), spoc(v1,v2,w)");
 		
 		rules.put("trans-repair1",  "sco(x,z)  :- sco(x,y,0), sco(y,z,?,?)");
 		rules.put("trans-repair2",  "sco(x,z)  :- sco(x,y,?,?), sco(y,z,?,?)");
@@ -36,8 +36,8 @@ public class BasicKBReasoner {
 		rules.put("E ref2", "sco(x,z)  :- subconjunctionof(y,x,z), sco(x,y)");
 		rules.put("E ref3", "sco(x,z)  :- subconjunctionof(x,x,z)");
 		rules.put("F",      "sco(x,y)  :- sv(x,v,z), subsomevalues(v,z,y)");
-		rules.put("G",      "sco(x,y)  :- sv(x,v,z), subpropertyof(v,u), subsomevalues(u,z,y)");
-		rules.put("Hn",     "sv(x,w,z) :- sv(x,v1,y), sv(y,v2,z), subpropertychain(v1,v2,w)");
+		rules.put("G",      "sco(x,y)  :- sv(x,v,z), spo(v,u), subsomevalues(u,z,y)");
+		rules.put("Hn",     "sv(x,w,z) :- sv(x,v1,y), sv(y,v2,z), spoc(v1,v2,w)");
 		//rules.put("I",      "sv(x,v,z) :- sco(x,y), sv(y,v,z)");
 		rules.put("Jn",     "sv(x,v,z) :- sv(x,v,y), sco(y,z)");
 		

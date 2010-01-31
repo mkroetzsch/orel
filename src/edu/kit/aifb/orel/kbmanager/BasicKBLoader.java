@@ -237,11 +237,11 @@ public class BasicKBLoader {
 		int pid1 = storage.getID(p1), pid2 = storage.getID(p2);
 		if ( (todos & BasicKBLoader.ASSERT) != 0 ) {
 			// trivial cases not stored
-			if (pid1 != pid2) storage.makePredicateAssertion("subpropertyof", pid1, pid2);				
+			if (pid1 != pid2) storage.makePredicateAssertion("spo", pid1, pid2);				
 		}
 		if ( (todos & BasicKBLoader.CHECK) != 0 ) {
 			if (pid1 != pid2) { // no need to check if trivial
-				result = storage.checkPredicateAssertion("subpropertyof", pid1, pid2);
+				result = storage.checkPredicateAssertion("spo", pid1, pid2);
 			}
 		}
 		return result;
@@ -264,10 +264,10 @@ public class BasicKBLoader {
 			boolean result = true;
 			int pid = storage.getID(p), pid1 = storage.getID(chain.get(0)), pid2 = storage.getID(chain.get(1));
 			if ( (todos & BasicKBLoader.ASSERT) != 0 ) {
-				storage.makePredicateAssertion("subpropertychain", pid1, pid2, pid);				
+				storage.makePredicateAssertion("spoc", pid1, pid2, pid);				
 			}
 			if ( (todos & BasicKBLoader.CHECK) != 0 ) {
-				result = storage.checkPredicateAssertion("subpropertychain", pid1, pid2, pid);
+				result = storage.checkPredicateAssertion("spoc", pid1, pid2, pid);
 			}
 			return result;
 		} else {
