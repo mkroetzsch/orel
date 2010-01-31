@@ -48,6 +48,19 @@ public class NaiveKBReasoner {
 		rules.put("Nom 2n", "nonempty(y) :- sco(x,y), nonempty(x)");
 		rules.put("Nom 3n", "nonempty(y) :- sv(x,v,y), nonempty(x)");
 		
+		rules.put("self-weak", "sv(x,p,x) :- self(x,p)");
+		rules.put("self-prop", "self(x,q) :- self(x,p), subpropertyof(p,q)");
+		rules.put("self-ind",  "self(x,p) :- sv(x,p,x), nominal(x)");
+		rules.put("self-sub",  "sco(x,y)  :- self(x,p), subself(p,y)");
+
+        //Self(p,x), Range(p,y) -> sCO(x,y)
+		//sV(x,p,y), sV(x,p,z),atMostOne(p,z),Self(p,x) -> sCO(x,y)
+        // (this should be dispensable as it goes beyond safety of atMostOne) 
+        // Re (B4) Handling of EL range restrictions:
+        //sV(x,p,y2), Range(p,y1), SubConjunctionOfFirst(y1,y2,z) -> sV(x,p,z)
+        //(assuming that sV is "sCO-upward-saturated" in the last argument, 
+        //also pending: symmetric case wrt. SubConjOfFirst)
+		
 		// now register those rules:
 		Iterator<String> nameit = rules.keySet().iterator();
 		String name;
@@ -83,7 +96,7 @@ public class NaiveKBReasoner {
 	 */
 	public boolean checkEntailment(OWLOntology ontology) throws Exception {
 		BasicKBLoader loader = new BasicKBLoader(storage);
-		loader.processOntology(ontology, BasicKBLoader.PREPARE );
+		loader.processOntology(ontology, BasicKBLoader.PREPARECHECK );
 		materialize();
 		// inconsistent ontologies entail anything
 		if (storage.checkPredicateAssertion("nonempty",storage.getIDForNothing())) {
