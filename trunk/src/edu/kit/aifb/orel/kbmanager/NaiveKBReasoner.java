@@ -44,7 +44,7 @@ public class NaiveKBReasoner {
 		rules.put("chain",  "sv(x,w,z) :- sv(x,v1,y), sv(y,v2,z), spoc(v1,v2,w)");
 		rules.put("sv-x",   "sv(x,p,z) :- sco(x,y), sv(y,p,z)");
 		rules.put("sv-y",   "sv(x,p,z) :- sv(x,p,y), sco(y,z)");
-		rules.put("sv-p",   "sv(x,q,z) :- sv(x,p,y), spo(p,q)");
+		rules.put("sv-p",   "sv(x,q,y) :- sv(x,p,y), spo(p,q)");
 		
 		rules.put("nom1", "sco(y,x) :- sco(x,y), nonempty(x), nominal(y)");
 		rules.put("nom2", "nonempty(y) :- sco(x,y), nonempty(x)");
@@ -102,6 +102,9 @@ public class NaiveKBReasoner {
 		BasicKBLoader loader = new BasicKBLoader(storage);
 		loader.processOntology(ontology, BasicKBLoader.PREPARECHECK );
 		materialize();
+		//storage.registerInferenceRule(InferenceRuleDeclaration.buildFromString("test","?sco(x,y) :- subself(p,y), sv(x,p,z)"));
+		//storage.registerInferenceRule(InferenceRuleDeclaration.buildFromString("test","?self(x,x) :- "));
+		//storage.registerInferenceRule(InferenceRuleDeclaration.buildFromString("test","?sco(x,x)"));
 		// inconsistent ontologies entail anything
 		if (storage.checkPredicateAssertion("nonempty",storage.getIDForNothing())) {
 			return true;

@@ -171,6 +171,7 @@ public class BasicKBLoader {
 		}
 		if ( (todos & BasicKBLoader.CHECK) != 0 ) {
 			if ( (id1 != id2) && (!c1.isOWLNothing()) && (!c2.isOWLThing()) ) { // no need to check if trivial
+			//if ( (!c1.isOWLNothing()) && (!c2.isOWLThing()) ) { // no need to check if trivial
 				result = storage.checkPredicateAssertion("sco",id1,id2);
 			}
 		}

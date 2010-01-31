@@ -49,7 +49,7 @@ public class MySQLStorageDriver implements StorageDriver {
 	// keep prepared statements in a map to process them with less code
 	protected HashMap<String,PreparedStatement> prepinsertstmts;
 	protected HashMap<String,Integer> prepinsertstmtsizes;
-	protected HashMap<String,PreparedStatement> prepcheckstmts;
+	protected HashMap<String,ArrayList<PreparedStatement>> prepcheckstmts;
 	
 	// true if we are in bulk loading, auto commit=off mode
 	protected boolean loadmode = false;
@@ -96,7 +96,7 @@ public class MySQLStorageDriver implements StorageDriver {
 		unwrittenids = new HashMap<String,Integer>(prelocsize);
 		prepinsertstmts = new HashMap<String,PreparedStatement>(expectedNumberOfPredicates);
 		prepinsertstmtsizes = new HashMap<String,Integer>(expectedNumberOfPredicates);
-		prepcheckstmts = new HashMap<String,PreparedStatement>(expectedNumberOfPredicates);
+		prepcheckstmts = new HashMap<String,ArrayList<PreparedStatement>>(expectedNumberOfPredicates);
 		try {
 			digest = java.security.MessageDigest.getInstance("MD5");
 		} catch (NoSuchAlgorithmException e) {
@@ -364,22 +364,28 @@ public class MySQLStorageDriver implements StorageDriver {
 	}
 	
 	public boolean checkPredicateAssertion(String predicate, int... ids) throws SQLException {
-		PreparedStatement stmt = prepcheckstmts.get(predicate);
-		if (stmt == null) {
-			stmt = getPreparedCheckStatement(predicate);
-			prepinsertstmts.put(predicate, stmt);
-			prepinsertstmtsizes.put(predicate, 0);
+		ArrayList<PreparedStatement> stmts = prepcheckstmts.get(predicate);
+		if (stmts == null) {
+			stmts = new ArrayList<PreparedStatement>(1);
+			stmts.add(getPreparedCheckStatement(predicate));
+			prepcheckstmts.put(predicate, stmts);
 		}
-		for (int i=0; i<ids.length; i++) {
-			stmt.setInt(i+1, ids[i]);
+		Iterator<PreparedStatement> stmtit = stmts.iterator();
+		PreparedStatement stmt;
+		boolean result = false;
+		while (!result && stmtit.hasNext()) {
+			stmt = stmtit.next();
+			for (int i=0; i<ids.length; i++) {
+				stmt.setInt(i+1, ids[i]);
+			}
+			ResultSet res = stmt.executeQuery();
+			result = (res.next());
+			res.close();
 		}
-		ResultSet res = stmt.executeQuery();
-		boolean result = (res.next());
-		res.close();
 		return result;
 	}
 
-	protected PreparedStatement getPreparedCheckStatement(String tablename) throws SQLException {
+	protected PreparedStatement getPreparedCheckStatement(String tablename) {
 		if (predicates.containsKey(tablename)) {
 			PredicateDeclaration pd = predicates.get(tablename);
 			String sql = "SELECT * FROM " + tablename + " WHERE ";
@@ -388,7 +394,12 @@ public class MySQLStorageDriver implements StorageDriver {
 				sql = sql + "f" + (i) + "=?";
 			}
 			sql = sql + " LIMIT 1";
-			return con.prepareStatement(sql);
+			try {
+				return con.prepareStatement(sql);
+			} catch (SQLException e) {
+				System.err.println(e.toString());
+				return null;
+			}
 		} else { 
 			return null;
 		}
@@ -404,7 +415,18 @@ public class MySQLStorageDriver implements StorageDriver {
 	
 	public void registerInferenceRule(InferenceRuleDeclaration rd) {
 		inferencerules.put(rd.getName(), rd);
-		inferencerulestmts.put(rd.getName(), getInferenceRuleStatements(rd));
+		if (rd.getMode() == InferenceRuleDeclaration.MODE_CHECK) {
+			String predicate = rd.getHead().getName();
+			ArrayList<PreparedStatement> stmts = prepcheckstmts.get(predicate);
+			if (stmts == null) {
+				stmts = new ArrayList<PreparedStatement>(1);
+				stmts.add(getPreparedCheckStatement(predicate));
+				prepcheckstmts.put(predicate, stmts);
+			}
+			stmts.addAll(getInferenceRuleStatements(rd));
+		} else {
+			inferencerulestmts.put(rd.getName(), getInferenceRuleStatements(rd));
+		}
 	}
 
 	/**
@@ -425,7 +447,9 @@ public class MySQLStorageDriver implements StorageDriver {
 		PreparedStatement stmt = stmts.get(0);
 		int result = 0;
 		try {
-			if (!inferencerules.get(rulename).retractInferences()) stmt.setInt(1, newstep);
+			if (inferencerules.get(rulename).getMode() != InferenceRuleDeclaration.MODE_RETRACT) {
+				stmt.setInt(1, newstep);
+			}
 			result = stmt.executeUpdate();
 		} catch (SQLException e) { // internal bug, just print the message
 			System.err.println(e.toString());
@@ -457,7 +481,9 @@ public class MySQLStorageDriver implements StorageDriver {
 		PreparedStatement stmt = stmts.get(0);
 		int result = 0, pos=1;
 		try {
-			if (!inferencerules.get(rulename).retractInferences()) stmt.setInt(pos++, newstep);
+			if (inferencerules.get(rulename).getMode() != InferenceRuleDeclaration.MODE_RETRACT) {
+				stmt.setInt(pos++, newstep);
+			}
 			for (int i=0; i<params.length; i++) {
 				stmt.setInt(pos++, params[i]);				
 			}
@@ -500,7 +526,9 @@ public class MySQLStorageDriver implements StorageDriver {
 			for (int i=1; i<stmts.size(); i++) {
 				stmt = stmts.get(i);
 				pos = 1;
-				if (!inferencerules.get(rulename).retractInferences()) stmt.setInt(pos++, max_cur_step+1);
+				if (inferencerules.get(rulename).getMode() != InferenceRuleDeclaration.MODE_RETRACT) {
+					stmt.setInt(pos++, max_cur_step+1);
+				}
 				for (int j=1; j<=i; j++) {
 					stmt.setInt(pos++, min_cur_step);
 				}
@@ -535,11 +563,10 @@ public class MySQLStorageDriver implements StorageDriver {
 		String from = "", insert, select = "", on = "", 
 		       on_op = " WHERE ";  // use WHERE while there is just one table
 		PredicateTerm pt;
-		PredicateDeclaration pd;
 		boolean hasParameterConstants = false; // constants of value "?" are set at application time;
 		                                       // rules with such constants do not support semi-naive
 		                                       // rewriting and can only be called when providing parameters
-		
+
 		// iterate over body to collect all variables and their variable->column mappings
 		// also make join string for FROM here
 		for (int i=0; i<rd.getBody().size(); i++) {
@@ -551,19 +578,35 @@ public class MySQLStorageDriver implements StorageDriver {
 		}
 		
 		// make strings for INSERT and SELECT part
-		if (rd.retractInferences()) {
+		if (rd.getMode() == InferenceRuleDeclaration.MODE_RETRACT) { // DELETE
 			insert = "DELETE t" + rd.getBody().size() + ".*";
 			if (!from.equals("")) from = from + " INNER JOIN ";
 			from = from + prepareRuleBodyAtom(rd, rd.getHead(), rd.getBody().size(), inferredTables, varequalities, constequalities);
-		} else { // make strings for INSERT and SELECT part
+		} else if (rd.getMode() == InferenceRuleDeclaration.MODE_CHECK) { // SELECT all (we just care about the non-zero count here)
+			insert = "";
+			select = "SELECT * ";
+			// Note: we build the "on" string here instead of adding equalities to our HashMaps, since otherwise the order of ? in the statement would not be correct
+			for (int i=0; i<rd.getHead().getArguments().size(); i++) {
+				if (!on.equals("")) on = on + " AND "; else on = on_op + " ";
+				pt = rd.getHead().getArguments().get(i);
+				if (pt.isVariable()) {
+					if (varequalities.containsKey(pt.getValue())) {
+						on = on + varequalities.get(pt.getValue()).get(0) + "=?";
+					} // else: no constraints on this variable, nothing to check
+				} else {
+					on = on + "?=\"" + pt.getValue() + "\"";
+				}
+			}
+			hasParameterConstants = true; // never make stepped statements for checks
+		} else { // INSERT SELECTed data 
 			insert = "INSERT IGNORE INTO " + rd.getHead().getName() + " (";
-			pd = predicates.get(rd.getHead().getName()); // use "pd == null" to indicate that rule is broken
+			PredicateDeclaration pd = predicates.get(rd.getHead().getName()); // use "pd == null" to indicate that rule is broken
 			for (int i=0; i<rd.getHead().getArguments().size(); i++) {
 				if (i>0) insert = insert + ",";
 				insert = insert + "f" + (i);
 				pt = rd.getHead().getArguments().get(i);
+				if (!select.equals("")) select = select + ",";
 				if (pt.isVariable()) {
-					if (!select.equals("")) select = select + ",";
 					if (varequalities.containsKey(pt.getValue())) {
 						select = select + varequalities.get(pt.getValue()).get(0) + " AS f" + (i);
 					} else { // else: unsafe rule, drop it
@@ -605,16 +648,17 @@ public class MySQLStorageDriver implements StorageDriver {
 		ArrayList<String> fields;
 		while (fieldsit.hasNext()) {
 			fields = fieldsit.next();
-			for (int i=1; i<fields.size(); i++) {
+			for (int i=0; i<fields.size()-1; i++) {
 				if (!on.equals("")) on = on + " AND "; else on = on_op + " ";
-				on = on + fields.get(i) + "=" + fields.get((i+1)%fields.size());
+				on = on + fields.get(i) + "=" + fields.get(i+1);
 			}
 		}
 	
 		/// Now build the final rules ...
 		// always make step-less version at index 0
 		try {
-			//System.out.println(rd.getName() + ":\n " + insert + select + " FROM " + from + on_op + on + "\n\n"); // DEBUG
+			if (rd.getMode() == InferenceRuleDeclaration.MODE_CHECK) on = on + " LIMIT 1";
+			//System.out.println(rd.getName() + ":\n " + insert + select + " FROM " + from + on + "\n\n"); // DEBUG
 			result.add(con.prepareStatement( insert + select + " FROM " + from + on));
 		} catch (SQLException e) { // bug in the above code, just print it
 			System.err.println(e.toString()); 
