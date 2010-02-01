@@ -20,7 +20,7 @@ public class Client {
 	public static void main(String[] args) {
 		// parse command line arguments
 		// supported arguments:  
-		// <mode> -- one of "load", "materialize", "init", "clear", "clearall", "checkentailment"
+		// <mode> -- one of "load", "materialize", "init", "clear", "clearall", "checkentailment", "checkconsistency"
 		// -c <configfile> -- URL of configuration file
 		int i = 0;
 		String arg;
@@ -44,7 +44,7 @@ public class Client {
 					System.err.println(arg + " requires a filename of the input file");
 				}
 			} else if (arg.equals("materialize") || arg.equals("init") || arg.equals("drop") || 
-					   arg.equals("clear") || arg.equals("clearall")) {
+					   arg.equals("clear") || arg.equals("clearall") || arg.equals("checkconsistency") ) {
 				operation = arg;
 			} else {
 				System.err.println("Unknown command " + arg);
@@ -53,7 +53,7 @@ public class Client {
 
 		if ( operation.equals("") ) {
 			System.out.println("No operation given. Usage:\n orel.sh <command> -c <configfile> -i <inputfile>\n" +
-					           " <command>       : one of \"load\", \"materialize\", \"init\", \"drop\", \"clear\", \"clearall\", \"checkentailment\"\n" +
+					           " <command>       : one of \"load\", \"materialize\", \"init\", \"drop\", \"clear\", \"clearall\", \"checkentailment\", \"checkconsistency\"\n" +
 					           "                   where \"load\" and \"checkentailment\" must be followed by an input ontology URI\n" +
 					           " -c <configfile> : path to the configuration file\n");
 			System.out.println("Exiting.");
@@ -130,9 +130,10 @@ public class Client {
 				System.out.println("Ontology loaded in " + (loadeTime-loadsTime) + " ms.");
 				System.out.println("Processing ontology ...");
 				loadsTime=System.currentTimeMillis();
-				if (kbmanager.checkEntailment(ontology) == InferenceResult.YES) {
+				InferenceResult result = kbmanager.checkEntailment(ontology);
+				if (result == InferenceResult.YES) {
 					System.out.println("Ontology is entailed.");
-				} else if (kbmanager.checkEntailment(ontology) == InferenceResult.NO) {
+				} else if (result == InferenceResult.NO) {
 					System.out.println("Ontology is not entailed.");
 				} else {
 					System.out.println("It could not be decided if the ontology is entailed, since the ontology contains unsupported features.");
@@ -140,6 +141,16 @@ public class Client {
 				loadeTime=System.currentTimeMillis();
 				System.out.println("Ontology processed in " + (loadeTime-loadsTime) + " ms.");
 				manager.removeOntology(ontology);
+			} else if (operation.equals("checkconsistency")) {
+				System.out.println("Checking consistency of loaded ontology ...");
+				InferenceResult result = kbmanager.checkConsistency();
+				if (result == InferenceResult.YES) {
+					System.out.println("Ontology is consistent.");
+				} else if (result == InferenceResult.NO) {
+					System.out.println("Ontology is not consistent.");
+				} else {
+					System.out.println("It could not be decided if the ontology is consistent, since the ontology contains unsupported features.");
+				}
 			} else if (operation.equals("materialize")) {
 				System.out.println("Materialising consequences ...");
 				kbmanager.materialize();
