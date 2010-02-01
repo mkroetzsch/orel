@@ -6,6 +6,7 @@ import org.semanticweb.owlapi.model.OWLOntology;
 import org.semanticweb.owlapi.model.OWLOntologyManager;
 
 import edu.kit.aifb.orel.kbmanager.BasicKBManager;
+import edu.kit.aifb.orel.kbmanager.BasicKBManager.InferenceResult;
 import edu.kit.aifb.orel.storage.MySQLStorageDriver;
 import edu.kit.aifb.orel.storage.StorageDriver;
 
@@ -129,10 +130,12 @@ public class Client {
 				System.out.println("Ontology loaded in " + (loadeTime-loadsTime) + " ms.");
 				System.out.println("Processing ontology ...");
 				loadsTime=System.currentTimeMillis();
-				if (kbmanager.checkEntailment(ontology)) {
+				if (kbmanager.checkEntailment(ontology) == InferenceResult.YES) {
 					System.out.println("Ontology is entailed.");
-				} else {
+				} else if (kbmanager.checkEntailment(ontology) == InferenceResult.NO) {
 					System.out.println("Ontology is not entailed.");
+				} else {
+					System.out.println("It could not be decided if the ontology is entailed, since the ontology contains unsupported features.");
 				}
 				loadeTime=System.currentTimeMillis();
 				System.out.println("Ontology processed in " + (loadeTime-loadsTime) + " ms.");
