@@ -43,9 +43,11 @@ public class BasicKBLoader {
 		// iterate over ontology to load all axioms:
 		Set<OWLLogicalAxiom> axiomset = ontology.getLogicalAxioms();
 		Iterator<OWLLogicalAxiom> axiomiterator = axiomset.iterator();
+		OWLLogicalAxiom axiom;
 		int count = 0;
 		while( (result || writing) && axiomiterator.hasNext()){
-			result = result && processLogicalAxiom(axiomiterator.next(), todos );
+			axiom = axiomiterator.next();
+			result = result && processLogicalAxiom(axiom, todos );
 			count++;
 			if (count % 100  == 0 ) System.out.print(".");
 		}
