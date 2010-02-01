@@ -7,6 +7,7 @@ import org.semanticweb.owlapi.io.StringDocumentSource;
 import org.semanticweb.owlapi.model.*;
 
 import edu.kit.aifb.orel.kbmanager.BasicKBManager;
+import edu.kit.aifb.orel.kbmanager.BasicKBManager.InferenceResult;
 
 import java.sql.SQLException;
 import java.util.Iterator;
@@ -35,7 +36,7 @@ public class Test {
 	}
 	private void loadOntology() throws OWLOntologyCreationException {
 		manager = OWLManager.createOWLOntologyManager();
-		physicalURI= IRI.create((new File(System.getProperty("user.dir")+"/"+this.file)).toURI());
+		physicalURI= IRI.create((new File(System.getProperty("user.dir")+"/testCases/"+this.file)).toURI());
 		//		physicalURI= URI.create("http://owl.semanticweb.org/exports/proposed/RL-RDF-rules-tests.rdf");
 
 		ontology = manager.loadOntologyFromOntologyDocument(physicalURI);
@@ -51,49 +52,283 @@ public class Test {
 	}
 
 	public void test(BasicKBManager kbmanager) throws Exception{
+		BufferedWriter result = new BufferedWriter(new FileWriter("result.txt"));
+	
+	    
 		Set<OWLClassAssertionAxiom> axiomset=ontology.getAxioms(AxiomType.CLASS_ASSERTION);
 		Set<OWLDataPropertyAssertionAxiom> dataset=ontology.getAxioms(AxiomType.DATA_PROPERTY_ASSERTION);
 		Iterator<OWLDataPropertyAssertionAxiom> dataIterator;
 		Iterator<OWLClassAssertionAxiom> classIterator=axiomset.iterator();
 		OWLClassAssertionAxiom classAssert;
-		OWLDataPropertyAssertionAxiom dataAxiom;
+		
+		
 		while(classIterator.hasNext()){
+		
 			classAssert=classIterator.next();
-			System.out.println(classAssert.getClassExpression().toString());
+//			result.write(classAssert.getClassExpression().toString());
+//			result.newLine();
+//			Positive Entailment Test
 			if(classAssert.getClassExpression().toString().equals("<http://www.w3.org/2007/OWL/testOntology#PositiveEntailmentTest>")){
+				result.write("Positive Entailment Test:");
+				result.write(classAssert.getIndividual().toString());
+//				result.write("classAssert"+classAssert.getClassExpression().getClass().getName());
+				result.newLine();
 				dataIterator=dataset.iterator();
-				while(dataIterator.hasNext()){
-					dataAxiom=dataIterator.next();
-					if(dataAxiom.getSubject().equals(classAssert.getIndividual())) {
-						if(dataAxiom.getProperty().toString().equals("<http://www.w3.org/2007/OWL/testOntology#rdfXmlPremiseOntology>")){
-//							System.out.println("PremiseOntology:");
-//							System.out.println(dataAxiom.getObject().getLiteral());
-							String ontStr=dataAxiom.getObject().getLiteral();
-							OWLOntologyManager man=OWLManager.createOWLOntologyManager();
-							premiseOntology =man.loadOntologyFromOntologyDocument((OWLOntologyDocumentSource)new StringDocumentSource(ontStr));
-													}
-						else if(dataAxiom.getProperty().toString().equals("<http://www.w3.org/2007/OWL/testOntology#rdfXmlConclusionOntology>")){
-//							System.out.println("ConclusionOntology:");
-//							System.out.println(dataAxiom.getObject().getLiteral());
-							String ontStr=dataAxiom.getObject().getLiteral();
-							OWLOntologyManager man=OWLManager.createOWLOntologyManager();
-							conclusionOntology =man.loadOntologyFromOntologyDocument((OWLOntologyDocumentSource)new StringDocumentSource(ontStr));
-						}
+				setPremiseConclusionOntologies(dataset, classAssert);
+//				Testing
+				if(kbmanager.loadOntology(premiseOntology)){
+					if(kbmanager.checkEntailment(conclusionOntology)==InferenceResult.YES){
+						System.out.println("Passed");
+						result.write("Passed");
+						result.newLine();
 					}
+					else if(kbmanager.checkEntailment(conclusionOntology)==InferenceResult.NO){
+						System.out.println("Fail");
+						result.write("Fail");
+						result.newLine();
+					}
+					else if(kbmanager.checkEntailment(conclusionOntology)==InferenceResult.DONTKNOW){
+						result.write("Incomplete");
+						result.write("Incomplete");
+						result.newLine();
 
-				}
-				kbmanager.loadOntology(premiseOntology);
-				if(kbmanager.checkEntailment(conclusionOntology)){
-					System.out.println("Entailed");
+					}
+					kbmanager.drop();
+					kbmanager.initialize();
 				}
 				else{
-					System.out.println("Not Entailed");
-				}
-				kbmanager.drop();
-				kbmanager.initialize();
+					if(kbmanager.checkEntailment(conclusionOntology)==InferenceResult.YES){
+						System.out.println("Passed");
+						result.write("Passed");
+						result.newLine();
+					}
+					else if(kbmanager.checkEntailment(conclusionOntology)==InferenceResult.NO){
+						System.out.println("Incomplete");
+						result.write("Incomplete");
+						result.newLine();
+					}
+					else if(kbmanager.checkEntailment(conclusionOntology)==InferenceResult.DONTKNOW){
+						result.write("Incomplete");
+						result.write("Incomplete");
+						result.newLine();
 
+					}
+					kbmanager.drop();
+					kbmanager.initialize();
+				}
 			}
+//			Negative Entailment Test
+			else if(classAssert.getClassExpression().toString().equals("<http://www.w3.org/2007/OWL/testOntology#NegativeEntailmentTest>")){
+				result.write("Negative Entailment Test:");
+				result.write(classAssert.getIndividual().toString());
+//				result.write("classAssert"+classAssert.getClassExpression().getClass().getName());
+				result.newLine();
+				setPremiseConclusionOntologies(dataset, classAssert);
+//				Testing
+				if(kbmanager.loadOntology(premiseOntology)){
+					if(kbmanager.checkEntailment(conclusionOntology)==InferenceResult.YES){
+						System.out.println("Fail");
+						result.write("Fail");
+						result.newLine();
+					}
+					else if(kbmanager.checkEntailment(conclusionOntology)==InferenceResult.NO){
+						System.out.println("Passed");
+						result.write("Passed");
+						result.newLine();
+					}
+					else if(kbmanager.checkEntailment(conclusionOntology)==InferenceResult.DONTKNOW){
+						result.write("Incomplete");
+						result.write("Incomplete");
+						result.newLine();
+
+					}
+					kbmanager.drop();
+					kbmanager.initialize();
+				}
+				else{
+					if(kbmanager.checkEntailment(conclusionOntology)==InferenceResult.YES){
+						System.out.println("Fail");
+						result.write("Fail");
+						result.newLine();
+					}
+					else if(kbmanager.checkEntailment(conclusionOntology)==InferenceResult.NO){
+						System.out.println("Incomplete");
+						result.write("Incomplete");
+						result.newLine();
+					}
+					else if(kbmanager.checkEntailment(conclusionOntology)==InferenceResult.DONTKNOW){
+						result.write("Incomplete");
+						result.write("Incomplete");
+						result.newLine();
+
+					}
+					kbmanager.drop();
+					kbmanager.initialize();
+				}
+			}
+//			Consistency Test
+				else if(classAssert.getClassExpression().toString().equals("<http://www.w3.org/2007/OWL/testOntology#ConsistencyTest>")){
+					result.write("Consistency Test:");
+					result.write(classAssert.getIndividual().toString());
+//					result.write("classAssert"+classAssert.getClassExpression().getClass().getName());
+					result.newLine();
+					setPremiseOntology(dataset, classAssert);
+//					Testing
+					if(kbmanager.loadOntology(premiseOntology)){
+						if(kbmanager.checkConsistency()==InferenceResult.YES){
+							System.out.println("Passed");
+							result.write("Passed");
+							result.newLine();
+						}
+						
+						else if(kbmanager.checkConsistency()==InferenceResult.NO){
+							System.out.println("Fail");
+							result.write("Fail");
+							result.newLine();
+						}
+						else if(kbmanager.checkConsistency()==InferenceResult.DONTKNOW){
+							result.write("Incomplete");
+							result.write("Incomplete");
+							result.newLine();
+
+						}
+						kbmanager.drop();
+						kbmanager.initialize();
+					}
+					else{
+						if(kbmanager.checkConsistency()==InferenceResult.YES){
+							System.out.println("Incomplete");
+							result.write("Incomplete");
+							result.newLine();
+						}
+						
+						else if(kbmanager.checkConsistency()==InferenceResult.NO){
+							System.out.println("Fail");
+							result.write("Fail");
+							result.newLine();
+						}
+						else if(kbmanager.checkConsistency()==InferenceResult.DONTKNOW){
+							result.write("Incomplete");
+							result.write("Incomplete");
+							result.newLine();
+						}
+						kbmanager.drop();
+						kbmanager.initialize();
+					}
+			
+				}
+//			Inconsistency Test
+				else if(classAssert.getClassExpression().toString().equals("<http://www.w3.org/2007/OWL/testOntology#InconsistencyTes>")){
+					result.write("Consistency Test:");
+					result.write(classAssert.getIndividual().toString());
+//					result.write("classAssert"+classAssert.getClassExpression().getClass().getName());
+					result.newLine();
+					setPremiseOntology(dataset, classAssert);
+//					Testing
+					if(kbmanager.loadOntology(premiseOntology)){
+						if(kbmanager.checkEntailment(conclusionOntology)==InferenceResult.YES){
+							System.out.println("Fail");
+							result.write("Fail");
+							result.newLine();
+						}
+						else if(kbmanager.checkEntailment(conclusionOntology)==InferenceResult.NO){
+							System.out.println("Passed");
+							result.write("Passed");
+							result.newLine();
+						}
+						else if(kbmanager.checkEntailment(conclusionOntology)==InferenceResult.DONTKNOW){
+							result.write("Incomplete");
+							result.write("Incomplete");
+							result.newLine();
+
+						}
+						kbmanager.drop();
+						kbmanager.initialize();
+					}
+					else{
+						if(kbmanager.checkEntailment(conclusionOntology)==InferenceResult.YES){
+							System.out.println("Incomplete");
+							result.write("Incomplete");
+							result.newLine();
+						}
+						else if(kbmanager.checkEntailment(conclusionOntology)==InferenceResult.NO){
+							System.out.println("Passed");
+							result.write("Passed");
+							result.newLine();
+						}
+						else if(kbmanager.checkEntailment(conclusionOntology)==InferenceResult.DONTKNOW){
+							result.write("Incomplete");
+							result.write("Incomplete");
+							result.newLine();
+
+						}
+						kbmanager.drop();
+						kbmanager.initialize();
+					}
+			
+				}
+				else{
+					result.write("Unknown Test Case:");
+					result.write(classAssert.getIndividual().toString());
+					result.newLine();
+					
+				}
+			result.newLine();
+			result.flush();
+			
 		}
+		result.close();
+	}
+	
+		// TODO Auto-generated method stub
+		
+	
+	private void setPremiseOntology(Set<OWLDataPropertyAssertionAxiom> dataset,
+			OWLClassAssertionAxiom classAssert) throws OWLOntologyCreationException {
+		OWLDataPropertyAssertionAxiom dataAxiom;
+		// 	OWLDataPropertyAssertionAxiom dataAxiom;
+		Iterator<OWLDataPropertyAssertionAxiom> dataIterator = dataset.iterator();
+		while(dataIterator.hasNext()){
+			dataAxiom=dataIterator.next();
+			if(dataAxiom.getSubject().equals(classAssert.getIndividual())) {
+				if(dataAxiom.getProperty().toString().equals("<http://www.w3.org/2007/OWL/testOntology#rdfXmlPremiseOntology>")){
+					//							System.out.println("PremiseOntology:");
+					//							System.out.println(dataAxiom.getObject().getLiteral());
+					String ontStr=dataAxiom.getObject().getLiteral();
+					OWLOntologyManager man=OWLManager.createOWLOntologyManager();
+					premiseOntology =man.loadOntologyFromOntologyDocument((OWLOntologyDocumentSource)new StringDocumentSource(ontStr));
+				}
+			
+			}
+
+		}
+		
+		
+	}
+	void setPremiseConclusionOntologies(Set<OWLDataPropertyAssertionAxiom> dataset, OWLClassAssertionAxiom classAssert) throws OWLOntologyCreationException{
+		OWLDataPropertyAssertionAxiom dataAxiom;
+		Iterator<OWLDataPropertyAssertionAxiom> dataIterator = dataset.iterator();
+		while(dataIterator.hasNext()){
+			dataAxiom=dataIterator.next();
+			if(dataAxiom.getSubject().equals(classAssert.getIndividual())) {
+				if(dataAxiom.getProperty().toString().equals("<http://www.w3.org/2007/OWL/testOntology#rdfXmlPremiseOntology>")){
+					//							System.out.println("PremiseOntology:");
+					//							System.out.println(dataAxiom.getObject().getLiteral());
+					String ontStr=dataAxiom.getObject().getLiteral();
+					OWLOntologyManager man=OWLManager.createOWLOntologyManager();
+					premiseOntology =man.loadOntologyFromOntologyDocument((OWLOntologyDocumentSource)new StringDocumentSource(ontStr));
+				}
+				else if(dataAxiom.getProperty().toString().equals("<http://www.w3.org/2007/OWL/testOntology#rdfXmlConclusionOntology>")){
+					//							System.out.println("ConclusionOntology:");
+					//							System.out.println(dataAxiom.getObject().getLiteral());
+					String ontStr=dataAxiom.getObject().getLiteral();
+					OWLOntologyManager man=OWLManager.createOWLOntologyManager();
+					conclusionOntology =man.loadOntologyFromOntologyDocument((OWLOntologyDocumentSource)new StringDocumentSource(ontStr));
+				}
+			}
+
+		}
+		
 	}
 	
 }	
