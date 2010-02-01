@@ -228,7 +228,7 @@ public class BasicKBLoader {
 				}
 			}
 			if ( (todos & BasicKBLoader.PREPARE) != 0 ) {
-				createBodyFacts(id1,(OWLIndividual)descs[i],((todos & BasicKBLoader.PREPARECHECK)!=0));
+				createBodyFacts(id1,(OWLClassExpression)descs[i],((todos & BasicKBLoader.PREPARECHECK)!=0));
 			}
 		}
 		return result;
