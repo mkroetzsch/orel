@@ -68,6 +68,15 @@ public class BasicKBManager {
 		NaiveKBReasoner reasoner = new NaiveKBReasoner(storage);
 		return reasoner.checkEntailment(ontology);
 	}
+	
+	/**
+	 * Check if the loaded axioms are consistent.
+	 * Unsupported axioms will be ignored, and the result will be as if they had not been given.   
+	 */
+	public boolean checkConsistency() throws Exception {
+		NaiveKBReasoner reasoner = new NaiveKBReasoner(storage);
+		return reasoner.checkConsistency();
+	}
 
 	/**
 	 * Compute all materialized statements on the database.
