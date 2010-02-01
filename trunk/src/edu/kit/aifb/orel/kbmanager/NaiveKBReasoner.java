@@ -8,6 +8,7 @@ import org.semanticweb.owlapi.model.OWLOntology;
 
 
 import edu.kit.aifb.orel.inferencing.InferenceRuleDeclaration;
+import edu.kit.aifb.orel.kbmanager.BasicKBManager.InferenceResult;
 import edu.kit.aifb.orel.storage.StorageDriver;
 
 /**
@@ -125,26 +126,35 @@ public class NaiveKBReasoner {
 	 * Unsupported axioms will be ignored, and the result will be as if they had not been given.   
 	 * @param ontology
 	 */
-	public boolean checkEntailment(OWLOntology ontology) throws Exception {
+	public InferenceResult checkEntailment(OWLOntology ontology) throws Exception {
 		BasicKBLoader loader = new BasicKBLoader(storage);
-		loader.processOntology(ontology, BasicKBLoader.PREPARECHECK );
+		boolean loaded = loader.processOntology(ontology, BasicKBLoader.PREPARECHECK );
 		materialize();
 		registerCheckRules();
 		// inconsistent ontologies entail anything
 		if (storage.checkPredicateAssertion("nonempty",storage.getIDForNothing())) {
-			return true;
+			return InferenceResult.YES;
+		} else if (!loader.processOntology(ontology, BasicKBLoader.CHECK )) { // some supported axioms not entailed
+			return InferenceResult.NO;
+		} else if (loaded) { // all axioms supported and entailed 
+			return InferenceResult.YES;
+		} else { // some axioms not supported, all supported ones entailed
+			return InferenceResult.DONTKNOW;
 		}
-		return loader.processOntology(ontology, BasicKBLoader.CHECK );
 	}
 
 	/**
 	 * Check if the loaded axioms are consistent.
 	 * Unsupported axioms will be ignored, and the result will be as if they had not been given.   
 	 */
-	public boolean checkConsistency() throws Exception {
+	public InferenceResult checkConsistency() throws Exception {
 		materialize();
 		registerCheckRules();
-		return !(storage.checkPredicateAssertion("nonempty",storage.getIDForNothing()));
+		if (storage.checkPredicateAssertion("nonempty",storage.getIDForNothing())) {
+			return InferenceResult.NO;
+		} else {
+			return InferenceResult.YES;
+		}
 	}
 	
 }

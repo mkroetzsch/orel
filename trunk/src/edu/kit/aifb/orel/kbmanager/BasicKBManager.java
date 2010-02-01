@@ -12,6 +12,9 @@ import edu.kit.aifb.orel.storage.StorageDriver;
  * @author Markus Krötzsch
  */
 public class BasicKBManager {
+	static public enum InferenceResult {
+	    YES, NO, DONTKNOW 
+	}
 	protected StorageDriver storage = null;
 	
 	/**
@@ -54,9 +57,9 @@ public class BasicKBManager {
 	 * @param ontology
 	 * @param donotassert if true then only load the relevant subexpressions without asserting the axioms 
 	 */
-	public void loadOntology(OWLOntology ontology) throws Exception {
+	public boolean loadOntology(OWLOntology ontology) throws Exception {
 		BasicKBLoader loader = new BasicKBLoader(storage);
-		loader.processOntology(ontology, (BasicKBLoader.PREPAREASSERT | BasicKBLoader.ASSERT) );
+		return loader.processOntology(ontology, (BasicKBLoader.PREPAREASSERT | BasicKBLoader.ASSERT) );
 	}
 
 	/**
@@ -64,7 +67,7 @@ public class BasicKBManager {
 	 * Unsupported axioms will be ignored, and the result will be as if they had not been given.   
 	 * @param ontology
 	 */
-	public boolean checkEntailment(OWLOntology ontology) throws Exception {
+	public InferenceResult checkEntailment(OWLOntology ontology) throws Exception {
 		NaiveKBReasoner reasoner = new NaiveKBReasoner(storage);
 		return reasoner.checkEntailment(ontology);
 	}
@@ -73,7 +76,7 @@ public class BasicKBManager {
 	 * Check if the loaded axioms are consistent.
 	 * Unsupported axioms will be ignored, and the result will be as if they had not been given.   
 	 */
-	public boolean checkConsistency() throws Exception {
+	public InferenceResult checkConsistency() throws Exception {
 		NaiveKBReasoner reasoner = new NaiveKBReasoner(storage);
 		return reasoner.checkConsistency();
 	}
