@@ -136,5 +136,15 @@ public class NaiveKBReasoner {
 		}
 		return loader.processOntology(ontology, BasicKBLoader.CHECK );
 	}
+
+	/**
+	 * Check if the loaded axioms are consistent.
+	 * Unsupported axioms will be ignored, and the result will be as if they had not been given.   
+	 */
+	public boolean checkConsistency() throws Exception {
+		materialize();
+		registerCheckRules();
+		return !(storage.checkPredicateAssertion("nonempty",storage.getIDForNothing()));
+	}
 	
 }
