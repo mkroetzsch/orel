@@ -80,13 +80,7 @@ public class MySQLStorageDriver implements StorageDriver {
 	public MySQLStorageDriver(String dbserver, String dbname, String dbuser, String dbpwd) throws SQLException {
 		connect(dbserver,dbname,dbuser,dbpwd);
 		//implement a least recently used cache for IDs:
-		ids = new LinkedHashMap<String,Integer>(idcachesize,0.75f,true) {
-			/// Anonymous inner class
-			private static final long serialVersionUID = 1L;
-			protected boolean removeEldestEntry(Map.Entry<String,Integer> eldest) {
-			   return size() > idcachesize;
-			}
-		};
+		resetCaches();
 		final int expectedNumberOfPredicates = 15; 
 		predicates = new HashMap<String,PredicateDeclaration>(expectedNumberOfPredicates);
 		inferencerules     = new HashMap<String,InferenceRuleDeclaration>(30);
@@ -102,6 +96,20 @@ public class MySQLStorageDriver implements StorageDriver {
 		} catch (NoSuchAlgorithmException e) {
 			// unlikely
 		}
+	}
+	
+	/**
+	 * Destroy and recreate any in memory caches that this object has. This is
+	 * important if the DB is modified in violent ways during some run.
+	 */
+	protected void resetCaches() {
+		ids = new LinkedHashMap<String,Integer>(idcachesize,0.75f,true) {
+			/// Anonymous inner class
+			private static final long serialVersionUID = 1L;
+			protected boolean removeEldestEntry(Map.Entry<String,Integer> eldest) {
+			   return size() > idcachesize;
+			}
+		};
 	}
 
 	/**
@@ -175,6 +183,7 @@ public class MySQLStorageDriver implements StorageDriver {
 			stmt.execute("DROP TABLE IF EXISTS " + pit.next().getName());
 		}
 		stmt.execute("DROP TABLE IF EXISTS ids");
+		resetCaches();
 	}
 
 	/**
@@ -192,6 +201,7 @@ public class MySQLStorageDriver implements StorageDriver {
 			Statement stmt = con.createStatement();
 			stmt.execute("TRUNCATE TABLE ids");
 		}
+		resetCaches();
 	}
 	
 	public void clear(String predicate, boolean onlyderived) throws SQLException {
