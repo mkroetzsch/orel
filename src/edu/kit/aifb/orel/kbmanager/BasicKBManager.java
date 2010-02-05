@@ -94,6 +94,7 @@ public class BasicKBManager {
 		storage.registerPredicate( new PredicateDeclaration("sco",2,true,false) );
 		
 		storage.registerPredicate( new PredicateDeclaration("sv",3,true,false) );
+		storage.registerPredicate( new PredicateDeclaration("av",3,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("self",2,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("subself",2,false,false) );
 		storage.registerPredicate( new PredicateDeclaration("subconjunctionof",3,false,false) );

@@ -526,6 +526,12 @@ public class BasicKBLoader {
 		} else if (d instanceof OWLObjectHasSelf) {
 			int pid = storage.getID(((OWLObjectHasSelf)d).getProperty());
 			storage.makePredicateAssertion("self",sid,pid);
+		} else if (d instanceof OWLObjectAllValuesFrom){
+			int pid = storage.getID(((OWLObjectAllValuesFrom)d).getProperty());
+			OWLClassExpression filler = ((OWLObjectAllValuesFrom)d).getFiller();
+			int oid = storage.getID(filler);
+			storage.makePredicateAssertion("av",sid,pid,oid);
+			createHeadFacts(oid,filler,false);
 		} else {// TODO: add more description types
 			System.err.println("Unsupported head class expression: " + d.toString());
 		}

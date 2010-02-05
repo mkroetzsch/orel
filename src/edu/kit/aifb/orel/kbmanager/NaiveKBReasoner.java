@@ -84,6 +84,11 @@ public class NaiveKBReasoner {
 		//rules.put("self-p",    "self(x,q) :- self(x,p), spo(p,q)");
 		rules.put("self-ind-sco",  "self(x,p) :- sco(x,y), sv(y,p,x), nominal(x)");
 		rules.put("subself",   "sco(x,y)  :- self(x,p), subself(p,y)");
+		
+		rules.put("av1", "sco(y1,y2) :- nominal(v), sco(v,x1), sco(v,x2), sv(x1,p,y1), av(x2,p,y2)");
+		rules.put("av2", "sco(y1,y2) :- nominal(v),            sco(v,x2), sv(v ,p,y1), av(x2,p,y2)");
+		rules.put("av3", "sco(y1,y2) :- nominal(v), sco(v,x1),            sv(x1,p,y1), av(v ,p,y2)");
+		rules.put("av4", "sco(y1,y2) :- nominal(v),                       sv(v ,p,y1), av(v ,p,y2)");
 
         //Self(p,x), Range(p,y) -> sCO(x,y)
 		//sV(x,p,y), sV(x,p,z),atMostOne(p,z),Self(p,x) -> sCO(x,y)
@@ -111,6 +116,7 @@ public class NaiveKBReasoner {
 		registerInferenceRules();
 		int affectedrows = 1, curstep = 0;
 		while (affectedrows > 0) {
+			System.out.println("============");
 			affectedrows = 0;
 			for (int i=0; i<inferencerules.size(); i++) {
 				affectedrows = affectedrows + storage.runRule(inferencerules.get(i),curstep,curstep);
