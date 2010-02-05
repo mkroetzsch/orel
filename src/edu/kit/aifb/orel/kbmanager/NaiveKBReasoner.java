@@ -30,11 +30,17 @@ public class NaiveKBReasoner {
 		// make the rule declaration as readable as possible;
 		// it is crucial to have this error free and customizable
 		
-		// recall that these rules are not recursively applied!
+		// Recall that these rules are not recursively applied!
+		// Many of these rules won't be used for querying, but we still 
+		// use them to document the incompleteness in materializing derived
+		// predicates.  
 		rules.put("self-p", "?self(x,q) :- self(x,p), spo(p,q)");
 		rules.put("sv-p",   "?sv(x,q,y) :- sv(x,p,y), spo(p,q)");
 		rules.put("sv-x",   "?sv(x,p,z) :- sco(x,y), sv(y,p,z)");
 		rules.put("sv-px",  "?sv(x,q,z) :- sco(x,y), spo(p,q), sv(y,p,z)");
+		rules.put("av-x",   "?av(x,p,y) :- sco(x,x1), av(x1,p,y)");
+		rules.put("av-y",   "?av(x,p,y) :- av(x,p,y1), sco(y1,y)");
+		rules.put("av-xy",  "?av(x,p,y) :- sco(x,x1), av(x1,p,y1), sco(y1,y)");
 		
 		// Unsound test: if x has a p to something, then it has a p to itself
 		//storage.registerInferenceRule(InferenceRuleDeclaration.buildFromString("test","?sco(x,y) :- subself(p,y), sv(x,p,z)"));
@@ -68,7 +74,7 @@ public class NaiveKBReasoner {
 		rules.put("con r2", "sco(x,z)  :- subconjunctionof(y,x,z), sco(x,y)");
 		rules.put("con r3", "sco(x,z)  :- subconjunctionof(x,x,z)");
 		rules.put("subsome","sco(x,y)  :- sv(x,v,z), subsomevalues(v,z,y)");
-		rules.put("some-spo","sco(x,y) :- sv(x,v,z), spo(v,u), subsomevalues(u,z,y)");
+		rules.put("subsome-p","sco(x,y) :- sv(x,v,z), spo(v,u), subsomevalues(u,z,y)");
 		rules.put("chain",  "sv(x,w,z) :- sv(x,v1,y), sv(y,v2,z), spoc(v1,v2,w)");
 		//rules.put("sv-x",   "sv(x,p,z) :- sco(x,y), sv(y,p,z)");
 		rules.put("sv-y",   "sv(x,p,z) :- sv(x,p,y), sco(y,z)");
@@ -85,10 +91,14 @@ public class NaiveKBReasoner {
 		rules.put("self-ind-sco",  "self(x,p) :- sco(x,y), sv(y,p,x), nominal(x)");
 		rules.put("subself",   "sco(x,y)  :- self(x,p), subself(p,y)");
 		
+		rules.put("av-p", "av(x,q,y) :- spo(q,p), av(x,p,y)");
 		rules.put("av1", "sco(y1,y2) :- nominal(v), sco(v,x1), sco(v,x2), sv(x1,p,y1), av(x2,p,y2)");
 		rules.put("av2", "sco(y1,y2) :- nominal(v),            sco(v,x2), sv(v ,p,y1), av(x2,p,y2)");
 		rules.put("av3", "sco(y1,y2) :- nominal(v), sco(v,x1),            sv(x1,p,y1), av(v ,p,y2)");
 		rules.put("av4", "sco(y1,y2) :- nominal(v),                       sv(v ,p,y1), av(v ,p,y2)");
+		
+		rules.put("suball",     "sco(x,z) :- av(x,p,y), suballvalues(p,y,z)");
+		rules.put("suball-sco", "sco(x,z) :- av(x,p,y1), sco(y1,y2), suballvalues(p,y2,z)");
 
         //Self(p,x), Range(p,y) -> sCO(x,y)
 		//sV(x,p,y), sV(x,p,z),atMostOne(p,z),Self(p,x) -> sCO(x,y)

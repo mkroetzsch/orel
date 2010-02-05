@@ -444,6 +444,12 @@ public class BasicKBLoader {
 		} else if (d instanceof OWLObjectHasSelf) {
 			int pid = storage.getID(((OWLObjectHasSelf)d).getProperty());
 			storage.makePredicateAssertion("subself",pid,id);
+		} else if (d instanceof OWLObjectAllValuesFrom){
+			int pid = storage.getID(((OWLObjectAllValuesFrom)d).getProperty());
+			OWLClassExpression filler = ((OWLObjectAllValuesFrom)d).getFiller();
+			int sid = storage.getID(filler);
+			storage.makePredicateAssertion("suballvalues",pid,sid,id);
+			createBodyFacts(sid,filler,false);
 		} else {// TODO: add more description types
 			System.err.println("Unsupported body class expression: " + d.toString());
 		}
