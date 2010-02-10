@@ -9,6 +9,7 @@ import java.util.Set;
 
 import org.semanticweb.owlapi.model.*;
 
+import edu.kit.aifb.orel.storage.SimpleLiteral;
 import edu.kit.aifb.orel.storage.StorageDriver;
 
 public class BasicKBLoader {
@@ -138,7 +139,7 @@ public class BasicKBLoader {
 			result = processClassAssertion( ((OWLClassAssertionAxiom) axiom).getIndividual(), ((OWLClassAssertionAxiom) axiom).getClassExpression(),todos); 
 		} else if (axiom instanceof OWLObjectPropertyAssertionAxiom) {
 			OWLObjectPropertyAssertionAxiom pa = (OWLObjectPropertyAssertionAxiom) axiom;
-			result = processPropertyAssertion( pa.getSubject(), pa.getProperty(), pa.getObject(),todos); 
+			result = processObjectPropertyAssertion( pa.getSubject(), pa.getProperty(), pa.getObject(),todos); 
 		} else if (axiom instanceof OWLSameIndividualAxiom) {
 			result = processSameIndividuals(((OWLSameIndividualAxiom)axiom).getIndividuals(),todos);
 		} else if (axiom instanceof OWLDifferentIndividualsAxiom) {
@@ -151,8 +152,10 @@ public class BasicKBLoader {
 					pa.getProperty(), datafactory.getOWLObjectOneOf(pa.getSubject()) ) );
 			result = processDisjointClasses(classes, todos);
 		} else if (axiom instanceof OWLDataPropertyAssertionAxiom) {
-			result = false; // TODO
-			System.err.println("The following axiom is not supported: " + axiom + "\n");
+			OWLDataPropertyAssertionAxiom pa = (OWLDataPropertyAssertionAxiom) axiom;
+			result = processDataPropertyAssertion( pa.getSubject(), pa.getProperty(), pa.getObject(),todos);
+//			result = false; // TODO
+//			System.err.println("The following axiom is not supported: " + axiom + "\n");
 		} else if (axiom instanceof OWLNegativeDataPropertyAssertionAxiom) {
 			result = false; // TODO
 			System.err.println("The following axiom is not supported: " + axiom + "\n");
@@ -296,7 +299,7 @@ public class BasicKBLoader {
 		return result;
 	}
 
-	protected boolean processPropertyAssertion(OWLIndividual s, OWLObjectPropertyExpression p, OWLIndividual o, int todos) throws Exception {
+	protected boolean processObjectPropertyAssertion(OWLIndividual s, OWLObjectPropertyExpression p, OWLIndividual o, int todos) throws Exception {
 		boolean result = true;
 		int sid = storage.getID(s);
 		int pid = storage.getID(p);
@@ -310,6 +313,25 @@ public class BasicKBLoader {
 		if ( (todos & BasicKBLoader.PREPARE) != 0 ) {
 			createBodyFacts(sid,s,((todos & BasicKBLoader.PREPARECHECK)!=0));
 			createHeadFacts(oid,o,((todos & BasicKBLoader.PREPARECHECK)!=0));
+		}
+		return result;
+	}
+
+	protected boolean processDataPropertyAssertion(OWLIndividual s, OWLDataPropertyExpression p, OWLLiteral l, int todos) throws Exception {
+		boolean result = true;
+		int sid = storage.getID(s);
+		int pid = storage.getID(p);
+		SimpleLiteral sl = Literals.getCanonicalLiteral(l);
+		int lid = storage.getID(sl);
+		if ( (todos & BasicKBLoader.ASSERT) != 0 ) {
+			storage.makePredicateAssertion("sv",sid,pid,lid);
+		}
+		if ( (todos & BasicKBLoader.CHECK) != 0 ) {
+			result = storage.checkPredicateAssertion("sv",sid,pid,lid);
+		}
+		if ( (todos & BasicKBLoader.PREPARE) != 0 ) {
+			createBodyFacts(sid,s,((todos & BasicKBLoader.PREPARECHECK)!=0));
+			createHeadFacts(lid,sl,((todos & BasicKBLoader.PREPARECHECK)!=0));
 		}
 		return result;
 	}
@@ -400,6 +422,14 @@ public class BasicKBLoader {
 		storage.makePredicateAssertion("nominal",id);
 		storage.makePredicateAssertion("nonempty",id);
 	}
+
+	protected void createBodyFacts(int id, SimpleLiteral sl, boolean invert) throws Exception {
+		if (invert) {
+			createHeadFacts(id,sl,false);
+			return;
+		}
+		// TODO
+	}
 	
 	protected void createBodyFacts(int id, OWLClassExpression d, boolean invert) throws Exception {
 		if (invert) {
@@ -461,7 +491,13 @@ public class BasicKBLoader {
 		createBodyFacts(oid1,ops.get(0),false);
 		if (ops.size() == 2) {
 			int oid2 = storage.getID(ops.get(1));
-			storage.makePredicateAssertion("subconjunctionof",oid1,oid2,id);
+			if ( (oid1 == oid2) || (ops.get(1).isOWLThing()) )  { // rare cases, let's not bother with those elsewhere
+				storage.makePredicateAssertion("sco",oid1,id);
+			} else if (ops.get(0).isOWLThing()) {
+				storage.makePredicateAssertion("sco",oid2,id);
+			} else {
+				storage.makePredicateAssertion("subconjunctionof",oid1,oid2,id);
+			}
 			createBodyFacts(oid2,ops.get(1),false);
 		} else { // recursion
 			ArrayList<OWLClassExpression> newops = new ArrayList<OWLClassExpression>(ops.size()-1);
@@ -469,7 +505,11 @@ public class BasicKBLoader {
 				newops.add(ops.get(i));
 			}
 			int oid2 = storage.getIDForNaryExpression(StorageDriver.OP_OBJECT_INTERSECTION, ops);
-			storage.makePredicateAssertion("subconjunctionof",oid1,oid2,id);
+			if (ops.get(0).isOWLThing()) {
+				storage.makePredicateAssertion("sco",oid2,id);
+			} else {
+				storage.makePredicateAssertion("subconjunctionof",oid1,oid2,id);
+			}
 			createConjunctionBodyFacts(oid2,newops);
 		}
 	}
@@ -491,6 +531,15 @@ public class BasicKBLoader {
 		}
 		storage.makePredicateAssertion("nominal",id);
 		storage.makePredicateAssertion("nonempty",id);
+	}
+
+	protected void createHeadFacts(int id, SimpleLiteral sl, boolean invert) throws Exception {
+		if (invert) {
+			createBodyFacts(id,sl,false);
+			return;
+		}
+		// TODO
+		storage.makePredicateAssertion("sco",id,storage.getIDForDatatypeURI(sl.getDatatypeURI()));
 	}
 
 	protected void createHeadFacts(int sid, OWLClassExpression d, boolean invert) throws Exception {

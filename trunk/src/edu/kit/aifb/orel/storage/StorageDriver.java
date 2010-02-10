@@ -5,7 +5,7 @@ import java.util.List;
 import org.semanticweb.owlapi.model.OWLClassExpression;
 import org.semanticweb.owlapi.model.OWLIndividual;
 import org.semanticweb.owlapi.model.OWLObject;
-import org.semanticweb.owlapi.model.OWLObjectPropertyExpression;
+import org.semanticweb.owlapi.model.OWLPropertyExpression;
 
 import edu.kit.aifb.orel.inferencing.InferenceRuleDeclaration;
 import edu.kit.aifb.orel.inferencing.PredicateDeclaration;
@@ -17,6 +17,7 @@ import edu.kit.aifb.orel.inferencing.PredicateDeclaration;
  */
 public interface StorageDriver {
 	final public static String OP_NOTHING = "owl:Nothing";
+	final public static String OP_THING = "owl:Thing";
 	final public static String OP_OBJECT_INTERSECTION = "ObjectIntersectionOf";
 	final public static String OP_OBJECT_UNION = "ObjectUnionOf";
 	final public static String OP_OBJECT_ONE_OF = "ObjectOneOf";
@@ -47,9 +48,12 @@ public interface StorageDriver {
 	public int runRule(String rulename, int newstep, int[] params);
 	public int runRule(String rulename, int min_cur_step, int max_cur_step);
 	
-	public int getIDForNaryExpression(String opname, List<? extends OWLObject> operands) throws Exception;
-	public int getIDForNothing() throws Exception;
-	public int getID(OWLClassExpression description) throws Exception;
-	public int getID(OWLIndividual individual) throws Exception;
-	public int getID(OWLObjectPropertyExpression property) throws Exception;
+	public int getIDForNaryExpression(String opname, List<? extends OWLObject> operands);
+	public int getIDForNothing();
+	public int getIDForThing();
+	public int getIDForDatatypeURI(String uri);
+	public int getID(OWLClassExpression description);
+	public int getID(OWLIndividual individual);
+	public int getID(SimpleLiteral literal);
+	public int getID(OWLPropertyExpression<?,?> property);
 }
