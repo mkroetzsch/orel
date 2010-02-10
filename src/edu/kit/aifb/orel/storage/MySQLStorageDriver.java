@@ -23,8 +23,8 @@ import org.semanticweb.owlapi.model.OWLIndividual;
 import org.semanticweb.owlapi.model.OWLNaryBooleanClassExpression;
 import org.semanticweb.owlapi.model.OWLObjectIntersectionOf;
 import org.semanticweb.owlapi.model.OWLObjectOneOf;
-import org.semanticweb.owlapi.model.OWLObjectPropertyExpression;
 import org.semanticweb.owlapi.model.OWLObjectUnionOf;
+import org.semanticweb.owlapi.model.OWLPropertyExpression;
 
 import edu.kit.aifb.orel.inferencing.InferenceRuleDeclaration;
 import edu.kit.aifb.orel.inferencing.PredicateAtom;
@@ -778,6 +778,8 @@ public class MySQLStorageDriver implements StorageDriver {
 	protected String getCanonicalName(OWLClassExpression description) {
 		if (description.isOWLNothing()) {
 			return StorageDriver.OP_NOTHING;
+		} else if (description.isOWLThing()) {
+			return StorageDriver.OP_THING;
 		} else if (description instanceof OWLObjectOneOf) {
 			Set<OWLIndividual> ops = ((OWLObjectOneOf) description).getIndividuals();
 			if (ops.size() == 1) {
@@ -813,27 +815,39 @@ public class MySQLStorageDriver implements StorageDriver {
 	 * For commutative operators like ObjectIntersectionOf, the operands should be sorted
 	 * before being passed to this method, so as to ensure a consistent representation.
 	 */
-	public int getIDForNaryExpression(String opname, List<? extends OWLObject> operands) throws SQLException {
+	public int getIDForNaryExpression(String opname, List<? extends OWLObject> operands) {
 		return getIDForString(getCanonicalName(opname, operands));
 	}
 	
-	public int getID(OWLClassExpression description) throws SQLException {
+	public int getID(OWLClassExpression description) {
 		return getIDForString(getCanonicalName(description));
 	}
 
-	public int getID(OWLIndividual individual) throws SQLException {
+	public int getID(OWLIndividual individual) {
 		return getIDForString(getCanonicalName(individual));
 	}
 	
-	public int getID(OWLObjectPropertyExpression property) throws SQLException {
+	public int getID(SimpleLiteral literal) {
+		return getIDForString(literal.toString());
+	}
+	
+	public int getID(OWLPropertyExpression<?,?> property) {
 		return getIDForString(property.toString());
 	}
 	
-	public int getIDForNothing() throws SQLException {
+	public int getIDForNothing() {
 		return getIDForString(StorageDriver.OP_NOTHING);
 	}
+
+	public int getIDForThing() {
+		return getIDForString(StorageDriver.OP_THING);
+	}
 	
-	protected int getIDForString(String description) throws SQLException {
+	public int getIDForDatatypeURI(String uri) {
+		return getIDForString(uri);
+	}
+	
+	protected int getIDForString(String description) {
 		int id = 0;
 		//System.out.println("Getting id for " + description); // debug
 		String hash;
@@ -847,7 +861,7 @@ public class MySQLStorageDriver implements StorageDriver {
 			id = ids.get(hash).intValue();
 		} else if (unwrittenids.containsKey(hash)) { // id was created recently and is not written to disk yet
 			id = unwrittenids.get(hash).intValue();
-		} else { // id not available: find it in the DB or newly allocate it
+		} else try { // id not available: find it in the DB or newly allocate it
 			if (findid == null) findid = con.prepareStatement("SELECT id FROM ids WHERE name=? LIMIT 1");
 			findid.setString(1, hash);
 			ResultSet res = findid.executeQuery();
@@ -902,6 +916,9 @@ public class MySQLStorageDriver implements StorageDriver {
 			}
 			res.close();
 			ids.put(hash,id);
+		} catch (SQLException e) { // should happen only on programming errors in above code
+			System.err.println(e.toString());
+			id = -1;
 		}
 		return id;
 	}
