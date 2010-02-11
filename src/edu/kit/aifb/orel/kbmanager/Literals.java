@@ -2,7 +2,10 @@ package edu.kit.aifb.orel.kbmanager;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
 
 import org.semanticweb.owlapi.model.OWLDatatype;
 import org.semanticweb.owlapi.model.OWLLiteral;
@@ -69,6 +72,33 @@ public class Literals {
 				return new SimpleLiteral(value.toString(), value, typeuri);
 			}
 		}
+	}
+	
+	public static List<String> getDatatypeURIs(SimpleLiteral sl) {
+		ArrayList<String> result = new ArrayList<String>();
+		if (sl.getDatatypeURI().equals(OWL_NS + "real")) {
+			// TODO: case for rationals needed too
+			if (sl.getValue() instanceof BigDecimal) {
+				result.add(OWL_NS + "real");
+				result.add(OWL_NS + "rational");
+				result.add(XSD_NS + "decimal");
+			} else {
+				Iterator<String> rangeit = numberRanges.keySet().iterator();
+				Number value = (Number)sl.getValue();
+				while (rangeit.hasNext()) {
+					String typeuri = rangeit.next();
+					if ( ( (numberRanges.get(typeuri).glb == null) || 
+						       (compare(numberRanges.get(typeuri).glb,value) <= 0) ) &&
+						     ( (numberRanges.get(typeuri).lub == null) ||
+								       (compare(numberRanges.get(typeuri).lub,value) >= 0) ) ) {
+						result.add(typeuri);
+					}
+				}
+			}
+		} else {
+			result.add(sl.getDatatypeURI());
+		}
+		return result;
 	}
 	
 	protected static Object parseValue(String lexicalValue, String typeuri) {
@@ -181,8 +211,6 @@ public class Literals {
             long l2 = n2.longValue();
             return l1<l2 ? -1 : (l1==l2 ? 0 : 1);
 		}
-		
 	}
-	
 	
 }

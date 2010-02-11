@@ -92,6 +92,7 @@ public class BasicKBManager {
 
 	protected void registerPredicates() {
 		storage.registerPredicate( new PredicateDeclaration("sco",2,true,false) );
+		storage.registerPredicate( new PredicateDeclaration("dsco",2,true,false) );
 		
 		storage.registerPredicate( new PredicateDeclaration("sv",3,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("av",3,true,false) );
@@ -103,7 +104,9 @@ public class BasicKBManager {
 		storage.registerPredicate( new PredicateDeclaration("spoc",3,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("spo",2,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("nominal",1,false,false) );
+		storage.registerPredicate( new PredicateDeclaration("dnominal",1,false,false) );
 		storage.registerPredicate( new PredicateDeclaration("nonempty",1,true,false) );
+		storage.registerPredicate( new PredicateDeclaration("dnonempty",1,true,false) );
 		
 		// old predicates, currently unused:
 		storage.registerPredicate( new PredicateDeclaration("subconint",3,true,false) );
