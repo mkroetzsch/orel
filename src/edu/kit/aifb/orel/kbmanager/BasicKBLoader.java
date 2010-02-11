@@ -48,7 +48,7 @@ public class BasicKBLoader {
 		int count = 0;
 		while( (result || writing) && axiomiterator.hasNext()){
 			axiom = axiomiterator.next();
-			result = result && processLogicalAxiom(axiom, todos );
+			result = processLogicalAxiom(axiom, todos) && result;
 			count++;
 			if (count % 100  == 0 ) System.out.print(".");
 		}
@@ -154,8 +154,6 @@ public class BasicKBLoader {
 		} else if (axiom instanceof OWLDataPropertyAssertionAxiom) {
 			OWLDataPropertyAssertionAxiom pa = (OWLDataPropertyAssertionAxiom) axiom;
 			result = processDataPropertyAssertion( pa.getSubject(), pa.getProperty(), pa.getObject(),todos);
-//			result = false; // TODO
-//			System.err.println("The following axiom is not supported: " + axiom + "\n");
 		} else if (axiom instanceof OWLNegativeDataPropertyAssertionAxiom) {
 			result = false; // TODO
 			System.err.println("The following axiom is not supported: " + axiom + "\n");
@@ -319,9 +317,10 @@ public class BasicKBLoader {
 
 	protected boolean processDataPropertyAssertion(OWLIndividual s, OWLDataPropertyExpression p, OWLLiteral l, int todos) throws Exception {
 		boolean result = true;
+		SimpleLiteral sl = Literals.makeSimpleLiteral(l);
+		if (sl == null) return false;
 		int sid = storage.getID(s);
 		int pid = storage.getID(p);
-		SimpleLiteral sl = Literals.getCanonicalLiteral(l);
 		int lid = storage.getID(sl);
 		if ( (todos & BasicKBLoader.ASSERT) != 0 ) {
 			storage.makePredicateAssertion("sv",sid,pid,lid);
