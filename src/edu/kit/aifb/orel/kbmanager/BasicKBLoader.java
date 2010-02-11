@@ -139,7 +139,9 @@ public class BasicKBLoader {
 			result = processClassAssertion( ((OWLClassAssertionAxiom) axiom).getIndividual(), ((OWLClassAssertionAxiom) axiom).getClassExpression(),todos); 
 		} else if (axiom instanceof OWLObjectPropertyAssertionAxiom) {
 			OWLObjectPropertyAssertionAxiom pa = (OWLObjectPropertyAssertionAxiom) axiom;
-			result = processObjectPropertyAssertion( pa.getSubject(), pa.getProperty(), pa.getObject(),todos); 
+			result = processSubclassOf( datafactory.getOWLObjectOneOf(pa.getSubject()) ,
+			                            datafactory.getOWLObjectSomeValuesFrom(
+					                       pa.getProperty(), datafactory.getOWLObjectOneOf(pa.getObject()) ), todos );
 		} else if (axiom instanceof OWLSameIndividualAxiom) {
 			result = processSameIndividuals(((OWLSameIndividualAxiom)axiom).getIndividuals(),todos);
 		} else if (axiom instanceof OWLDifferentIndividualsAxiom) {
@@ -147,9 +149,9 @@ public class BasicKBLoader {
 		} else if (axiom instanceof OWLNegativeObjectPropertyAssertionAxiom) {
 			OWLNegativeObjectPropertyAssertionAxiom pa = (OWLNegativeObjectPropertyAssertionAxiom) axiom;
 			Set<OWLClassExpression> classes = new HashSet<OWLClassExpression>();
-			classes.add( datafactory.getOWLObjectOneOf(pa.getObject()) );
+			classes.add( datafactory.getOWLObjectOneOf(pa.getSubject()) );
 			classes.add( datafactory.getOWLObjectSomeValuesFrom(
-					pa.getProperty(), datafactory.getOWLObjectOneOf(pa.getSubject()) ) );
+					pa.getProperty(), datafactory.getOWLObjectOneOf(pa.getObject()) ) );
 			result = processDisjointClasses(classes, todos);
 		} else if (axiom instanceof OWLDataPropertyAssertionAxiom) {
 			OWLDataPropertyAssertionAxiom pa = (OWLDataPropertyAssertionAxiom) axiom;
@@ -297,7 +299,7 @@ public class BasicKBLoader {
 		return result;
 	}
 
-	protected boolean processObjectPropertyAssertion(OWLIndividual s, OWLObjectPropertyExpression p, OWLIndividual o, int todos) throws Exception {
+/*	protected boolean processObjectPropertyAssertion(OWLIndividual s, OWLObjectPropertyExpression p, OWLIndividual o, int todos) throws Exception {
 		boolean result = true;
 		int sid = storage.getID(s);
 		int pid = storage.getID(p);
@@ -313,7 +315,7 @@ public class BasicKBLoader {
 			createHeadFacts(oid,o,((todos & BasicKBLoader.PREPARECHECK)!=0));
 		}
 		return result;
-	}
+	}*/
 
 	protected boolean processDataPropertyAssertion(OWLIndividual s, OWLDataPropertyExpression p, OWLLiteral l, int todos) throws Exception {
 		boolean result = true;
@@ -323,10 +325,10 @@ public class BasicKBLoader {
 		int pid = storage.getID(p);
 		int lid = storage.getID(sl);
 		if ( (todos & BasicKBLoader.ASSERT) != 0 ) {
-			storage.makePredicateAssertion("sv",sid,pid,lid);
+			storage.makePredicateAssertion("dsv",sid,pid,lid);
 		}
 		if ( (todos & BasicKBLoader.CHECK) != 0 ) {
-			result = storage.checkPredicateAssertion("sv",sid,pid,lid);
+			result = storage.checkPredicateAssertion("dsv",sid,pid,lid);
 		}
 		if ( (todos & BasicKBLoader.PREPARE) != 0 ) {
 			createBodyFacts(sid,s,((todos & BasicKBLoader.PREPARECHECK)!=0));
@@ -437,7 +439,9 @@ public class BasicKBLoader {
 			return;
 		}
 		if (d instanceof OWLClass) {
-			// nothing to do here
+			storage.makePredicateAssertion("sco",id,id);
+			storage.makePredicateAssertion("sco",id,storage.getIDForThing());
+			storage.makePredicateAssertion("sco",storage.getIDForNothing(),id);
 		} else if (d instanceof OWLObjectIntersectionOf) {
 			ArrayList<OWLClassExpression> ops = new ArrayList<OWLClassExpression>(((OWLObjectIntersectionOf) d).getOperands());
 			Collections.sort(ops); // make sure that we have a defined order; cannot have random changes between prepare and check!
@@ -552,7 +556,9 @@ public class BasicKBLoader {
 			return;
 		}
 		if (d instanceof OWLClass) {
-			// nothing to do here
+			storage.makePredicateAssertion("sco",sid,sid);
+			storage.makePredicateAssertion("sco",sid,storage.getIDForThing());
+			storage.makePredicateAssertion("sco",storage.getIDForNothing(),sid);
 		} else if (d instanceof OWLObjectIntersectionOf){
 			Iterator<OWLClassExpression> descit = ((OWLObjectIntersectionOf)d).getOperands().iterator();
 			OWLClassExpression desc;
@@ -567,13 +573,15 @@ public class BasicKBLoader {
 			int pid = storage.getID(((OWLObjectSomeValuesFrom)d).getProperty());
 			OWLClassExpression filler = ((OWLObjectSomeValuesFrom)d).getFiller();
 			int oid = storage.getID(filler);
-			storage.makePredicateAssertion("sv",sid,pid,oid);
+			storage.makePredicateAssertion("sv",sid,pid,sid);
+			storage.makePredicateAssertion("rsco",sid,oid);
 			createHeadFacts(oid,filler,false);
 		} else if (d instanceof OWLObjectHasValue) {
 			int pid = storage.getID(((OWLObjectHasValue)d).getProperty());
 			OWLIndividual value = ((OWLObjectHasValue)d).getValue();
 			int oid = storage.getID(value);
-			storage.makePredicateAssertion("sv",sid,pid,oid);
+			storage.makePredicateAssertion("sv",sid,pid,sid);
+			storage.makePredicateAssertion("rsco",sid,oid);
 			createHeadFacts(oid,value,false);
 		} else if (d instanceof OWLObjectOneOf) {
 			Set<OWLIndividual> inds = ((OWLObjectOneOf) d).getIndividuals();
