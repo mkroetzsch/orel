@@ -62,13 +62,10 @@ public class Literals {
 			if (numberRanges.containsKey(typeuri)) {
 				typeuri = OWL_NS+"real";
 			}
-			System.out.println("Parsing \"" + literal.getLiteral() + "\"^^" + type.getIRI().toString());
 			Object value = parseValue(literal.getLiteral(),type.getIRI().toString());
 			if (value == null) {
-				System.out.println("Failed.");				
 				return null;
 			} else {
-				System.out.println("Success.");
 				return new SimpleLiteral(value.toString(), value, typeuri);
 			}
 		}
