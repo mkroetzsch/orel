@@ -87,7 +87,6 @@ public class MySQLStorageDriver implements StorageDriver {
 		inferencerulestmts = new HashMap<String,ArrayList<PreparedStatement>>(30);
 		inferenceruleruntimes = new HashMap<String,Long>(30);
 
-		unwrittenids = new HashMap<String,Integer>(prelocsize);
 		prepinsertstmts = new HashMap<String,PreparedStatement>(expectedNumberOfPredicates);
 		prepinsertstmtsizes = new HashMap<String,Integer>(expectedNumberOfPredicates);
 		prepcheckstmts = new HashMap<String,ArrayList<PreparedStatement>>(expectedNumberOfPredicates);
@@ -110,6 +109,7 @@ public class MySQLStorageDriver implements StorageDriver {
 			   return size() > idcachesize;
 			}
 		};
+		unwrittenids = new HashMap<String,Integer>(prelocsize);
 	}
 
 	/**
@@ -177,6 +177,7 @@ public class MySQLStorageDriver implements StorageDriver {
 	 * Delete all of our database tables and their contents.
 	 */
 	public void drop() throws SQLException {
+		commit(); // use to clear prepared statements' caches
 		Statement stmt = con.createStatement();
 		Iterator<PredicateDeclaration> pit = predicates.values().iterator();
 		while (pit.hasNext()) {
@@ -191,6 +192,7 @@ public class MySQLStorageDriver implements StorageDriver {
 	 * @throws SQLException
 	 */
 	public void clear(boolean onlyderived) throws SQLException {
+		commit();
 		Iterator<String> pit = predicates.keySet().iterator();
 		String predicate;
 		while (pit.hasNext()) {
@@ -205,6 +207,7 @@ public class MySQLStorageDriver implements StorageDriver {
 	}
 	
 	public void clear(String predicate, boolean onlyderived) throws SQLException {
+		commit();
 		Statement stmt = con.createStatement();
 		PredicateDeclaration pd = predicates.get(predicate);
 		if (pd == null) return; // unknown predicate
