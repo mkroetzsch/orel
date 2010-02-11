@@ -88,14 +88,17 @@ public class BasicKBManager {
 		NaiveKBReasoner reasoner = new NaiveKBReasoner(storage);
 		reasoner.materialize();
 	}
-	
 
 	protected void registerPredicates() {
 		storage.registerPredicate( new PredicateDeclaration("sco",2,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("dsco",2,true,false) );
-		
 		storage.registerPredicate( new PredicateDeclaration("sv",3,true,false) );
-		storage.registerPredicate( new PredicateDeclaration("av",3,true,false) );
+		storage.registerPredicate( new PredicateDeclaration("dsv",3,true,false) );
+		storage.registerPredicate( new PredicateDeclaration("rsco",2,true,false) );
+		storage.registerPredicate( new PredicateDeclaration("drsco",2,true,false) );
+		storage.registerPredicate( new PredicateDeclaration("ran",2,true,false) );
+		storage.registerPredicate( new PredicateDeclaration("dran",2,true,false) );
+
 		storage.registerPredicate( new PredicateDeclaration("self",2,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("subself",2,false,false) );
 		storage.registerPredicate( new PredicateDeclaration("subconjunctionof",3,false,false) );
@@ -108,10 +111,7 @@ public class BasicKBManager {
 		storage.registerPredicate( new PredicateDeclaration("nonempty",1,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("dnonempty",1,true,false) );
 		
-		// old predicates, currently unused:
-		storage.registerPredicate( new PredicateDeclaration("subconint",3,true,false) );
-		storage.registerPredicate( new PredicateDeclaration("sv_nl",3,true,false) );
-		storage.registerPredicate( new PredicateDeclaration("sco_nl",2,true,false) );
+		storage.registerPredicate( new PredicateDeclaration("av",3,true,false) );
 	}
 
 }

@@ -34,13 +34,13 @@ public class NaiveKBReasoner {
 		// Many of these rules won't be used for querying, but we still 
 		// use them to document the incompleteness in materializing derived
 		// predicates.  
-		rules.put("self-p", "?self(x,q) :- self(x,p), spo(p,q)");
-		rules.put("sv-p",   "?sv(x,q,y) :- sv(x,p,y), spo(p,q)");
-		rules.put("sv-x",   "?sv(x,p,z) :- sco(x,y), sv(y,p,z)");
-		rules.put("sv-px",  "?sv(x,q,z) :- sco(x,y), spo(p,q), sv(y,p,z)");
-		rules.put("av-x",   "?av(x,p,y) :- sco(x,x1), av(x1,p,y)");
-		rules.put("av-y",   "?av(x,p,y) :- av(x,p,y1), sco(y1,y)");
-		rules.put("av-xy",  "?av(x,p,y) :- sco(x,x1), av(x1,p,y1), sco(y1,y)");
+		//rules.put("self-p", "?self(x,q) :- self(x,p), spo(p,q)");
+		//rules.put("sv-p",   "?sv(x,q,y) :- sv(x,p,y), spo(p,q)");
+		//rules.put("sv-x",   "?sv(x,p,z) :- sco(x,y), sv(y,p,z)");
+		//rules.put("sv-px",  "?sv(x,q,z) :- sco(x,y), spo(p,q), sv(y,p,z)");
+		//rules.put("av-x",   "?av(x,p,y) :- sco(x,x1), av(x1,p,y)");
+		//rules.put("av-y",   "?av(x,p,y) :- av(x,p,y1), sco(y1,y)");
+		//rules.put("av-xy",  "?av(x,p,y) :- sco(x,x1), av(x1,p,y1), sco(y1,y)");
 		
 		// Unsound test: if x has a p to something, then it has a p to itself
 		//storage.registerInferenceRule(InferenceRuleDeclaration.buildFromString("test","?sco(x,y) :- subself(p,y), sv(x,p,z)"));
@@ -63,7 +63,56 @@ public class NaiveKBReasoner {
 		int top = storage.getIDForThing();
 		// make the rule declaration as readable as possible;
 		// it is crucial to have this error free and customizable
+
+		/// spoc
+		rules.put("spocp", "spoc(p',q',r) :- spo(p',p), spo(q',q), spoc(p,q,r)");
+		/// spo
+		//TODO: property(p) --> spo(p,p)
+		rules.put("spo",            "spo(p,r) :- spo(p,q), spo(q,r)");
+		rules.put("sposelfspocdom", "spo(q,r) :- subsomevalues(q," + top + ",x), sco(x,y), self(y,p), spoc(p,q,r)");
+		rules.put("sposelfspocran", "spo(p,r) :- ran(p,x), sco(x,y), self(y,q), spoc(p,q,r)");
+		/// sco
+		// NOTE: we create sco(x,top), sco(bot,x), and sco(x,x) at load time
+		rules.put("sco",         "sco(x,z) :- sco(x,y), sco(y,z)"); 
+		rules.put("con",         "sco(x,z) :- sco(x,y1), sco(x,y2), subconjunctionof(y1,y2,z)");
+		rules.put("svr",         "sco(x,z) :- sv(x,p,y), rsco(y,y'), subsomevalues(p,y',z)");
+		rules.put("svr-self",    "sco(x,z) :- self(x,p), sco(x,y'),  subsomevalues(p,y',z)");
+		rules.put("scoeq",       "sco(y,x) :- nonempty(x), nominal(y), sco(x,y)");
+		rules.put("selfran",     "sco(x,y) :- self(x,p), ran(p,y)"); // this is "rscoran-self"
+		rules.put("selfsubself", "sco(x,y) :- self(x,p), subself(p,y)");
+		/// rsco
+		rules.put("rsco1",   "rsco(x,z) :- rsco(x,y), sco(y,z)");
+		rules.put("rcon",    "rsco(x,z) :- rsco(x,y1),rsco(x,y2), subconjunctionof(y1,y2,z)");
+		rules.put("rscoran", "rsco(x,y) :- sv(x,p,x), ran(p,y)");
+			//rules.put("rsco0", "rsco(x,y) :- sco(x,y)"); // not sound
+		/// svp
+		rules.put("svp",          "sv(x,q,x) :- sv(x,p,x), spo(p,q)");
+		rules.put("svspoc",       "sv(x,r,z) :- spoc(p,q,r), sv(x,p,x'), rsco(x',z'), sv(z',q,z)");
+		rules.put("svspoc-self1", "sv(x,r,z) :- spoc(p,q,r), self(x,p), sco(x,z'), sv(z',q,z)");
+		rules.put("svspoc-self2", "sv(x,r,y) :- spoc(p,q,r), sv(x,p,y), rsco(y,z), self(z,q)");
+			//rules.put("svspoc-self3", "sv(x,r,z) :- spoc(p,q,r), self(x,p), sco(x,z), self(z,q)"); // reincarnated as "svselfspoc"
+			//rules.put("svself",       "sv(x,p,x) :- sco(x,y), self(y,p)"); // this rule would violate the assumptions on sv (referring to aux. ids only)
+		/// ran
+		rules.put("ranp",   "ran(q,x) :- ran(p,x), spo(q,p)");
+		rules.put("ransco", "ran(p,y) :- ran(p,x), sco(x,y)");
+		rules.put("rancon", "ran(p,z) :- ran(p,x), ran(p,y), subconjunctionof(x,y,z)"); 
+		/// nonempty
+		rules.put("nenom",  "nonempty(x) :- nominal(x)");
+		rules.put("nesco",  "nonempty(y) :- nonempty(x), sco(x,y)");
+		rules.put("nersco", "nonempty(y) :- nonempty(x), rsco(x,y)");
+		/// self
+		rules.put("selfp",        "self(x,q) :- self(x,p), spo(p,q)"); // subsumes "svp-self"
+		rules.put("svselfspoc",   "self(x,r) :- sco(x,y1), sco(x,y2), self(y1,p), self(y2,q), spoc(p,q,r)");
+		rules.put("selfnom",      "self(x,p) :- nominal(x), sco(x,y), sv(y,p,z), rsco(z,x)");
+		rules.put("selfnom-self", "self(x,p) :- nominal(x), sco(x,y), self(y,p), sco(y,x)");
 		
+		// <<<Role Disjointness:>>>
+		//rules.put("disnom", "sco(x,bot) :- disjoint(v,w), nominal(y), sco(x,x1), sco(x,x2), sv(x1,v,x1), sv(x2,w,x2), rsco(x1,y), rsco(x2,y)");
+		//rules.put("disspo", "sco(y,bot) :- sco(y,x), sv(x,u,x), disjoint(v,w), spo(u,v), spo(u,w)");
+		//rules.put("disself", "sco(x,bot) :- disjoint(v,w), sco(x,y1), sco(x,y2), self(y1,v), self(y2,w)");
+		
+		/* old rule set below
+		 
 		// rules with "top" extension account for the lack of sco(x,top) and nonempty(top)
 		
 		rules.put("spo", "spo(x,z) :- spo(x,y,0), spo(y,z)");
@@ -109,15 +158,7 @@ public class NaiveKBReasoner {
 		rules.put("av4", "sco(y1,y2) :- nominal(v),                       sv(v ,p,y1), av(v ,p,y2), nominal(y1)");
 		
 		rules.put("suball",     "sco(x,z) :- av(x,p,y), suballvalues(p,y,z)");
-		rules.put("suball-sco", "sco(x,z) :- av(x,p,y1), sco(y1,y2), suballvalues(p,y2,z)");
-
-        //Self(p,x), Range(p,y) -> sCO(x,y)
-		//sV(x,p,y), sV(x,p,z),atMostOne(p,z),Self(p,x) -> sCO(x,y)
-        // (this should be dispensable as it goes beyond safety of atMostOne) 
-        // Re (B4) Handling of EL range restrictions:
-        //sV(x,p,y2), Range(p,y1), SubConjunctionOfFirst(y1,y2,z) -> sV(x,p,z)
-        //(assuming that sV is "sCO-upward-saturated" in the last argument, 
-        //also pending: symmetric case wrt. SubConjOfFirst)
+		rules.put("suball-sco", "sco(x,z) :- av(x,p,y1), sco(y1,y2), suballvalues(p,y2,z)");*/
 		
 		// now register those rules:
 		Iterator<String> nameit = rules.keySet().iterator();
