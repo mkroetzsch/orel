@@ -29,7 +29,7 @@ public class SimpleLiteral {
 		return valueString;
 	}
 	
-	public Object getvalue() {
+	public Object getValue() {
 		return value;
 	}
 	

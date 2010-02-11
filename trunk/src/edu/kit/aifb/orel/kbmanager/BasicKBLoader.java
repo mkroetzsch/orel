@@ -427,7 +427,8 @@ public class BasicKBLoader {
 			createHeadFacts(id,sl,false);
 			return;
 		}
-		// TODO
+		storage.makePredicateAssertion("dnominal",id);
+		storage.makePredicateAssertion("dnonempty",id);
 	}
 	
 	protected void createBodyFacts(int id, OWLClassExpression d, boolean invert) throws Exception {
@@ -537,8 +538,12 @@ public class BasicKBLoader {
 			createBodyFacts(id,sl,false);
 			return;
 		}
-		// TODO
-		storage.makePredicateAssertion("sco",id,storage.getIDForDatatypeURI(sl.getDatatypeURI()));
+		storage.makePredicateAssertion("dnominal",id);
+		storage.makePredicateAssertion("dnonempty",id);
+		List<String> typeuris = Literals.getDatatypeURIs(sl);
+		for (int i=0; i<typeuris.size(); i++) {
+			storage.makePredicateAssertion("dsco",id,storage.getIDForDatatypeURI(typeuris.get(i)));
+		}
 	}
 
 	protected void createHeadFacts(int sid, OWLClassExpression d, boolean invert) throws Exception {
