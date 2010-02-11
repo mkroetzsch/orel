@@ -77,17 +77,18 @@ public class Test {
 				setPremiseConclusionOntologies(dataset, classAssert);
 //				Testing
 				if(kbmanager.loadOntology(premiseOntology)){
-					if(kbmanager.checkEntailment(conclusionOntology)==InferenceResult.YES){
+					InferenceResult infResult=kbmanager.checkEntailment(conclusionOntology);
+					if(infResult==InferenceResult.YES){
 						System.out.println("Passed");
 						result.write("Passed");
 						result.newLine();
 					}
-					else if(kbmanager.checkEntailment(conclusionOntology)==InferenceResult.NO){
+					else if(infResult==InferenceResult.NO){
 						System.out.println("Fail");
 						result.write("Fail");
 						result.newLine();
 					}
-					else if(kbmanager.checkEntailment(conclusionOntology)==InferenceResult.DONTKNOW){
+					else if(infResult==InferenceResult.DONTKNOW){
 						result.write("Incomplete");
 						result.write("Incomplete");
 						result.newLine();
@@ -97,17 +98,18 @@ public class Test {
 					kbmanager.initialize();
 				}
 				else{
-					if(kbmanager.checkEntailment(conclusionOntology)==InferenceResult.YES){
+					InferenceResult infResult=kbmanager.checkEntailment(conclusionOntology);
+					if(infResult==InferenceResult.YES){
 						System.out.println("Passed");
 						result.write("Passed");
 						result.newLine();
 					}
-					else if(kbmanager.checkEntailment(conclusionOntology)==InferenceResult.NO){
+					else if(infResult==InferenceResult.NO){
 						System.out.println("Incomplete");
 						result.write("Incomplete");
 						result.newLine();
 					}
-					else if(kbmanager.checkEntailment(conclusionOntology)==InferenceResult.DONTKNOW){
+					else if(infResult==InferenceResult.DONTKNOW){
 						result.write("Incomplete");
 						result.write("Incomplete");
 						result.newLine();
@@ -126,17 +128,18 @@ public class Test {
 				setPremiseConclusionOntologies(dataset, classAssert);
 //				Testing
 				if(kbmanager.loadOntology(premiseOntology)){
-					if(kbmanager.checkEntailment(conclusionOntology)==InferenceResult.YES){
+					InferenceResult infResult=kbmanager.checkEntailment(conclusionOntology);
+					if(infResult==InferenceResult.YES){
 						System.out.println("Fail");
 						result.write("Fail");
 						result.newLine();
 					}
-					else if(kbmanager.checkEntailment(conclusionOntology)==InferenceResult.NO){
+					else if(infResult==InferenceResult.NO){
 						System.out.println("Passed");
 						result.write("Passed");
 						result.newLine();
 					}
-					else if(kbmanager.checkEntailment(conclusionOntology)==InferenceResult.DONTKNOW){
+					else if(infResult==InferenceResult.DONTKNOW){
 						result.write("Incomplete");
 						result.write("Incomplete");
 						result.newLine();
@@ -146,17 +149,18 @@ public class Test {
 					kbmanager.initialize();
 				}
 				else{
-					if(kbmanager.checkEntailment(conclusionOntology)==InferenceResult.YES){
+					InferenceResult infResult=kbmanager.checkEntailment(conclusionOntology);
+					if(infResult==InferenceResult.YES){
 						System.out.println("Fail");
 						result.write("Fail");
 						result.newLine();
 					}
-					else if(kbmanager.checkEntailment(conclusionOntology)==InferenceResult.NO){
+					else if(infResult==InferenceResult.NO){
 						System.out.println("Incomplete");
 						result.write("Incomplete");
 						result.newLine();
 					}
-					else if(kbmanager.checkEntailment(conclusionOntology)==InferenceResult.DONTKNOW){
+					else if(infResult==InferenceResult.DONTKNOW){
 						result.write("Incomplete");
 						result.write("Incomplete");
 						result.newLine();
@@ -168,25 +172,30 @@ public class Test {
 			}
 //			Consistency Test
 				else if(classAssert.getClassExpression().toString().equals("<http://www.w3.org/2007/OWL/testOntology#ConsistencyTest>")){
+					
 					result.write("Consistency Test:");
 					result.write(classAssert.getIndividual().toString());
 //					result.write("classAssert"+classAssert.getClassExpression().getClass().getName());
 					result.newLine();
 					setPremiseOntology(dataset, classAssert);
+					if(classAssert.getIndividual().toString().equals("<http://owl.semanticweb.org/id/TestCase-3AWebOnt-2DequivalentClass-2D001>")){
+						System.out.println("Here is the problem");
+					}
 //					Testing
 					if(kbmanager.loadOntology(premiseOntology)){
-						if(kbmanager.checkConsistency()==InferenceResult.YES){
+						InferenceResult infResult=kbmanager.checkConsistency();
+						if(infResult==InferenceResult.YES){
 							System.out.println("Passed");
 							result.write("Passed");
 							result.newLine();
 						}
 						
-						else if(kbmanager.checkConsistency()==InferenceResult.NO){
+						else if(infResult==InferenceResult.NO){
 							System.out.println("Fail");
 							result.write("Fail");
 							result.newLine();
 						}
-						else if(kbmanager.checkConsistency()==InferenceResult.DONTKNOW){
+						else if(infResult==InferenceResult.DONTKNOW){
 							result.write("Incomplete");
 							result.write("Incomplete");
 							result.newLine();
@@ -196,18 +205,19 @@ public class Test {
 						kbmanager.initialize();
 					}
 					else{
-						if(kbmanager.checkConsistency()==InferenceResult.YES){
+						InferenceResult infResult=kbmanager.checkConsistency();
+						if(infResult==InferenceResult.YES){
 							System.out.println("Incomplete");
 							result.write("Incomplete");
 							result.newLine();
 						}
 						
-						else if(kbmanager.checkConsistency()==InferenceResult.NO){
+						else if(infResult==InferenceResult.NO){
 							System.out.println("Fail");
 							result.write("Fail");
 							result.newLine();
 						}
-						else if(kbmanager.checkConsistency()==InferenceResult.DONTKNOW){
+						else if(infResult==InferenceResult.DONTKNOW){
 							result.write("Incomplete");
 							result.write("Incomplete");
 							result.newLine();
@@ -219,24 +229,28 @@ public class Test {
 				}
 //			Inconsistency Test
 				else if(classAssert.getClassExpression().toString().equals("<http://www.w3.org/2007/OWL/testOntology#InconsistencyTes>")){
-					result.write("Consistency Test:");
+					result.write("InConsistency Test:");
 					result.write(classAssert.getIndividual().toString());
+					if(classAssert.getIndividual().toString().equals("<http://owl.semanticweb.org/id/TestCase-3AWebOnt-2DequivalentClass-2D001>")){
+						System.out.println("Check it here");
+					}
 //					result.write("classAssert"+classAssert.getClassExpression().getClass().getName());
 					result.newLine();
 					setPremiseOntology(dataset, classAssert);
 //					Testing
 					if(kbmanager.loadOntology(premiseOntology)){
-						if(kbmanager.checkEntailment(conclusionOntology)==InferenceResult.YES){
+						InferenceResult infResult=kbmanager.checkConsistency();
+						if(infResult==InferenceResult.YES){
 							System.out.println("Fail");
 							result.write("Fail");
 							result.newLine();
 						}
-						else if(kbmanager.checkEntailment(conclusionOntology)==InferenceResult.NO){
+						else if(infResult==InferenceResult.NO){
 							System.out.println("Passed");
 							result.write("Passed");
 							result.newLine();
 						}
-						else if(kbmanager.checkEntailment(conclusionOntology)==InferenceResult.DONTKNOW){
+						else if(infResult==InferenceResult.DONTKNOW){
 							result.write("Incomplete");
 							result.write("Incomplete");
 							result.newLine();
@@ -246,17 +260,18 @@ public class Test {
 						kbmanager.initialize();
 					}
 					else{
-						if(kbmanager.checkEntailment(conclusionOntology)==InferenceResult.YES){
+						InferenceResult infResult=kbmanager.checkConsistency();
+						if(infResult==InferenceResult.YES){
 							System.out.println("Incomplete");
 							result.write("Incomplete");
 							result.newLine();
 						}
-						else if(kbmanager.checkEntailment(conclusionOntology)==InferenceResult.NO){
+						else if(infResult==InferenceResult.NO){
 							System.out.println("Passed");
 							result.write("Passed");
 							result.newLine();
 						}
-						else if(kbmanager.checkEntailment(conclusionOntology)==InferenceResult.DONTKNOW){
+						else if(infResult==InferenceResult.DONTKNOW){
 							result.write("Incomplete");
 							result.write("Incomplete");
 							result.newLine();
@@ -297,6 +312,11 @@ public class Test {
 					String ontStr=dataAxiom.getObject().getLiteral();
 					OWLOntologyManager man=OWLManager.createOWLOntologyManager();
 					premiseOntology =man.loadOntologyFromOntologyDocument((OWLOntologyDocumentSource)new StringDocumentSource(ontStr));
+					if(classAssert.getIndividual().toString().equals("<http://owl.semanticweb.org/id/TestCase-3AWebOnt-2DequivalentClass-2D001>")){
+						System.out.println(classAssert);
+						System.out.println(ontStr);
+
+					}
 				}
 			
 			}

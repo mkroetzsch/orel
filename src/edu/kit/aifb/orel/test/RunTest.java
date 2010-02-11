@@ -30,7 +30,8 @@ public class RunTest {
 		StorageDriver storage = new MySQLStorageDriver(Settings.getDBServer(),Settings.getDBName(),Settings.getDBUser(),Settings.getDBPassword());
 		BasicKBManager kbmanager = new BasicKBManager(storage);
 		kbmanager.initialize();
-		Test test=new Test("profile-RL.rdf");
+		
+		Test test=new Test("smallprofile-EL.rdf");
 		test.test(kbmanager);
 	}
 
