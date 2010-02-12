@@ -33,6 +33,8 @@ public interface StorageDriver {
 	public void clear(boolean onlyderived) throws Exception;
 	public void clear(String predicate, boolean onlyderived) throws Exception;
 	
+	public void commit() throws Exception;
+	
 	
 	public void beginLoading();
 	

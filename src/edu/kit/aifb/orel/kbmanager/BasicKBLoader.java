@@ -420,11 +420,9 @@ public class BasicKBLoader {
 			createHeadFacts(id,i,false);
 			return;
 		}
+		createClassTautologies(id);
 		storage.makePredicateAssertion("nominal",id);
 		storage.makePredicateAssertion("nonempty",id);
-		storage.makePredicateAssertion("sco",id,id);
-		storage.makePredicateAssertion("sco",id,storage.getIDForThing());
-		storage.makePredicateAssertion("sco",storage.getIDForNothing(),id);
 	}
 
 	protected void createBodyFacts(int id, SimpleLiteral sl, boolean invert) throws Exception {
@@ -441,10 +439,9 @@ public class BasicKBLoader {
 			createHeadFacts(id,d,false);
 			return;
 		}
+		createClassTautologies(id);
 		if (d instanceof OWLClass) {
-			storage.makePredicateAssertion("sco",id,id);
-			storage.makePredicateAssertion("sco",id,storage.getIDForThing());
-			storage.makePredicateAssertion("sco",storage.getIDForNothing(),id);
+			// nothing special to do here
 		} else if (d instanceof OWLObjectIntersectionOf) {
 			ArrayList<OWLClassExpression> ops = new ArrayList<OWLClassExpression>(((OWLObjectIntersectionOf) d).getOperands());
 			Collections.sort(ops); // make sure that we have a defined order; cannot have random changes between prepare and check!
@@ -512,6 +509,7 @@ public class BasicKBLoader {
 				newops.add(ops.get(i));
 			}
 			int oid2 = storage.getIDForNaryExpression(StorageDriver.OP_OBJECT_INTERSECTION, ops);
+			createClassTautologies(oid2);
 			if (ops.get(0).isOWLThing()) {
 				storage.makePredicateAssertion("sco",oid2,id);
 			} else {
@@ -536,11 +534,9 @@ public class BasicKBLoader {
 			createBodyFacts(id,i,false);
 			return;
 		}
+		createClassTautologies(id);		
 		storage.makePredicateAssertion("nominal",id);
 		storage.makePredicateAssertion("nonempty",id);
-		storage.makePredicateAssertion("sco",id,id);
-		storage.makePredicateAssertion("sco",id,storage.getIDForThing());
-		storage.makePredicateAssertion("sco",storage.getIDForNothing(),id);
 	}
 
 	protected void createHeadFacts(int id, SimpleLiteral sl, boolean invert) throws Exception {
@@ -561,10 +557,9 @@ public class BasicKBLoader {
 			createBodyFacts(sid,d,false);
 			return;
 		}
+		createClassTautologies(sid);
 		if (d instanceof OWLClass) {
-			storage.makePredicateAssertion("sco",sid,sid);
-			storage.makePredicateAssertion("sco",sid,storage.getIDForThing());
-			storage.makePredicateAssertion("sco",storage.getIDForNothing(),sid);
+			// nothing special to do here
 		} else if (d instanceof OWLObjectIntersectionOf){
 			Iterator<OWLClassExpression> descit = ((OWLObjectIntersectionOf)d).getOperands().iterator();
 			OWLClassExpression desc;
@@ -608,6 +603,12 @@ public class BasicKBLoader {
 		} else {// TODO: add more description types
 			System.err.println("Unsupported head class expression: " + d.toString());
 		}
+	}
+	
+	public void createClassTautologies(int id) throws Exception {
+		storage.makePredicateAssertion("sco",id,id);
+		storage.makePredicateAssertion("sco",id,storage.getIDForThing());
+		storage.makePredicateAssertion("sco",storage.getIDForNothing(),id);
 	}
 
 }

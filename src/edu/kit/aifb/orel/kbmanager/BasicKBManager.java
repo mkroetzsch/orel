@@ -35,6 +35,13 @@ public class BasicKBManager {
 	 */
 	public void initialize() throws Exception {
 		storage.initialize();
+		// the fundamental truths of DL reasoning: 
+		int thing = storage.getIDForThing(), nothing = storage.getIDForNothing();
+		storage.makePredicateAssertion("sco",thing,thing);
+		storage.makePredicateAssertion("sco",nothing,nothing);
+		storage.makePredicateAssertion("sco",nothing,thing);
+		storage.makePredicateAssertion("nonempty",thing);
+		storage.commit();
 	}
 
 	/**
@@ -49,7 +56,12 @@ public class BasicKBManager {
 	 * @throws SQLException
 	 */
 	public void clearDatabase(boolean onlyderived) throws Exception {
-		storage.clear(onlyderived);
+		if (onlyderived) {
+			storage.clear(onlyderived);
+		} else { // faster
+			drop();
+			initialize();
+		}
 	}
 	
 	/**
