@@ -245,7 +245,7 @@ public class MySQLStorageDriver implements StorageDriver {
 	 * Make sure all batch inserts are flushed, even if they are
 	 * below the maximum size.
 	 */
-	protected void commit() throws SQLException {
+	public void commit() throws SQLException {
 		Iterator<String> inserttables = prepinsertstmts.keySet().iterator();
 		String key;
 		while (inserttables.hasNext()) {
