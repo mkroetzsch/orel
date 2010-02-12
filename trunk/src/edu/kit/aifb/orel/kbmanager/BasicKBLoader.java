@@ -422,6 +422,9 @@ public class BasicKBLoader {
 		}
 		storage.makePredicateAssertion("nominal",id);
 		storage.makePredicateAssertion("nonempty",id);
+		storage.makePredicateAssertion("sco",id,id);
+		storage.makePredicateAssertion("sco",id,storage.getIDForThing());
+		storage.makePredicateAssertion("sco",storage.getIDForNothing(),id);
 	}
 
 	protected void createBodyFacts(int id, SimpleLiteral sl, boolean invert) throws Exception {
@@ -535,6 +538,9 @@ public class BasicKBLoader {
 		}
 		storage.makePredicateAssertion("nominal",id);
 		storage.makePredicateAssertion("nonempty",id);
+		storage.makePredicateAssertion("sco",id,id);
+		storage.makePredicateAssertion("sco",id,storage.getIDForThing());
+		storage.makePredicateAssertion("sco",storage.getIDForNothing(),id);
 	}
 
 	protected void createHeadFacts(int id, SimpleLiteral sl, boolean invert) throws Exception {
