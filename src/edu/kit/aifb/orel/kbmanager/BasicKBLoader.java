@@ -250,6 +250,10 @@ public class BasicKBLoader {
 				result = storage.checkPredicateAssertion("spo", pid1, pid2);
 			}
 		}
+		if ( (todos & BasicKBLoader.PREPARE) != 0 ) {
+			result = createPropertyFacts(pid1,p1) && result;
+			result = createPropertyFacts(pid2,p2) && result;
+		}
 		return result;
 	}
 
@@ -274,6 +278,10 @@ public class BasicKBLoader {
 			}
 			if ( (todos & BasicKBLoader.CHECK) != 0 ) {
 				result = storage.checkPredicateAssertion("spoc", pid1, pid2, pid);
+			}
+			if ( (todos & BasicKBLoader.PREPARE) != 0 ) {
+				result = createPropertyFacts(pid1,chain.get(0)) && result;
+				result = createPropertyFacts(pid2,chain.get(1)) && result;
 			}
 			return result;
 		} else {
@@ -303,6 +311,7 @@ public class BasicKBLoader {
 		boolean result = true;
 		int sid = storage.getID(s);
 		int pid = storage.getID(p);
+		result = createPropertyFacts( ...
 		int oid = storage.getID(o);
 		if ( (todos & BasicKBLoader.ASSERT) != 0 ) {
 			storage.makePredicateAssertion("sv",sid,pid,oid);
@@ -311,7 +320,7 @@ public class BasicKBLoader {
 			result = storage.checkPredicateAssertion("sv",sid,pid,oid);
 		}
 		if ( (todos & BasicKBLoader.PREPARE) != 0 ) {
-			createBodyFacts(sid,s,((todos & BasicKBLoader.PREPARECHECK)!=0));
+			result = ... createBodyFacts(sid,s,((todos & BasicKBLoader.PREPARECHECK)!=0));
 			createHeadFacts(oid,o,((todos & BasicKBLoader.PREPARECHECK)!=0));
 		}
 		return result;
@@ -451,13 +460,15 @@ public class BasicKBLoader {
 			OWLClassExpression filler = ((OWLObjectSomeValuesFrom)d).getFiller();
 			int sid = storage.getID(filler);
 			storage.makePredicateAssertion("subsomevalues",pid,sid,id);
-			result = createBodyFacts(sid,filler,false);
+			result = createPropertyFacts(pid,((OWLObjectSomeValuesFrom)d).getProperty());
+			result = createBodyFacts(sid,filler,false) && result;
 		} else if (d instanceof OWLObjectHasValue) {
 			int pid = storage.getID(((OWLObjectHasValue)d).getProperty());
 			OWLIndividual value = ((OWLObjectHasValue)d).getValue();
 			int sid = storage.getID(value);
 			storage.makePredicateAssertion("subsomevalues",pid,sid,id);
-			result = createBodyFacts(sid,value,false);
+			result = createPropertyFacts(pid,((OWLObjectHasValue)d).getProperty());
+			result = createBodyFacts(sid,value,false) && result;
 		} else if (d instanceof OWLObjectUnionOf) {
 			Iterator<OWLClassExpression> opit = ((OWLObjectUnionOf)d).getOperands().iterator();
 			OWLClassExpression op;
@@ -478,12 +489,14 @@ public class BasicKBLoader {
 		} else if (d instanceof OWLObjectHasSelf) {
 			int pid = storage.getID(((OWLObjectHasSelf)d).getProperty());
 			storage.makePredicateAssertion("subself",pid,id);
+			result = createPropertyFacts(pid,((OWLObjectHasSelf)d).getProperty());
 		} else if (d instanceof OWLObjectAllValuesFrom){
 			int pid = storage.getID(((OWLObjectAllValuesFrom)d).getProperty());
 			OWLClassExpression filler = ((OWLObjectAllValuesFrom)d).getFiller();
 			int sid = storage.getID(filler);
 			storage.makePredicateAssertion("suballvalues",pid,sid,id);
-			result = createBodyFacts(sid,filler,false);
+			result = createPropertyFacts(pid,((OWLObjectAllValuesFrom)d).getProperty());
+			result = createBodyFacts(sid,filler,false) && result;
 		} else {// TODO: add more description types
 			System.err.println("Unsupported body class expression: " + d.toString());
 			result = false;
@@ -575,18 +588,20 @@ public class BasicKBLoader {
 			}
 		} else if (d instanceof OWLObjectSomeValuesFrom){
 			int pid = storage.getID(((OWLObjectSomeValuesFrom)d).getProperty());
+			result = createPropertyFacts(pid,((OWLObjectSomeValuesFrom)d).getProperty());
 			OWLClassExpression filler = ((OWLObjectSomeValuesFrom)d).getFiller();
 			int oid = storage.getID(filler);
 			storage.makePredicateAssertion("sv",sid,pid,sid);
 			storage.makePredicateAssertion("rsco",sid,oid);
-			result = createHeadFacts(oid,filler,false);
+			result = createHeadFacts(oid,filler,false) && result;
 		} else if (d instanceof OWLObjectHasValue) {
 			int pid = storage.getID(((OWLObjectHasValue)d).getProperty());
+			result = createPropertyFacts(pid,((OWLObjectHasValue)d).getProperty());
 			OWLIndividual value = ((OWLObjectHasValue)d).getValue();
 			int oid = storage.getID(value);
 			storage.makePredicateAssertion("sv",sid,pid,sid);
 			storage.makePredicateAssertion("rsco",sid,oid);
-			result = createHeadFacts(oid,value,false);
+			result = createHeadFacts(oid,value,false) && result;
 		} else if (d instanceof OWLObjectOneOf) {
 			Set<OWLIndividual> inds = ((OWLObjectOneOf) d).getIndividuals();
 			if (inds.size() == 1) {
@@ -597,13 +612,15 @@ public class BasicKBLoader {
 			}
 		} else if (d instanceof OWLObjectHasSelf) {
 			int pid = storage.getID(((OWLObjectHasSelf)d).getProperty());
+			result = createPropertyFacts(pid,((OWLObjectHasSelf)d).getProperty());
 			storage.makePredicateAssertion("self",sid,pid);
 		} else if (d instanceof OWLObjectAllValuesFrom){
 			int pid = storage.getID(((OWLObjectAllValuesFrom)d).getProperty());
+			result = createPropertyFacts(pid,((OWLObjectAllValuesFrom)d).getProperty());
 			OWLClassExpression filler = ((OWLObjectAllValuesFrom)d).getFiller();
 			int oid = storage.getID(filler);
 			storage.makePredicateAssertion("av",sid,pid,oid);
-			result = createHeadFacts(oid,filler,false);
+			result = createHeadFacts(oid,filler,false) && result;
 		} else {// TODO: add more description types
 			System.err.println("Unsupported head class expression: " + d.toString());
 			result = false;
@@ -615,6 +632,17 @@ public class BasicKBLoader {
 		storage.makePredicateAssertion("sco",id,id);
 		storage.makePredicateAssertion("sco",id,storage.getIDForThing());
 		storage.makePredicateAssertion("sco",storage.getIDForNothing(),id);
+	}
+	
+	public boolean createPropertyFacts(int id, OWLObjectPropertyExpression p) throws Exception {
+		storage.makePredicateAssertion("spo",id,id);
+		if (p instanceof OWLObjectInverseOf) {
+			return false; // currently not supported
+		} else if ( p.isOWLTopObjectProperty() || p.isOWLBottomObjectProperty() ) {
+			return false; // currently not supported
+		} else {
+			return true;
+		}
 	}
 
 }
