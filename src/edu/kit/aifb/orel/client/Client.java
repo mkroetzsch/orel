@@ -9,6 +9,7 @@ import edu.kit.aifb.orel.kbmanager.BasicKBManager;
 import edu.kit.aifb.orel.kbmanager.BasicKBManager.InferenceResult;
 import edu.kit.aifb.orel.storage.MySQLStorageDriver;
 import edu.kit.aifb.orel.storage.StorageDriver;
+import edu.kit.aifb.orel.test.OWLWGTestCaseChecker;
 
 public class Client {
 	protected static StorageDriver storage;
@@ -20,7 +21,7 @@ public class Client {
 	public static void main(String[] args) {
 		// parse command line arguments
 		// supported arguments:  
-		// <mode> -- one of "load", "materialize", "init", "clear", "clearall", "checkentailment", "checkconsistency"
+		// <mode> -- one of "load", "materialize", "init", "clear", "clearall", "checkentailment", "checkconsistency", "runtests"
 		// -c <configfile> -- URL of configuration file
 		int i = 0;
 		String arg;
@@ -36,7 +37,7 @@ public class Client {
 				}
 			} else if (arg.startsWith("-")) {
 				System.err.println("Unknown option " + arg);
-			} else if ( (arg.equals("load")) || arg.equals("checkentailment") ) {
+			} else if ( (arg.equals("load")) || arg.equals("checkentailment") || arg.equals("runtests")) {
 				operation = arg;
 				if (i < args.length) {
 					inputfile = args[i++];
@@ -53,8 +54,8 @@ public class Client {
 
 		if ( operation.equals("") ) {
 			System.out.println("No operation given. Usage:\n orel.sh <command> -c <configfile> -i <inputfile>\n" +
-					           " <command>       : one of \"load\", \"materialize\", \"init\", \"drop\", \"clear\", \"clearall\", \"checkentailment\", \"checkconsistency\"\n" +
-					           "                   where \"load\" and \"checkentailment\" must be followed by an input ontology URI\n" +
+					           " <command>       : one of \"load\", \"materialize\", \"init\", \"drop\", \"clear\", \"clearall\", \"checkentailment\", \"checkconsistency\", \"runtests\"\n" +
+					           "                   where \"load\", \"checkentailment\", and \"runtests\" must be followed by an input ontology URI\n" +
 					           " -c <configfile> : path to the configuration file\n");
 			System.out.println("Exiting.");
 			return;
@@ -81,8 +82,8 @@ public class Client {
 			} else if (operation.equals("drop")) {
 				System.out.println("Deleting all database tables ...");
 				Thread.sleep(1000);
-				System.out.println("(CTRL+C to abort within the next 5 seconds!)");
-				Thread.sleep(5000);
+				System.out.println("(CTRL+C to abort within the next 3 seconds!)");
+				Thread.sleep(3000);
 				kbmanager.drop();
 			} else if (operation.equals("clear")) {
 				System.out.println("Deleting derived database content ...");
@@ -115,6 +116,16 @@ public class Client {
 				loadeTime=System.currentTimeMillis();
 				System.out.println("Ontology stored in " + (loadeTime-loadsTime) + " ms.");
 				manager.removeOntology(ontology);
+			} else if (operation.equals("runtests")) {
+				System.out.println("Loading and executing OWL test cases ...");
+				if (inputfile.equals("")) {
+					System.err.println("Please provide the URI of the input ontology using the parameter -i.");
+					return;
+				}
+				//URI physicalURI=(new File(uristring)).toURI();
+				IRI physicalURI= IRI.create(inputfile);
+				OWLWGTestCaseChecker test = new OWLWGTestCaseChecker(physicalURI);
+				test.test(kbmanager);
 			} else if (operation.equals("checkentailment")) {
 				System.out.println("Checking entailment of ontology ...");
 				if (inputfile.equals("")) {
