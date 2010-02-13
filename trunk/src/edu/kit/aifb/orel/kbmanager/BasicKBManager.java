@@ -40,6 +40,8 @@ public class BasicKBManager {
 		storage.makePredicateAssertion("sco",thing,thing);
 		storage.makePredicateAssertion("sco",nothing,nothing);
 		storage.makePredicateAssertion("sco",nothing,thing);
+		storage.makePredicateAssertion("subconjunctionof",nothing,thing,nothing);
+		storage.makePredicateAssertion("subconjunctionof",thing,nothing,nothing);
 		storage.makePredicateAssertion("nonempty",thing);
 		storage.commit();
 	}
