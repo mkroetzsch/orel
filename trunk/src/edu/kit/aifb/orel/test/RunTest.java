@@ -1,5 +1,9 @@
 package edu.kit.aifb.orel.test;
 
+import java.io.File;
+
+import org.semanticweb.owlapi.model.IRI;
+
 import edu.kit.aifb.orel.client.Settings;
 import edu.kit.aifb.orel.kbmanager.BasicKBManager;
 import edu.kit.aifb.orel.storage.MySQLStorageDriver;
@@ -17,7 +21,8 @@ public class RunTest {
 		StorageDriver storage = new MySQLStorageDriver(Settings.getDBServer(),Settings.getDBName(),Settings.getDBUser(),Settings.getDBPassword());
 		BasicKBManager kbmanager = new BasicKBManager(storage);
 		kbmanager.initialize();
-		Test test = new Test("tests/rleltests.rdf");
+		IRI physicalURI= IRI.create( (new File(System.getProperty("user.dir") + "/tests/rleltests.rdf")).toURI() );
+		OWLWGTestCaseChecker test = new OWLWGTestCaseChecker(physicalURI);
 		test.test(kbmanager);
 	}
 
