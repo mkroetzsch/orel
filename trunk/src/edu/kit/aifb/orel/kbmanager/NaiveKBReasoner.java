@@ -202,12 +202,12 @@ public class NaiveKBReasoner {
 		// inconsistent ontologies entail anything
 		if (storage.checkPredicateAssertion("nonempty",storage.getIDForNothing())) {
 			return InferenceResult.YES;
-		} else if (!loader.processOntology(ontology, BasicKBLoader.CHECK )) { // some supported axioms not entailed
-			return InferenceResult.NO;
-		} else if (loaded) { // all axioms supported and entailed 
-			return InferenceResult.YES;
-		} else { // some axioms not supported, all supported ones entailed
+		} else if (!loaded) { // if checked axioms failed to load, neither YES nor NO are sure answers
 			return InferenceResult.DONTKNOW;
+		} else if (loader.processOntology(ontology, BasicKBLoader.CHECK )) { // some supported axioms not entailed
+			return InferenceResult.YES;
+		} else { 
+			return InferenceResult.NO;
 		}
 	}
 
