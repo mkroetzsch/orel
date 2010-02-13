@@ -20,19 +20,37 @@ import java.io.*;
  * @author Markus Krötzsch
  */
 public class Test {
+	static final String TEST_NS = "http://www.w3.org/2007/OWL/testOntology#";
 	static public enum TestResult { PASS,FAIL,INCOMPLETE };
 	static public enum TestType { ENTAILMENT,NONENTAILMENT,CONSISTENCY,INCONSISTENCY,UNKNOWN };
+	
+	protected class TestCaseData {
+		public TestType type;
+		public String uri;
+		public OWLOntology premiseOntology = null;
+		public OWLOntology conclusionOntology = null;
+		public OWLOntology nonConclusionOntology = null;
+		public boolean directSemantics = false;
+		
+		public TestCaseData(String uri, TestType type) {
+			this.uri = uri;
+			this.type = type;
+		}
+		
+		public boolean relevantToOrel() {
+			return directSemantics && 
+			       (premiseOntology != null) &&
+			       ( (type==TestType.CONSISTENCY) || 
+			         (type==TestType.INCONSISTENCY) || 
+			         ( (type==TestType.ENTAILMENT) && (conclusionOntology != null) ) ||
+			         ( (type==TestType.NONENTAILMENT) && (nonConclusionOntology != null) )
+			       );
+		}
+	}
 
-	private OWLOntologyManager manager;
-	private IRI physicalURI;
-	private OWLOntology ontology;
-	
-	protected OWLOntology premiseOntology;
-	protected OWLOntology conclusionOntology;
-	protected OWLOntology nonConclusionOntology;
-	
+	protected OWLOntologyManager manager;
+	protected OWLOntology testCaseOntology;
 	protected BufferedWriter outputbuffer;
-	
 	
 	/**
 	 * @param file (String) containing the ontology test 
@@ -43,67 +61,40 @@ public class Test {
 	
 	protected void loadOntology(String filename) throws OWLOntologyCreationException {
 		manager = OWLManager.createOWLOntologyManager();
-		physicalURI= IRI.create( (new File(System.getProperty("user.dir") + "/" +  filename)).toURI() );
+		IRI physicalURI= IRI.create( (new File(System.getProperty("user.dir") + "/" +  filename)).toURI() );
 		//		physicalURI= URI.create("http://owl.semanticweb.org/exports/proposed/RL-RDF-rules-tests.rdf");
-		ontology = manager.loadOntologyFromOntologyDocument(physicalURI);
+		testCaseOntology = manager.loadOntologyFromOntologyDocument(physicalURI);
 	}
 	
-	public OWLOntology getPremiseOntology() {
-		return premiseOntology;
-	}
-	
-	public OWLOntology getConclusionOntology() {
-		return conclusionOntology;
-	}
-
 	public void test(BasicKBManager kbmanager) throws Exception {
 		outputbuffer = new BufferedWriter(new FileWriter("testresults.txt"));
-		Set<OWLClassAssertionAxiom> axiomset = ontology.getAxioms(AxiomType.CLASS_ASSERTION);
-		Set<OWLDataPropertyAssertionAxiom> dataset = ontology.getAxioms(AxiomType.DATA_PROPERTY_ASSERTION);
+		Set<OWLClassAssertionAxiom> axiomset = testCaseOntology.getAxioms(AxiomType.CLASS_ASSERTION);
+		Set<OWLLogicalAxiom> dataset = testCaseOntology.getLogicalAxioms();
 		Iterator<OWLClassAssertionAxiom> classIterator = axiomset.iterator();
 		OWLClassAssertionAxiom classAssert;
-		String testuri, testclassuri;
-		TestType testtype;
+		TestCaseData testcase;
 		boolean loaded;
 		InferenceResult infResult,correctResult;
-		
 		while (classIterator.hasNext()) {
 			kbmanager.drop();
 			kbmanager.initialize();
 			classAssert = classIterator.next();
-			testuri = classAssert.getIndividual().toString();
-			testclassuri = classAssert.getClassExpression().toString();
-			if (testclassuri.equals("<http://www.w3.org/2007/OWL/testOntology#PositiveEntailmentTest>")) {
-				testtype = TestType.ENTAILMENT;
-			} else if (testclassuri.equals("<http://www.w3.org/2007/OWL/testOntology#NegativeEntailmentTest>")) {
-				testtype = TestType.NONENTAILMENT;
-			} else if (testclassuri.equals("<http://www.w3.org/2007/OWL/testOntology#ConsistencyTest>")) {
-				testtype = TestType.CONSISTENCY;
-			} else if (testclassuri.equals("<http://www.w3.org/2007/OWL/testOntology#InconsistencyTest>")) {
-				testtype = TestType.INCONSISTENCY;
-			} else {
-				testtype = TestType.UNKNOWN;
-				continue;
-			}
-			System.out.println("Considering test case " + testuri + " (" + testtype + ") ...");
-			setTestCaseOntologies(dataset, classAssert.getIndividual());
-			if (premiseOntology != null) {
-				loaded = kbmanager.loadOntology(premiseOntology);
-			} else {
-				outputbuffer.write("*** Problem finding premise for test " + testuri + "\n");
-				continue;
-			}
-			if (testtype == TestType.CONSISTENCY) {
+
+			testcase = extractTestCaseData(dataset, classAssert);
+			if (!testcase.relevantToOrel()) continue;
+			System.out.println("Considering test case " + testcase.uri + " (" + testcase.type + ") ...");
+			loaded = kbmanager.loadOntology(testcase.premiseOntology);
+			if (testcase.type == TestType.CONSISTENCY) {
 				infResult = negateInferenceResult(kbmanager.checkConsistency());
 				correctResult = InferenceResult.NO;
-			} else if (testtype == TestType.INCONSISTENCY) {
+			} else if (testcase.type == TestType.INCONSISTENCY) {
 				infResult = negateInferenceResult(kbmanager.checkConsistency());
 				correctResult = InferenceResult.YES;
-			} else if ( (testtype == TestType.ENTAILMENT) && (conclusionOntology != null) ) {
-				infResult = kbmanager.checkEntailment(conclusionOntology);
+			} else if (testcase.type == TestType.ENTAILMENT) {
+				infResult = kbmanager.checkEntailment(testcase.conclusionOntology);
 				correctResult = InferenceResult.YES;
-			} else if ( (testtype == TestType.NONENTAILMENT) && (nonConclusionOntology != null) ) {
-				infResult = kbmanager.checkEntailment(nonConclusionOntology);
+			} else if (testcase.type == TestType.NONENTAILMENT) {
+				infResult = kbmanager.checkEntailment(testcase.nonConclusionOntology);
 				correctResult = InferenceResult.NO;
 			} else {
 				//outputbuffer.write("***Unsupported test type " + testuri + "\n");
@@ -115,53 +106,76 @@ public class Test {
 			}
 			
 			if (infResult == InferenceResult.DONTKNOW) {
-				reportResult(TestResult.INCOMPLETE, testuri, testtype);
+				reportResult(TestResult.INCOMPLETE, testcase);
 			} else if (infResult == correctResult) {
-				reportResult(TestResult.PASS, testuri, testtype);
+				reportResult(TestResult.PASS, testcase);
 			} else {
-				reportResult(TestResult.FAIL, testuri, testtype);
+				reportResult(TestResult.FAIL, testcase);
 			}
 			outputbuffer.flush();
 		}
 		outputbuffer.close();
 	}
 
-	protected void setTestCaseOntologies(Set<OWLDataPropertyAssertionAxiom> dataset, OWLIndividual testcase) throws OWLOntologyCreationException{
-		OWLDataPropertyAssertionAxiom dataAxiom;
-		Iterator<OWLDataPropertyAssertionAxiom> dataIterator = dataset.iterator();
-		premiseOntology = null;
-		conclusionOntology = null;
-		nonConclusionOntology = null;
+	protected TestCaseData extractTestCaseData(Set<OWLLogicalAxiom> dataset, OWLClassAssertionAxiom testClassAssertion) throws OWLOntologyCreationException{
+		
+		TestCaseData result;
+		TestType testtype;
+		String testclassuri = testClassAssertion.getClassExpression().toString();
+		if (testclassuri.equals("<" + TEST_NS + "PositiveEntailmentTest>")) {
+			testtype = TestType.ENTAILMENT;
+		} else if (testclassuri.equals("<" + TEST_NS + "NegativeEntailmentTest>")) {
+			testtype = TestType.NONENTAILMENT;
+		} else if (testclassuri.equals("<" + TEST_NS + "ConsistencyTest>")) {
+			testtype = TestType.CONSISTENCY;
+		} else if (testclassuri.equals("<" + TEST_NS + "InconsistencyTest>")) {
+			testtype = TestType.INCONSISTENCY;
+		} else {
+			testtype = TestType.UNKNOWN;
+			return new TestCaseData(testClassAssertion.getIndividual().toString(),testtype);
+		}
+		
+		result = new TestCaseData(testClassAssertion.getIndividual().toString(),testtype);
+		OWLLogicalAxiom axiom;
+		String propname;
+		Iterator<OWLLogicalAxiom> dataIterator = dataset.iterator();
 		while (dataIterator.hasNext()) {
-			dataAxiom = dataIterator.next();
-			if (dataAxiom.getSubject().equals(testcase)) {
-				if ( (premiseOntology == null) && 
-				     ( dataAxiom.getProperty().toString().equals("<http://www.w3.org/2007/OWL/testOntology#rdfXmlPremiseOntology>") ||
-				       dataAxiom.getProperty().toString().equals("<http://www.w3.org/2007/OWL/testOntology#fsPremiseOntology>") ) ) {
-					//							System.out.println("PremiseOntology:");
-					//							System.out.println(dataAxiom.getObject().getLiteral());
-					premiseOntology = OWLManager.createOWLOntologyManager().loadOntologyFromOntologyDocument(
-							            (OWLOntologyDocumentSource)new StringDocumentSource( dataAxiom.getObject().getLiteral() )
-							          );
-				} else if ( (conclusionOntology == null) && 
-						    ( dataAxiom.getProperty().toString().equals("<http://www.w3.org/2007/OWL/testOntology#rdfXmlConclusionOntology>") ||
-						      dataAxiom.getProperty().toString().equals("<http://www.w3.org/2007/OWL/testOntology#fsConclusionOntology>") ) ) {
-					//							System.out.println("ConclusionOntology:");
-					//							System.out.println(dataAxiom.getObject().getLiteral());
-					conclusionOntology = OWLManager.createOWLOntologyManager().loadOntologyFromOntologyDocument(
-					                       (OWLOntologyDocumentSource)new StringDocumentSource(dataAxiom.getObject().getLiteral())
-					                     );
-				} else if ( (nonConclusionOntology == null) && 
-						    ( dataAxiom.getProperty().toString().equals("<http://www.w3.org/2007/OWL/testOntology#rdfXmlNonConclusionOntology>") ||
-						      dataAxiom.getProperty().toString().equals("<http://www.w3.org/2007/OWL/testOntology#fsNonConclusionOntology>") ) ) {
-					//							System.out.println("ConclusionOntology:");
-					//							System.out.println(dataAxiom.getObject().getLiteral());
-					nonConclusionOntology = OWLManager.createOWLOntologyManager().loadOntologyFromOntologyDocument(
-					                         (OWLOntologyDocumentSource)new StringDocumentSource(dataAxiom.getObject().getLiteral())
-					                        );
+			axiom = dataIterator.next();
+			if (axiom instanceof OWLDataPropertyAssertionAxiom) {
+				if (((OWLDataPropertyAssertionAxiom)axiom).getSubject().equals(testClassAssertion.getIndividual())) {
+					propname = ((OWLDataPropertyAssertionAxiom)axiom).getProperty().toString();
+					if ( (result.premiseOntology == null) && 
+					     ( propname.equals("<" + TEST_NS + "rdfXmlPremiseOntology>") ||
+					       propname.equals("<" + TEST_NS + "fsPremiseOntology>") ) ) {
+						result.premiseOntology = OWLManager.createOWLOntologyManager().loadOntologyFromOntologyDocument(
+								                  (OWLOntologyDocumentSource)new StringDocumentSource( ((OWLDataPropertyAssertionAxiom)axiom).getObject().getLiteral() )
+								                 );
+					} else if ( (result.conclusionOntology == null) && 
+							    ( propname.equals("<" + TEST_NS + "rdfXmlConclusionOntology>") ||
+							      propname.equals("<" + TEST_NS + "fsConclusionOntology>") ) ) {
+						result.conclusionOntology = OWLManager.createOWLOntologyManager().loadOntologyFromOntologyDocument(
+						                             (OWLOntologyDocumentSource)new StringDocumentSource(((OWLDataPropertyAssertionAxiom)axiom).getObject().getLiteral())
+						                            );
+					} else if ( (result.nonConclusionOntology == null) && 
+							    ( propname.equals("<" + TEST_NS + "rdfXmlNonConclusionOntology>") ||
+							      propname.equals("<" + TEST_NS + "fsNonConclusionOntology>") ) ) {
+						result.nonConclusionOntology = OWLManager.createOWLOntologyManager().loadOntologyFromOntologyDocument(
+						                                (OWLOntologyDocumentSource)new StringDocumentSource(((OWLDataPropertyAssertionAxiom)axiom).getObject().getLiteral())
+						                               );
+					}
+				}
+			} else if (axiom instanceof OWLObjectPropertyAssertionAxiom) {
+				if (((OWLObjectPropertyAssertionAxiom)axiom).getSubject().equals(testClassAssertion.getIndividual())) {
+					propname = ((OWLObjectPropertyAssertionAxiom)axiom).getProperty().toString();
+					if (propname.equals("<" + TEST_NS + "semantics>")) {
+						if (((OWLObjectPropertyAssertionAxiom)axiom).getObject().toString().equals("<" + TEST_NS + "DIRECT>")) {
+							result.directSemantics = true;
+						}
+					}
 				}
 			}
 		}
+		return result;
 	}
 	
 	protected InferenceResult negateInferenceResult(InferenceResult result) {
@@ -174,14 +188,14 @@ public class Test {
 		}
 	}
 	
-	protected void reportResult(TestResult result, String testcase, TestType testtype) {
+	protected void reportResult(TestResult result, TestCaseData testcase) {
 		try {
 			if ( result == TestResult.FAIL ) {
-				outputbuffer.write("FAILED " + testcase + " (" + testtype + ")\n");
+				outputbuffer.write("FAILED " + testcase.uri + " (" + testcase.type + ")\n");
 			} else if ( result == TestResult.PASS ) {
-				outputbuffer.write("   PASSED " + testcase + " (" + testtype + ")\n");
+				outputbuffer.write("   PASSED " + testcase.uri + " (" + testcase.type + ")\n");
 			} else if ( result == TestResult.INCOMPLETE ) {
-				outputbuffer.write("INCOMPLETE " + testcase + " (" + testtype + ")\n");
+				outputbuffer.write("INCOMPLETE " + testcase.uri + " (" + testcase.type + ")\n");
 			}
 		} catch (IOException e) {
 			System.err.println("Problem writing test case output: " + e.toString());
@@ -189,4 +203,3 @@ public class Test {
 	}
 	
 }	
-
