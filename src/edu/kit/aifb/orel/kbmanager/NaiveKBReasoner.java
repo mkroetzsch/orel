@@ -64,47 +64,42 @@ public class NaiveKBReasoner {
 		// make the rule declaration as readable as possible;
 		// it is crucial to have this error free and customizable
 
-		/// spoc
-		rules.put("spocp", "spoc(p',q',r) :- spo(p',p), spo(q',q), spoc(p,q,r)");
-		/// spo
-		//TODO: property(p) --> spo(p,p)
-		rules.put("spo",            "spo(p,r) :- spo(p,q), spo(q,r)");
-		rules.put("sposelfspocdom", "spo(q,r) :- subsomevalues(q," + top + ",x), sco(x,y), self(y,p), spoc(p,q,r)");
-		rules.put("sposelfspocran", "spo(p,r) :- ran(p,x), sco(x,y), self(y,q), spoc(p,q,r)");
-		/// sco
-		// NOTE: we create sco(x,top), sco(bot,x), and sco(x,x) at load time
-		rules.put("sco",         "sco(x,z) :- sco(x,y), sco(y,z)"); 
-		rules.put("con",         "sco(x,z) :- sco(x,y1), sco(x,y2), subconjunctionof(y1,y2,z)");
-		rules.put("svr",         "sco(x,z) :- sv(x,p,y), rsco(y,y'), subsomevalues(p,y',z)");
-		rules.put("svr-self",    "sco(x,z) :- self(x,p), sco(x,y'),  subsomevalues(p,y',z)");
-		rules.put("scoeq",       "sco(y,x) :- nonempty(x), nominal(y), sco(x,y)");
-		rules.put("selfran",     "sco(x,y) :- self(x,p), ran(p,y)"); // this is "rscoran-self"
-		rules.put("selfsubself", "sco(x,y) :- self(x,p), subself(p,y)");
-		/// rsco
-		rules.put("rsco1",   "rsco(x,z) :- rsco(x,y), sco(y,z)");
-		rules.put("rcon",    "rsco(x,z) :- rsco(x,y1),rsco(x,y2), subconjunctionof(y1,y2,z)");
-		rules.put("rscoran", "rsco(x,y) :- sv(x,p,x), ran(p,y)");
-			//rules.put("rsco0", "rsco(x,y) :- sco(x,y)"); // not sound
-		/// svp
-		rules.put("svp",          "sv(x,q,x) :- sv(x,p,x), spo(p,q)");
-		rules.put("svspoc",       "sv(x,r,z) :- spoc(p,q,r), sv(x,p,x'), rsco(x',z'), sv(z',q,z)");
-		rules.put("svspoc-self1", "sv(x,r,z) :- spoc(p,q,r), self(x,p), sco(x,z'), sv(z',q,z)");
-		rules.put("svspoc-self2", "sv(x,r,y) :- spoc(p,q,r), sv(x,p,y), rsco(y,z), self(z,q)");
-			//rules.put("svspoc-self3", "sv(x,r,z) :- spoc(p,q,r), self(x,p), sco(x,z), self(z,q)"); // reincarnated as "svselfspoc"
-			//rules.put("svself",       "sv(x,p,x) :- sco(x,y), self(y,p)"); // this rule would violate the assumptions on sv (referring to aux. ids only)
-		/// ran
-		rules.put("ranp",   "ran(q,x) :- ran(p,x), spo(q,p)");
-		rules.put("ransco", "ran(p,y) :- ran(p,x), sco(x,y)");
-		rules.put("rancon", "ran(p,z) :- ran(p,x), ran(p,y), subconjunctionof(x,y,z)"); 
-		/// nonempty
-		rules.put("nenom",  "nonempty(x) :- nominal(x)");
-		rules.put("nesco",  "nonempty(y) :- nonempty(x), sco(x,y)");
-		rules.put("nersco", "nonempty(y) :- nonempty(x), rsco(x,y)");
-		/// self
-		rules.put("selfp",        "self(x,q) :- self(x,p), spo(p,q)"); // subsumes "svp-self"
-		rules.put("svselfspoc",   "self(x,r) :- sco(x,y1), sco(x,y2), self(y1,p), self(y2,q), spoc(p,q,r)");
-		rules.put("selfnom",      "self(x,p) :- nominal(x), sco(x,y), sv(y,p,z), rsco(z,x)");
-		rules.put("selfnom-self", "self(x,p) :- nominal(x), sco(x,y), self(y,p), sco(y,x)");
+        /// spoc
+        rules.put("spocp", "spoc(p',q',r) :- spo(p',p), spo(q',q), spoc(p,q,r)");
+        /// spo
+        //TODO: property(p) --> spo(p,p)
+        rules.put("spo",            "spo(p,r) :- spo(p,q), spo(q,r)");
+        rules.put("sposelfspocdom", "spo(q,r) :- subsomevalues(q," + top + ",x), sco(x,y), self(y,p), spoc(p,q,r)");
+        rules.put("sposelfspocran", "spo(p,r) :- ran(p,x), sco(x,y), self(y,q), spoc(p,q,r)");
+        /// sco
+        // NOTE: we create sco(x,top), sco(bot,x), and sco(x,x) at load time
+        rules.put("sco",         "sco(x,z) :- sco(x,y), sco(y,z)"); 
+        rules.put("con",         "sco(x,z) :- sco(x,y1), sco(x,y2), subconjunctionof(y1,y2,z)");
+        rules.put("svr",         "sco(x,z) :- sv(x,p,y), sco(y,y'), subsomevalues(p,y',z)");
+        rules.put("svr-self",    "sco(x,z) :- self(x,p), sco(x,y'), subsomevalues(p,y',z)");
+        rules.put("scoeq",       "sco(y,x) :- nonempty(x), nominal(y), sco(x,y)");
+        rules.put("selfran",     "sco(x,y) :- self(x,p), ran(p,y)"); // this is "scoran-self"
+        rules.put("selfsubself", "sco(x,y) :- self(x,p), subself(p,y)");
+        rules.put("scoran",      "sco(x,y) :- sv(x,p,y), ran(p,y)");
+        /// svp
+        rules.put("svp",          "sv(x,q,y) :- sv(x,p,y), spo(p,q)");
+        rules.put("svspoc",       "sv(x,r,z) :- spoc(p,q,r), sv(x,p,x'), sco(x',z'), sv(z',q,z)");
+        rules.put("svspoc-self1", "sv(x,r,z) :- spoc(p,q,r), self(x,p), sco(x,z'), sv(z',q,z)");
+        rules.put("svspoc-self2", "sv(x,r,y) :- spoc(p,q,r), sv(x,p,y), sco(y,z), self(z,q)");
+                //rules.put("svspoc-self3", "sv(x,r,z) :- spoc(p,q,r), self(x,p), sco(x,z), self(z,q)"); // reincarnated as "svselfspoc"
+                //rules.put("svself",       "sv(x,p,x) :- sco(x,y), self(y,p)"); // this rule would violate the assumptions on sv (referring to aux. ids only)
+        /// ran
+        rules.put("ranp",   "ran(q,x) :- ran(p,x), spo(q,p)");
+        rules.put("ransco", "ran(p,y) :- ran(p,x), sco(x,y)");
+        rules.put("rancon", "ran(p,z) :- ran(p,x), ran(p,y), subconjunctionof(x,y,z)"); 
+        /// nonempty
+        rules.put("nenom",  "nonempty(x) :- nominal(x)");
+        rules.put("nesco",  "nonempty(y) :- nonempty(x), sco(x,y)");
+        /// self
+        rules.put("selfp",        "self(x,q) :- self(x,p), spo(p,q)"); // subsumes "svp-self"
+        rules.put("svselfspoc",   "self(x,r) :- sco(x,y1), sco(x,y2), self(y1,p), self(y2,q), spoc(p,q,r)");
+        rules.put("selfnom",      "self(x,p) :- nominal(x), sco(x,y), sv(y,p,z), sco(z,x)");
+        rules.put("selfnom-self", "self(x,p) :- nominal(x), sco(x,y), self(y,p), sco(y,x)");
 		
 		// <<<Role Disjointness:>>>
 		//rules.put("disnom", "sco(x,bot) :- disjoint(v,w), nominal(y), sco(x,x1), sco(x,x2), sv(x1,v,x1), sv(x2,w,x2), rsco(x1,y), rsco(x2,y)");
