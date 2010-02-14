@@ -108,8 +108,6 @@ public class BasicKBManager {
 		storage.registerPredicate( new PredicateDeclaration("dsco",2,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("sv",3,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("dsv",3,true,false) );
-		storage.registerPredicate( new PredicateDeclaration("rsco",2,true,false) );
-		storage.registerPredicate( new PredicateDeclaration("drsco",2,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("ran",2,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("dran",2,true,false) );
 

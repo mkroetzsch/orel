@@ -591,16 +591,18 @@ public class BasicKBLoader {
 			result = createPropertyFacts(pid,((OWLObjectSomeValuesFrom)d).getProperty());
 			OWLClassExpression filler = ((OWLObjectSomeValuesFrom)d).getFiller();
 			int oid = storage.getID(filler);
-			storage.makePredicateAssertion("sv",sid,pid,sid);
-			storage.makePredicateAssertion("rsco",sid,oid);
+			int auxid = storage.getSkolemID(d);
+			storage.makePredicateAssertion("sv",sid,pid,auxid);
+			storage.makePredicateAssertion("sco",auxid,oid);
 			result = createHeadFacts(oid,filler,false) && result;
 		} else if (d instanceof OWLObjectHasValue) {
 			int pid = storage.getID(((OWLObjectHasValue)d).getProperty());
 			result = createPropertyFacts(pid,((OWLObjectHasValue)d).getProperty());
 			OWLIndividual value = ((OWLObjectHasValue)d).getValue();
+			int auxid = storage.getSkolemID(d);
 			int oid = storage.getID(value);
-			storage.makePredicateAssertion("sv",sid,pid,sid);
-			storage.makePredicateAssertion("rsco",sid,oid);
+			storage.makePredicateAssertion("sv",sid,pid,auxid);
+			storage.makePredicateAssertion("sco",auxid,oid);
 			result = createHeadFacts(oid,value,false) && result;
 		} else if (d instanceof OWLObjectOneOf) {
 			Set<OWLIndividual> inds = ((OWLObjectOneOf) d).getIndividuals();

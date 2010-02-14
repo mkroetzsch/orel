@@ -850,6 +850,10 @@ public class MySQLStorageDriver implements StorageDriver {
 		return getIDForString(uri);
 	}
 	
+	public int getSkolemID(OWLClassExpression description) {
+		return getIDForString("C(" + getCanonicalName(description) + ")");
+	}
+	
 	protected int getIDForString(String description) {
 		int id = 0;
 		//System.out.println("Getting id for " + description); // debug

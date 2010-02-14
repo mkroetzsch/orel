@@ -58,4 +58,5 @@ public interface StorageDriver {
 	public int getID(OWLIndividual individual);
 	public int getID(SimpleLiteral literal);
 	public int getID(OWLPropertyExpression<?,?> property);
+	public int getSkolemID(OWLClassExpression description);
 }
