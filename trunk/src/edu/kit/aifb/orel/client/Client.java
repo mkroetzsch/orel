@@ -23,6 +23,7 @@ public class Client {
 		// supported arguments:  
 		// <mode> -- one of "load", "materialize", "init", "clear", "clearall", "checkentailment", "checkconsistency", "runtests"
 		// -c <configfile> -- URL of configuration file
+		// -o <outputfile> -- URL of outputfile file if relevant to the chosen operation
 		int i = 0;
 		String arg;
 		String operation = "", inputfile = "", configfile = "./settings.cfg", outputfile = "";
@@ -62,7 +63,8 @@ public class Client {
 			System.out.println("No operation given. Usage:\n orel.sh <command> [<inputfile>] [-c <configfile>] [-o <ouptutfile>] \n" +
 					           " <command>       : one of \"load\", \"materialize\", \"init\", \"drop\", \"clear\", \"clearall\", \"checkentailment\", \"checkconsistency\", \"runtests\"\n" +
 					           "                   where \"load\", \"checkentailment\", and \"runtests\" must be followed by an input ontology URI\n" +
-					           " -c <configfile> : path to the configuration file\n");
+					           " -c <configfile> : path to the configuration file\n" +
+					           " -o <outputfile> : name of the output file, if relevant to the current operation\n");
 			System.out.println("Exiting.");
 			return;
 		}
@@ -109,17 +111,16 @@ public class Client {
 					System.err.println("Please provide the URI of the input ontology using the parameter -i.");
 					return;
 				}
-				long loadsTime=System.currentTimeMillis();
+				long loadsTime = System.currentTimeMillis();
 				OWLOntologyManager manager = OWLManager.createOWLOntologyManager();
-				//URI physicalURI=(new File(uristring)).toURI();
-				IRI physicalURI= IRI.create(inputfile);
+				IRI physicalURI = IRI.create(inputfile);
 				OWLOntology ontology = manager.loadOntologyFromOntologyDocument(physicalURI);
-				long loadeTime=System.currentTimeMillis();
+				long loadeTime = System.currentTimeMillis();
 				System.out.println("Ontology loaded in " + (loadeTime-loadsTime) + " ms.");
 				System.out.println("Storing ontology ...");
-				loadsTime=System.currentTimeMillis();
+				loadsTime = System.currentTimeMillis();
 				kbmanager.loadOntology(ontology);
-				loadeTime=System.currentTimeMillis();
+				loadeTime = System.currentTimeMillis();
 				System.out.println("Ontology stored in " + (loadeTime-loadsTime) + " ms.");
 				manager.removeOntology(ontology);
 			} else if (operation.equals("runtests")) {
@@ -131,8 +132,7 @@ public class Client {
 				if (outputfile.equals("")) {
 					outputfile = "testresults.txt";
 				}
-				//URI physicalURI=(new File(uristring)).toURI();
-				IRI physicalURI= IRI.create(inputfile);
+				IRI physicalURI = IRI.create(inputfile);
 				OWLWGTestCaseChecker testchecker = new OWLWGTestCaseChecker(physicalURI,kbmanager);
 				testchecker.runTests(outputfile);
 				System.out.println("\n Test results written to file " + outputfile + ".");
@@ -145,12 +145,12 @@ public class Client {
 				long loadsTime=System.currentTimeMillis();
 				OWLOntologyManager manager = OWLManager.createOWLOntologyManager();
 				//URI physicalURI=(new File(uristring)).toURI();
-				IRI physicalURI= IRI.create(inputfile);
+				IRI physicalURI = IRI.create(inputfile);
 				OWLOntology ontology = manager.loadOntologyFromOntologyDocument(physicalURI);
-				long loadeTime=System.currentTimeMillis();
+				long loadeTime = System.currentTimeMillis();
 				System.out.println("Ontology loaded in " + (loadeTime-loadsTime) + " ms.");
 				System.out.println("Processing ontology ...");
-				loadsTime=System.currentTimeMillis();
+				loadsTime = System.currentTimeMillis();
 				InferenceResult result = kbmanager.checkEntailment(ontology);
 				if (result == InferenceResult.YES) {
 					System.out.println("Ontology is entailed.");
@@ -180,8 +180,7 @@ public class Client {
 			System.err.println(e.toString());
 			return;
 		}
-		long eTime=System.currentTimeMillis();
-		System.out.println("Done in " + (eTime-sTime) + " ms.\n");
+		System.out.println("Done in " + (System.currentTimeMillis()-sTime) + " ms.\n");
 	}
 
 }
