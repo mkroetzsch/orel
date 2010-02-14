@@ -25,7 +25,7 @@ public class Client {
 		// -c <configfile> -- URL of configuration file
 		int i = 0;
 		String arg;
-		String operation = "", inputfile = "", configfile = "./settings.cfg";
+		String operation = "", inputfile = "", configfile = "./settings.cfg", outputfile = "";
 		// add more intelligence to those checks later		
 		while (i < args.length) {
 			arg = args[i++];
@@ -34,6 +34,12 @@ public class Client {
 					configfile = args[i++];
 				} else {
 					System.err.println(arg + " requires a filename of the configuration file");
+				}
+			} if (arg.equals("-o") || arg.equals("--output")) {
+				if (i < args.length) {
+					outputfile = args[i++];
+				} else {
+					System.err.println(arg + " requires a filename of the output file");
 				}
 			} else if (arg.startsWith("-")) {
 				System.err.println("Unknown option " + arg);
@@ -53,7 +59,7 @@ public class Client {
 		}
 
 		if ( operation.equals("") ) {
-			System.out.println("No operation given. Usage:\n orel.sh <command> -c <configfile> -i <inputfile>\n" +
+			System.out.println("No operation given. Usage:\n orel.sh <command> [<inputfile>] [-c <configfile>] [-o <ouptutfile>] \n" +
 					           " <command>       : one of \"load\", \"materialize\", \"init\", \"drop\", \"clear\", \"clearall\", \"checkentailment\", \"checkconsistency\", \"runtests\"\n" +
 					           "                   where \"load\", \"checkentailment\", and \"runtests\" must be followed by an input ontology URI\n" +
 					           " -c <configfile> : path to the configuration file\n");
@@ -122,10 +128,14 @@ public class Client {
 					System.err.println("Please provide the URI of the input ontology using the parameter -i.");
 					return;
 				}
+				if (outputfile.equals("")) {
+					outputfile = "testresults.txt";
+				}
 				//URI physicalURI=(new File(uristring)).toURI();
 				IRI physicalURI= IRI.create(inputfile);
-				OWLWGTestCaseChecker test = new OWLWGTestCaseChecker(physicalURI);
-				test.test(kbmanager);
+				OWLWGTestCaseChecker testchecker = new OWLWGTestCaseChecker(physicalURI,kbmanager);
+				testchecker.runTests(outputfile);
+				System.out.println("\n Test results written to file " + outputfile + ".");
 			} else if (operation.equals("checkentailment")) {
 				System.out.println("Checking entailment of ontology ...");
 				if (inputfile.equals("")) {

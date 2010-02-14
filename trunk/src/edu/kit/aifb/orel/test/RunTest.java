@@ -22,8 +22,8 @@ public class RunTest {
 		BasicKBManager kbmanager = new BasicKBManager(storage);
 		kbmanager.initialize();
 		IRI physicalURI= IRI.create( (new File(System.getProperty("user.dir") + "/tests/rleltests.rdf")).toURI() );
-		OWLWGTestCaseChecker test = new OWLWGTestCaseChecker(physicalURI);
-		test.test(kbmanager);
+		OWLWGTestCaseChecker test = new OWLWGTestCaseChecker(physicalURI,kbmanager);
+		test.runTests("testresults.txt");
 	}
 
 }

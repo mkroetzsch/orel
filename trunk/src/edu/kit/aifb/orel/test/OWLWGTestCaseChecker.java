@@ -21,6 +21,7 @@ import java.io.*;
  */
 public class OWLWGTestCaseChecker {
 	static final String TEST_NS = "http://www.w3.org/2007/OWL/testOntology#";
+	static final String TEST_ONTOLOGY_STUB = "Ontology(<http://www.w3.org/2007/OWL/testOntology>)";
 	static public enum TestResult { PASS,FAIL,INCOMPLETE };
 	static public enum TestType { ENTAILMENT,NONENTAILMENT,CONSISTENCY,INCONSISTENCY,UNKNOWN };
 	
@@ -52,16 +53,20 @@ public class OWLWGTestCaseChecker {
 	protected OWLOntology testCaseOntology;
 	protected BufferedWriter outputbuffer;
 	
+	BasicKBManager kbmanager;
+	
 	/**
 	 * @param file (String) containing the ontology test 
 	 */
-	public OWLWGTestCaseChecker(IRI testcases) throws OWLOntologyCreationException, SQLException, IOException {
+	public OWLWGTestCaseChecker(IRI testcases,BasicKBManager kbmanager) throws OWLOntologyCreationException, SQLException, IOException {
+		this.kbmanager = kbmanager;
 		manager = OWLManager.createOWLOntologyManager();
+		manager.loadOntologyFromOntologyDocument(new StringDocumentSource(TEST_ONTOLOGY_STUB));
 		testCaseOntology = manager.loadOntologyFromOntologyDocument(testcases);
 	}
 	
-	public void test(BasicKBManager kbmanager) throws Exception {
-		outputbuffer = new BufferedWriter(new FileWriter("testresults.txt"));
+	public void runTests(String outputfile) throws Exception {
+		outputbuffer = new BufferedWriter(new FileWriter(outputfile));
 		Set<OWLClassAssertionAxiom> axiomset = testCaseOntology.getAxioms(AxiomType.CLASS_ASSERTION);
 		Set<OWLLogicalAxiom> dataset = testCaseOntology.getLogicalAxioms();
 		Iterator<OWLClassAssertionAxiom> classIterator = axiomset.iterator();
@@ -154,7 +159,7 @@ public class OWLWGTestCaseChecker {
 							    ( propname.equals("<" + TEST_NS + "rdfXmlNonConclusionOntology>") ||
 							      propname.equals("<" + TEST_NS + "fsNonConclusionOntology>") ) ) {
 						result.nonConclusionOntology = OWLManager.createOWLOntologyManager().loadOntologyFromOntologyDocument(
-						                                (OWLOntologyDocumentSource)new StringDocumentSource(((OWLDataPropertyAssertionAxiom)axiom).getObject().getLiteral())
+						                                new StringDocumentSource(((OWLDataPropertyAssertionAxiom)axiom).getObject().getLiteral())
 						                               );
 					}
 				}
