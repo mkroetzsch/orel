@@ -118,6 +118,7 @@ public class BasicKBManager {
 		storage.registerPredicate( new PredicateDeclaration("suballvalues",3,false,false) );
 		storage.registerPredicate( new PredicateDeclaration("spoc",3,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("spo",2,true,false) );
+		storage.registerPredicate( new PredicateDeclaration("disjoint",2,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("nominal",1,false,false) );
 		storage.registerPredicate( new PredicateDeclaration("dnominal",1,false,false) );
 		storage.registerPredicate( new PredicateDeclaration("nonempty",1,true,false) );

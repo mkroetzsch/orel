@@ -61,6 +61,7 @@ public class NaiveKBReasoner {
 		inferencerules = new ArrayList<String>();
 		HashMap<String,String> rules = new HashMap<String,String>();
 		int top = storage.getIDForThing();
+		int bot = storage.getIDForNothing();
 		// make the rule declaration as readable as possible;
 		// it is crucial to have this error free and customizable
 
@@ -100,11 +101,16 @@ public class NaiveKBReasoner {
         rules.put("svselfspoc",   "self(x,r) :- sco(x,y1), sco(x,y2), self(y1,p), self(y2,q), spoc(p,q,r)");
         rules.put("selfnom",      "self(x,p) :- nominal(x), sco(x,y), sv(y,p,z), sco(z,x)");
         rules.put("selfnom-self", "self(x,p) :- nominal(x), sco(x,y), self(y,p), sco(y,x)");
-		
+
 		// <<<Role Disjointness:>>>
-		//rules.put("disnom", "sco(x,bot) :- disjoint(v,w), nominal(y), sco(x,x1), sco(x,x2), sv(x1,v,x1), sv(x2,w,x2), rsco(x1,y), rsco(x2,y)");
-		//rules.put("disspo", "sco(y,bot) :- sco(y,x), sv(x,u,x), disjoint(v,w), spo(u,v), spo(u,w)");
-		//rules.put("disself", "sco(x,bot) :- disjoint(v,w), sco(x,y1), sco(x,y2), self(y1,v), self(y2,w)");
+		rules.put("disnom",  "sco(x," + bot + ") :- disjoint(v,w), nominal(y), sco(x,x1), sco(x,x2), sv(x1,v,x1), sv(x2,w,x2), sco(x1,y), sco(x2,y)");
+		rules.put("disspo",  "sco(y," + bot + ") :- sco(y,x), sv(x,u,x), disjoint(v,w), spo(u,v), spo(u,w)");
+		rules.put("disself", "sco(x," + bot + ") :- disjoint(v,w), sco(x,y1), sco(x,y2), self(y1,v), self(y2,w)");
+
+		rules.put("dissub1", "disjoint(p,q) :- disjoint(p1,q1), spo(p,p1), spo(q,q1)");
+		rules.put("dissub2", "disjoint(p,q) :- subsomevalues(p," + top + ",x), subsomevalues(q," + top + ",y), sco(x,x'), sco(y,y'), subconjunctionof(x',y',z'), sco(z'," + bot + ")");
+		rules.put("dissub3", "disjoint(p,q) :- ran(p,x), ran(q,y), sco(x,x'), sco(y,y'), subconjunctionof(x',y',z'), sco(z'," + bot + ")");
+		rules.put("dissym",  "disjoint(p,q) :- disjoint(q,p)");
 		
 		/* old rule set below
 		 
