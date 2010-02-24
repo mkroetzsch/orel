@@ -181,7 +181,7 @@ public class BasicAxiomVisitor implements OWLAxiomVisitorEx<Boolean> {
 		}
 		boolean result = true;
 		for (int i=0; i<inds.length; i++) {
-			for (int j=i+1; i<inds.length; i++) {
+			for (int j=i+1; j<inds.length; j++) {
 				result = result && processSubClassOfAxiom(datafactory.getOWLObjectIntersectionOf(nominals[i],nominals[j]), datafactory.getOWLNothing());
 			}
 		}
