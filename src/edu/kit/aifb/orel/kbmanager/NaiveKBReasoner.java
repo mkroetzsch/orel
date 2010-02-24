@@ -103,8 +103,8 @@ public class NaiveKBReasoner {
         rules.put("selfnom-self", "self(x,p) :- nominal(x), sco(x,y), self(y,p), sco(y,x)");
 
 		// <<<Role Disjointness:>>>
-        rules.put("disnom",  "sco(x," + bot + ") :- disjoint(v,w), nominal(y), sco(x,x1), sco(x,x2), sv(x1,v,x1), sv(x2,w,x2), sco(x1,y), sco(x2,y)");
-        rules.put("disspo",  "sco(y," + bot + ") :- sco(y,x), sv(x,u,x), disjoint(v,w), spo(u,v), spo(u,w)");
+        rules.put("disnom",  "sco(x," + bot + ") :- disjoint(v,w), nominal(y), sco(x,x1), sco(x,x2), sv(x1,v,x1'), sv(x2,w,x2'), sco(x1',y), sco(x2',y)");
+        rules.put("disspo",  "sco(y," + bot + ") :- sco(y,x), sv(x,u,x'), disjoint(v,w), spo(u,v), spo(u,w)");
         rules.put("disself", "sco(x," + bot + ") :- disjoint(v,w), sco(x,y1), sco(x,y2), self(y1,v), self(y2,w)");
 
 		rules.put("dissub1", "disjoint(p,q) :- disjoint(p1,q1), spo(p,p1), spo(q,q1)");
