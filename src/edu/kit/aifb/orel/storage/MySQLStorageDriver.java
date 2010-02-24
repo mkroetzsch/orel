@@ -9,27 +9,16 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
-
-import org.semanticweb.owlapi.model.OWLObject;
-import org.semanticweb.owlapi.model.OWLClassExpression;
-import org.semanticweb.owlapi.model.OWLIndividual;
-import org.semanticweb.owlapi.model.OWLNaryBooleanClassExpression;
-import org.semanticweb.owlapi.model.OWLObjectIntersectionOf;
-import org.semanticweb.owlapi.model.OWLObjectOneOf;
-import org.semanticweb.owlapi.model.OWLObjectUnionOf;
-import org.semanticweb.owlapi.model.OWLPropertyExpression;
 
 import edu.kit.aifb.orel.inferencing.InferenceRuleDeclaration;
 import edu.kit.aifb.orel.inferencing.PredicateAtom;
 import edu.kit.aifb.orel.inferencing.PredicateDeclaration;
 import edu.kit.aifb.orel.inferencing.PredicateTerm;
+import edu.kit.aifb.orel.kbmanager.BasicExpressionVisitor;
 
 /**
  * Class for implementing a simple caching interface for DB access, 
@@ -339,23 +328,27 @@ public class MySQLStorageDriver implements StorageDriver {
 	
 	/* *** Basic data access *** */
 
-	public void makePredicateAssertion(String predicate, int... ids) throws SQLException {
-		PreparedStatement stmt = prepinsertstmts.get(predicate);
-		if (stmt == null) {
-			stmt = getPreparedInsertStatement(predicate);
-			prepinsertstmts.put(predicate, stmt);
-			prepinsertstmtsizes.put(predicate, 0);
-		}
-		for (int i=0; i<ids.length; i++) {
-			stmt.setInt(i+1, ids[i]);
-		}
-		stmt.addBatch();
-		int cursize = prepinsertstmtsizes.get(predicate)+1;
-		if (cursize >= maxbatchsize) {
-			stmt.executeBatch();
-			prepinsertstmtsizes.put(predicate,0);
-		} else {
-			prepinsertstmtsizes.put(predicate,cursize);
+	public void makePredicateAssertion(String predicate, int... ids) {
+		try {
+			PreparedStatement stmt = prepinsertstmts.get(predicate);
+			if (stmt == null) {
+				stmt = getPreparedInsertStatement(predicate);
+				prepinsertstmts.put(predicate, stmt);
+				prepinsertstmtsizes.put(predicate, 0);
+			}
+			for (int i=0; i<ids.length; i++) {
+				stmt.setInt(i+1, ids[i]);
+			}
+			stmt.addBatch();
+			int cursize = prepinsertstmtsizes.get(predicate)+1;
+			if (cursize >= maxbatchsize) {
+				stmt.executeBatch();
+				prepinsertstmtsizes.put(predicate,0);
+			} else {
+				prepinsertstmtsizes.put(predicate,cursize);
+			}
+		} catch (SQLException e) {
+			System.err.println(e.toString());
 		}
 	}
 	
@@ -376,7 +369,7 @@ public class MySQLStorageDriver implements StorageDriver {
 		}
 	}
 	
-	public boolean checkPredicateAssertion(String predicate, int... ids) throws SQLException {
+	public boolean checkPredicateAssertion(String predicate, int... ids) {
 		ArrayList<PreparedStatement> stmts = prepcheckstmts.get(predicate);
 		if (stmts == null) {
 			stmts = new ArrayList<PreparedStatement>(1);
@@ -386,14 +379,18 @@ public class MySQLStorageDriver implements StorageDriver {
 		Iterator<PreparedStatement> stmtit = stmts.iterator();
 		PreparedStatement stmt;
 		boolean result = false;
-		while (!result && stmtit.hasNext()) {
-			stmt = stmtit.next();
-			for (int i=0; i<ids.length; i++) {
-				stmt.setInt(i+1, ids[i]);
+		try {
+			while (!result && stmtit.hasNext()) {
+				stmt = stmtit.next();
+				for (int i=0; i<ids.length; i++) {
+					stmt.setInt(i+1, ids[i]);
+				}
+				ResultSet res = stmt.executeQuery();
+				result = (res.next());
+				res.close();
 			}
-			ResultSet res = stmt.executeQuery();
-			result = (res.next());
-			res.close();
+		} catch (SQLException e) {
+			System.err.println(e.toString());
 		}
 		return result;
 	}
@@ -759,109 +756,26 @@ public class MySQLStorageDriver implements StorageDriver {
 
 	/* *** Id management *** */
 	
-	/**
-	 * Produce a canonical string name based on the given operator name and operand list.
-	 * For commutative operators like ObjectIntersectionOf, the operands should be sorted
-	 * before being passed to this method, so as to ensure a consistent representation.
-	 * TODO Check if this is still used for sets of individuals by anybody. Otherwise 
-	 * reduce to class expressions.
-	 */
-	protected String getCanonicalName(String opname, List<? extends OWLObject> operands) {
-		String result = opname + "(";
-		for (int i=0; i<operands.size(); i++) {
-			if (operands.get(i) instanceof OWLIndividual) {
-				result = result + " " + getCanonicalName((OWLIndividual)operands.get(i));
-			} else if (operands.get(i) instanceof OWLClassExpression) {
-				result = result + " " + getCanonicalName((OWLClassExpression)operands.get(i));
-			}
-		}
-		return result + " )";
-	}
-	
-	protected String getCanonicalName(OWLClassExpression description) {
-		if (description.isOWLNothing()) {
-			return StorageDriver.OP_NOTHING;
-		} else if (description.isOWLThing()) {
-			return StorageDriver.OP_THING;
-		} else if (description instanceof OWLObjectOneOf) {
-			Set<OWLIndividual> ops = ((OWLObjectOneOf) description).getIndividuals();
-			if (ops.size() == 1) {
-				return getCanonicalName(ops.iterator().next());
-			} else {
-				return getCanonicalName(((OWLObjectOneOf) description).asObjectUnionOf());
-			}
-		} else if (description instanceof OWLNaryBooleanClassExpression) {
-			String opname;
-			if (description instanceof OWLObjectIntersectionOf) {
-				opname = StorageDriver.OP_OBJECT_INTERSECTION;
-			} else if (description instanceof OWLObjectUnionOf) {
-				opname = StorageDriver.OP_OBJECT_UNION;
-			} else {
-				System.err.println("Unsupported nary class expression " + description.toString());
-				return description.toString();
-			}
-			ArrayList<OWLClassExpression> ops = new ArrayList<OWLClassExpression>(((OWLNaryBooleanClassExpression) description).getOperands());
-			Collections.sort(ops); // make sure that we have a defined order; cannot have random changes between prepare and check!
-			return getCanonicalName(opname,ops);
-		} else {
-			return description.toString();
-		}
-	}
-	
-	protected String getCanonicalName(OWLIndividual individual) {
-		// treat individuals like nominals
-		return  StorageDriver.OP_OBJECT_ONE_OF + "(" + individual.toString() + ")";
-	}
-	
-	/**
-	 * Produce an id based on the given operator name and operand list.
-	 * For commutative operators like ObjectIntersectionOf, the operands should be sorted
-	 * before being passed to this method, so as to ensure a consistent representation.
-	 */
-	public int getIDForNaryExpression(String opname, List<? extends OWLObject> operands) {
-		return getIDForString(getCanonicalName(opname, operands));
-	}
-	
-	public int getID(OWLClassExpression description) {
-		return getIDForString(getCanonicalName(description));
-	}
-
-	public int getID(OWLIndividual individual) {
-		return getIDForString(getCanonicalName(individual));
-	}
-	
-	public int getID(SimpleLiteral literal) {
-		return getIDForString(literal.toString());
-	}
-	
-	public int getID(OWLPropertyExpression<?,?> property) {
-		return getIDForString(property.toString());
-	}
-	
 	public int getIDForNothing() {
-		return getIDForString(StorageDriver.OP_NOTHING);
+		return getID(BasicExpressionVisitor.OP_NOTHING);
 	}
 
 	public int getIDForThing() {
-		return getIDForString(StorageDriver.OP_THING);
+		return getID(BasicExpressionVisitor.OP_THING);
 	}
 	
 	public int getIDForDatatypeURI(String uri) {
-		return getIDForString(uri);
+		return getID(uri);
 	}
 	
-	public int getSkolemID(OWLClassExpression description) {
-		return getIDForString("C(" + getCanonicalName(description) + ")");
-	}
-	
-	protected int getIDForString(String description) {
+	public int getID(String key) {
 		int id = 0;
 		//System.out.println("Getting id for " + description); // debug
 		String hash;
-		if (description.toCharArray().length < namefieldlength) { // try to keep names intact ...
-			hash = description;
+		if (key.toCharArray().length < namefieldlength) { // try to keep names intact ...
+			hash = key;
 		} else { // ... but use a hash if the string is too long
-			digest.update(description.getBytes());
+			digest.update(key.getBytes());
 			hash = "_" + getHex(digest.digest());
 		}
 		if (ids.containsKey(hash)) { // id in LRU cache

@@ -114,11 +114,15 @@ public class BasicKBManager {
 		storage.registerPredicate( new PredicateDeclaration("self",2,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("subself",2,false,false) );
 		storage.registerPredicate( new PredicateDeclaration("subconjunctionof",3,false,false) );
+		storage.registerPredicate( new PredicateDeclaration("dsubconjunctionof",3,false,false) );
 		storage.registerPredicate( new PredicateDeclaration("subsomevalues",3,false,false) );
+		storage.registerPredicate( new PredicateDeclaration("dsubsomevalues",3,false,false) );
 		storage.registerPredicate( new PredicateDeclaration("suballvalues",3,false,false) );
 		storage.registerPredicate( new PredicateDeclaration("spoc",3,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("spo",2,true,false) );
+		storage.registerPredicate( new PredicateDeclaration("dspo",2,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("disjoint",2,true,false) );
+		storage.registerPredicate( new PredicateDeclaration("ddisjoint",2,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("nominal",1,false,false) );
 		storage.registerPredicate( new PredicateDeclaration("dnominal",1,false,false) );
 		storage.registerPredicate( new PredicateDeclaration("nonempty",1,true,false) );

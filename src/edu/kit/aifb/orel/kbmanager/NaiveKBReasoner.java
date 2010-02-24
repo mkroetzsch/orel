@@ -103,14 +103,40 @@ public class NaiveKBReasoner {
         rules.put("selfnom-self", "self(x,p) :- nominal(x), sco(x,y), self(y,p), sco(y,x)");
 
 		// <<<Role Disjointness:>>>
-		rules.put("disnom",  "sco(x," + bot + ") :- disjoint(v,w), nominal(y), sco(x,x1), sco(x,x2), sv(x1,v,x1), sv(x2,w,x2), sco(x1,y), sco(x2,y)");
-		rules.put("disspo",  "sco(y," + bot + ") :- sco(y,x), sv(x,u,x), disjoint(v,w), spo(u,v), spo(u,w)");
-		rules.put("disself", "sco(x," + bot + ") :- disjoint(v,w), sco(x,y1), sco(x,y2), self(y1,v), self(y2,w)");
+        rules.put("disnom",  "sco(x," + bot + ") :- disjoint(v,w), nominal(y), sco(x,x1), sco(x,x2), sv(x1,v,x1), sv(x2,w,x2), sco(x1,y), sco(x2,y)");
+        rules.put("disspo",  "sco(y," + bot + ") :- sco(y,x), sv(x,u,x), disjoint(v,w), spo(u,v), spo(u,w)");
+        rules.put("disself", "sco(x," + bot + ") :- disjoint(v,w), sco(x,y1), sco(x,y2), self(y1,v), self(y2,w)");
 
 		rules.put("dissub1", "disjoint(p,q) :- disjoint(p1,q1), spo(p,p1), spo(q,q1)");
 		rules.put("dissub2", "disjoint(p,q) :- subsomevalues(p," + top + ",x), subsomevalues(q," + top + ",y), sco(x,x'), sco(y,y'), subconjunctionof(x',y',z'), sco(z'," + bot + ")");
 		rules.put("dissub3", "disjoint(p,q) :- ran(p,x), ran(q,y), sco(x,x'), sco(y,y'), subconjunctionof(x',y',z'), sco(z'," + bot + ")");
 		rules.put("dissym",  "disjoint(p,q) :- disjoint(q,p)");
+		
+		//// Datatype property versions of rules below:
+        /// dspoc [not existing in OWL 2] 
+        /// dspo
+        //TODO: property(p) --> spo(p,p)
+        rules.put("dspo",           "dspo(p,r) :- dspo(p,q), dspo(q,r)");
+        /// dsco
+        // NOTE: we create sco(x,top), sco(bot,x), and sco(x,x) at load time
+        rules.put("dsco",         "dsco(x,z) :- dsco(x,y), dsco(y,z)"); 
+        rules.put("dcon",         "dsco(x,z) :- dsco(x,y1), dsco(x,y2), dsubconjunctionof(y1,y2,z)");
+        rules.put("dsvr",         "dsco(x,z) :- dsv(x,p,y), dsco(y,y'), dsubsomevalues(p,y',z)");
+        rules.put("dscoeq",       "dsco(y,x) :- dnonempty(x), dnominal(y), dsco(x,y)");
+        rules.put("dscoran",      "dsco(x,y) :- dsv(x,p,y), dran(p,y)");
+        /// dsvp
+        rules.put("dsvp",          "dsv(x,q,y) :- dsv(x,p,y), dspo(p,q)");
+        /// dran
+        rules.put("dranp",   "dran(q,x) :- dran(p,x), dspo(q,p)");
+        rules.put("dransco", "dran(p,y) :- dran(p,x), dsco(x,y)");
+        rules.put("drancon", "dran(p,z) :- dran(p,x), dran(p,y), dsubconjunctionof(x,y,z)"); 
+        /// dnonempty
+        rules.put("dnenom",  "dnonempty(x) :- dnominal(x)");
+        rules.put("dnesco",  "dnonempty(y) :- dnonempty(x), dsco(x,y)");
+        /// dself [not existing in OWL 2]
+
+		// <<<Role Disjointness:>>>
+        // TODO
 		
 		/* old rule set below
 		 

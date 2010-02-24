@@ -1,20 +1,15 @@
 package edu.kit.aifb.orel.kbmanager;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Set;
-
 import org.semanticweb.owlapi.model.*;
-
-import edu.kit.aifb.orel.storage.SimpleLiteral;
 import edu.kit.aifb.orel.storage.StorageDriver;
 
 public class BasicKBLoader {
 	protected StorageDriver storage;
 	protected OWLDataFactory datafactory;
+	protected BasicExpressionVisitor expvisitor;
+	protected BasicAxiomVisitor axiomvisitor;
 	
 	/// Flags for more fine-grained control of actions during axiom processing
 	static protected final int CHECK = 1;
@@ -37,6 +32,8 @@ public class BasicKBLoader {
 	public boolean processOntology(OWLOntology ontology, int todos) throws Exception {
 		boolean result = true;
 		datafactory = ontology.getOWLOntologyManager().getOWLDataFactory();
+		expvisitor = new BasicExpressionVisitor(BasicExpressionVisitor.Action.READ,storage);
+		axiomvisitor = new BasicAxiomVisitor(storage,datafactory,expvisitor,todos);
 		boolean writing = ( (todos & BasicKBLoader.WRITE) != 0 );
 		if ( writing ) { // initialize bridge and prepare for bulk insert:
 			storage.beginLoading();
@@ -44,11 +41,9 @@ public class BasicKBLoader {
 		// iterate over ontology to load all axioms:
 		Set<OWLLogicalAxiom> axiomset = ontology.getLogicalAxioms();
 		Iterator<OWLLogicalAxiom> axiomiterator = axiomset.iterator();
-		OWLLogicalAxiom axiom;
 		int count = 0;
-		while( (result || writing) && axiomiterator.hasNext()){
-			axiom = axiomiterator.next();
-			result = processLogicalAxiom(axiom, todos) && result;
+		while ( (result || writing) && axiomiterator.hasNext() ) {
+			result = axiomiterator.next().accept(axiomvisitor) && result;
 			count++;
 			if (count % 100  == 0 ) System.out.print(".");
 		}
@@ -59,114 +54,140 @@ public class BasicKBLoader {
 		return result;
 	}
 	
-	@SuppressWarnings("unchecked")
-	protected boolean processLogicalAxiom(OWLLogicalAxiom axiom, int todos) throws Exception {
+	//@SuppressWarnings("unchecked")
+/*	protected boolean processLogicalAxiom(OWLLogicalAxiom axiom, int todos) throws Exception {
 		//System.out.println("Processing axiom " + axiom.toString()); // debug
 		boolean result;
-		if (axiom instanceof OWLSubClassOfAxiom) {
-			result = processSubclassOf(((OWLSubClassOfAxiom) axiom).getSubClass(), ((OWLSubClassOfAxiom) axiom).getSuperClass(),todos);
-		} else if (axiom instanceof OWLEquivalentClassesAxiom) {
-			result = processEquivalentClasses(((OWLEquivalentClassesAxiom)axiom).getClassExpressions(),todos);
-		} else if (axiom instanceof OWLDisjointClassesAxiom) {
-			result = processDisjointClasses(((OWLDisjointClassesAxiom)axiom).getClassExpressions(),todos);
-		} else if (axiom instanceof OWLDisjointUnionAxiom) {
-			result = false; // no disjoint unions in OWL RL/EL
-			System.err.println("The following axiom is not supported: " + axiom + "\n");
-		} else if (axiom instanceof OWLSubObjectPropertyOfAxiom) {
-			result = processSubObjectPropertyOf(((OWLSubObjectPropertyOfAxiom) axiom).getSubProperty(), ((OWLSubPropertyAxiom<OWLObjectProperty>) axiom).getSuperProperty(),todos);
-		} else if (axiom instanceof OWLSubPropertyChainOfAxiom) {
-			result = processSubpropertyChainOf(((OWLSubPropertyChainOfAxiom) axiom).getPropertyChain(), ((OWLSubPropertyChainOfAxiom) axiom).getSuperProperty(),todos);
-		} else if (axiom instanceof OWLEquivalentObjectPropertiesAxiom) {	
-			result = processEquivalentObjectProperties(((OWLEquivalentObjectPropertiesAxiom) axiom).getProperties(),todos);
-		} else if (axiom instanceof OWLInverseObjectPropertiesAxiom) {
-			result = false; // TODO
-			System.err.println("The following axiom is not supported: " + axiom + "\n");
-		} else if (axiom instanceof OWLFunctionalObjectPropertyAxiom) {
-			result = false; // TODO
-			System.err.println("The following axiom is not supported: " + axiom + "\n");
-		} else if (axiom instanceof OWLInverseFunctionalObjectPropertyAxiom) {
-			result = false; // TODO
-			System.err.println("The following axiom is not supported: " + axiom + "\n");
-		} else if (axiom instanceof OWLSymmetricObjectPropertyAxiom) {
-			result = false; // TODO
-			System.err.println("The following axiom is not supported: " + axiom + "\n");
-		} else if (axiom instanceof OWLAsymmetricObjectPropertyAxiom) {
-			result = false; // TODO
-			System.err.println("The following axiom is not supported: " + axiom + "\n");
-		} else if (axiom instanceof OWLTransitiveObjectPropertyAxiom) {
-			ArrayList<OWLObjectPropertyExpression> chain = new ArrayList<OWLObjectPropertyExpression>(2);
-			OWLObjectPropertyExpression p = ((OWLTransitiveObjectPropertyAxiom)axiom).getProperty();
-			chain.add(p);
-			chain.add(p);
-			result = processSubpropertyChainOf(chain, p, todos);
-		} else if (axiom instanceof OWLReflexiveObjectPropertyAxiom) {
-			result = processSubclassOf(datafactory.getOWLThing(), datafactory.getOWLObjectHasSelf(((OWLReflexiveObjectPropertyAxiom)axiom).getProperty()),todos);
-		} else if (axiom instanceof OWLIrreflexiveObjectPropertyAxiom) {
-			result = false; // TODO
-			System.err.println("The following axiom is not supported: " + axiom + "\n");
-		} else if (axiom instanceof OWLObjectPropertyDomainAxiom) {
-			OWLObjectPropertyDomainAxiom pda = (OWLObjectPropertyDomainAxiom)axiom;
-			result = processSubclassOf(datafactory.getOWLObjectSomeValuesFrom(pda.getProperty(), datafactory.getOWLThing()), pda.getDomain(),todos);
-		} else if (axiom instanceof OWLObjectPropertyRangeAxiom) {
-			result = processRange(((OWLObjectPropertyRangeAxiom)axiom).getProperty(),((OWLObjectPropertyRangeAxiom)axiom).getRange(),todos);
-		} else if (axiom instanceof OWLDisjointObjectPropertiesAxiom) {
-			result = processDisjointProperties(((OWLDisjointObjectPropertiesAxiom)axiom).getProperties(),todos);
-		} else if (axiom instanceof OWLEquivalentDataPropertiesAxiom) {
-			result = false; // TODO
-			System.err.println("The following axiom is not supported: " + axiom + "\n");
-		} else if (axiom instanceof OWLSubDataPropertyOfAxiom) {
-			result = false; // TODO
-			System.err.println("The following axiom is not supported: " + axiom + "\n");
-		} else if (axiom instanceof OWLFunctionalDataPropertyAxiom) {
-			result = false; // TODO
-			System.err.println("The following axiom is not supported: " + axiom + "\n");
-		} else if (axiom instanceof OWLDataPropertyDomainAxiom) {
-			result = false; // TODO
-			System.err.println("The following axiom is not supported: " + axiom + "\n");
-		} else if (axiom instanceof OWLDataPropertyRangeAxiom) {
-			result = false; // TODO
-			System.err.println("The following axiom is not supported: " + axiom + "\n");
-		} else if (axiom instanceof OWLDisjointDataPropertiesAxiom) {
-			result = false; // TODO
-			System.err.println("The following axiom is not supported: " + axiom + "\n");
-		} else if (axiom instanceof OWLHasKeyAxiom) {
-			result = false; // TODO
-			System.err.println("The following axiom is not supported: " + axiom + "\n");
-		} else if (axiom instanceof OWLClassAssertionAxiom) {
-			result = processClassAssertion( ((OWLClassAssertionAxiom) axiom).getIndividual(), ((OWLClassAssertionAxiom) axiom).getClassExpression(),todos); 
-		} else if (axiom instanceof OWLObjectPropertyAssertionAxiom) {
-			OWLObjectPropertyAssertionAxiom pa = (OWLObjectPropertyAssertionAxiom) axiom;
-			result = processSubclassOf( datafactory.getOWLObjectOneOf(pa.getSubject()) ,
-			                            datafactory.getOWLObjectSomeValuesFrom(
-					                       pa.getProperty(), datafactory.getOWLObjectOneOf(pa.getObject()) ), todos );
-		} else if (axiom instanceof OWLSameIndividualAxiom) {
-			result = processSameIndividuals(((OWLSameIndividualAxiom)axiom).getIndividuals(),todos);
-		} else if (axiom instanceof OWLDifferentIndividualsAxiom) {
-			result = processDifferentIndividuals(((OWLDifferentIndividualsAxiom)axiom).getIndividuals(),todos);
-		} else if (axiom instanceof OWLNegativeObjectPropertyAssertionAxiom) {
-			OWLNegativeObjectPropertyAssertionAxiom pa = (OWLNegativeObjectPropertyAssertionAxiom) axiom;
-			Set<OWLClassExpression> classes = new HashSet<OWLClassExpression>();
-			classes.add( datafactory.getOWLObjectOneOf(pa.getSubject()) );
-			classes.add( datafactory.getOWLObjectSomeValuesFrom(
-					pa.getProperty(), datafactory.getOWLObjectOneOf(pa.getObject()) ) );
-			result = processDisjointClasses(classes, todos);
-		} else if (axiom instanceof OWLDataPropertyAssertionAxiom) {
-			OWLDataPropertyAssertionAxiom pa = (OWLDataPropertyAssertionAxiom) axiom;
-			result = processDataPropertyAssertion( pa.getSubject(), pa.getProperty(), pa.getObject(),todos);
-		} else if (axiom instanceof OWLNegativeDataPropertyAssertionAxiom) {
-			result = false; // TODO
-			System.err.println("The following axiom is not supported: " + axiom + "\n");
-		} else { // unknown logical axiom type
-			result = false;
-			System.err.println("The following axiom is not supported: " + axiom + "\n");
-		}
+			if (axiom instanceof OWLSubClassOfAxiom) {
+				//done
+				result = processSubclassOf(((OWLSubClassOfAxiom) axiom).getSubClass(), ((OWLSubClassOfAxiom) axiom).getSuperClass(),todos);
+			} else if (axiom instanceof OWLEquivalentClassesAxiom) {
+				//done
+				result = processEquivalentClasses(((OWLEquivalentClassesAxiom)axiom).getClassExpressions(),todos);
+			} else if (axiom instanceof OWLDisjointClassesAxiom) {
+				//done
+				result = processDisjointClasses(((OWLDisjointClassesAxiom)axiom).getClassExpressions(),todos);
+			} else if (axiom instanceof OWLDisjointUnionAxiom) {
+				// done
+				result = false; // no disjoint unions in OWL RL/EL
+				System.err.println("The following axiom is not supported: " + axiom + "\n");
+			} else if (axiom instanceof OWLSubObjectPropertyOfAxiom) {
+				// done
+				result = processSubObjectPropertyOf(((OWLSubObjectPropertyOfAxiom) axiom).getSubProperty(), ((OWLSubPropertyAxiom<OWLObjectProperty>) axiom).getSuperProperty(),todos);
+			} else if (axiom instanceof OWLSubPropertyChainOfAxiom) {
+				// done
+				result = processSubpropertyChainOf(((OWLSubPropertyChainOfAxiom) axiom).getPropertyChain(), ((OWLSubPropertyChainOfAxiom) axiom).getSuperProperty(),todos);
+			} else if (axiom instanceof OWLEquivalentObjectPropertiesAxiom) {
+				// done
+				result = processEquivalentObjectProperties(((OWLEquivalentObjectPropertiesAxiom) axiom).getProperties(),todos);
+			} else if (axiom instanceof OWLInverseObjectPropertiesAxiom) {
+				result = false; // TODO
+				System.err.println("The following axiom is not supported: " + axiom + "\n");
+			} else if (axiom instanceof OWLFunctionalObjectPropertyAxiom) {
+				result = false; // TODO
+				System.err.println("The following axiom is not supported: " + axiom + "\n");
+			} else if (axiom instanceof OWLInverseFunctionalObjectPropertyAxiom) {
+				result = false; // TODO
+				System.err.println("The following axiom is not supported: " + axiom + "\n");
+			} else if (axiom instanceof OWLSymmetricObjectPropertyAxiom) {
+				result = false; // TODO
+				System.err.println("The following axiom is not supported: " + axiom + "\n");
+			} else if (axiom instanceof OWLAsymmetricObjectPropertyAxiom) {
+				result = false; // TODO
+				System.err.println("The following axiom is not supported: " + axiom + "\n");
+			} else if (axiom instanceof OWLTransitiveObjectPropertyAxiom) {
+				// done
+				ArrayList<OWLObjectPropertyExpression> chain = new ArrayList<OWLObjectPropertyExpression>(2);
+				OWLObjectPropertyExpression p = ((OWLTransitiveObjectPropertyAxiom)axiom).getProperty();
+				chain.add(p);
+				chain.add(p);
+				result = processSubpropertyChainOf(chain, p, todos);
+			} else if (axiom instanceof OWLReflexiveObjectPropertyAxiom) {
+				// done
+				result = processSubclassOf(datafactory.getOWLThing(), datafactory.getOWLObjectHasSelf(((OWLReflexiveObjectPropertyAxiom)axiom).getProperty()),todos);
+			} else if (axiom instanceof OWLIrreflexiveObjectPropertyAxiom) {
+				result = false; // TODO
+				System.err.println("The following axiom is not supported: " + axiom + "\n");
+			} else if (axiom instanceof OWLObjectPropertyDomainAxiom) {
+				// done
+				OWLObjectPropertyDomainAxiom pda = (OWLObjectPropertyDomainAxiom)axiom;
+				result = processSubclassOf(datafactory.getOWLObjectSomeValuesFrom(pda.getProperty(), datafactory.getOWLThing()), pda.getDomain(),todos);
+			} else if (axiom instanceof OWLObjectPropertyRangeAxiom) {
+				// done
+				result = processRange(((OWLObjectPropertyRangeAxiom)axiom).getProperty(),((OWLObjectPropertyRangeAxiom)axiom).getRange(),todos);
+			} else if (axiom instanceof OWLDisjointObjectPropertiesAxiom) {
+				// done
+				result = processDisjointProperties(((OWLDisjointObjectPropertiesAxiom)axiom).getProperties(),todos);
+			} else if (axiom instanceof OWLEquivalentDataPropertiesAxiom) {
+				result = false; // TODO
+				System.err.println("The following axiom is not supported: " + axiom + "\n");
+			} else if (axiom instanceof OWLSubDataPropertyOfAxiom) {
+				result = false; // TODO
+				System.err.println("The following axiom is not supported: " + axiom + "\n");
+			} else if (axiom instanceof OWLFunctionalDataPropertyAxiom) {
+				result = false; // TODO
+				System.err.println("The following axiom is not supported: " + axiom + "\n");
+			} else if (axiom instanceof OWLDataPropertyDomainAxiom) {
+				result = false; // TODO
+				System.err.println("The following axiom is not supported: " + axiom + "\n");
+			} else if (axiom instanceof OWLDataPropertyRangeAxiom) {
+				result = false; // TODO
+				System.err.println("The following axiom is not supported: " + axiom + "\n");
+			} else if (axiom instanceof OWLDisjointDataPropertiesAxiom) {
+				result = false; // TODO
+				System.err.println("The following axiom is not supported: " + axiom + "\n");
+			} else if (axiom instanceof OWLHasKeyAxiom) {
+				result = false; // TODO
+				System.err.println("The following axiom is not supported: " + axiom + "\n");
+			} else if (axiom instanceof OWLClassAssertionAxiom) {
+				// done
+				result = processClassAssertion( ((OWLClassAssertionAxiom) axiom).getIndividual(), ((OWLClassAssertionAxiom) axiom).getClassExpression(),todos); 
+			} else if (axiom instanceof OWLObjectPropertyAssertionAxiom) {
+				// done
+				OWLObjectPropertyAssertionAxiom pa = (OWLObjectPropertyAssertionAxiom)axiom;
+				result = processSubclassOf( datafactory.getOWLObjectOneOf(pa.getSubject()) ,
+				                            datafactory.getOWLObjectSomeValuesFrom(
+						                       pa.getProperty(), datafactory.getOWLObjectOneOf(pa.getObject()) ), todos );
+			} else if (axiom instanceof OWLSameIndividualAxiom) {
+				// done
+				result = processSameIndividuals(((OWLSameIndividualAxiom)axiom).getIndividuals(),todos);
+			} else if (axiom instanceof OWLDifferentIndividualsAxiom) {
+				// done
+				result = processDifferentIndividuals(((OWLDifferentIndividualsAxiom)axiom).getIndividuals(),todos);
+			} else if (axiom instanceof OWLNegativeObjectPropertyAssertionAxiom) {
+				// done
+				OWLNegativeObjectPropertyAssertionAxiom pa = (OWLNegativeObjectPropertyAssertionAxiom)axiom;
+				Set<OWLClassExpression> classes = new HashSet<OWLClassExpression>();
+				classes.add( datafactory.getOWLObjectOneOf(pa.getSubject()) );
+				classes.add( datafactory.getOWLObjectSomeValuesFrom(
+						pa.getProperty(), datafactory.getOWLObjectOneOf(pa.getObject()) ) );
+				result = processDisjointClasses(classes, todos);
+			} else if (axiom instanceof OWLDataPropertyAssertionAxiom) {
+				// done
+				OWLDataPropertyAssertionAxiom pa = (OWLDataPropertyAssertionAxiom)axiom;
+				result = processDataPropertyAssertion( pa.getSubject(), pa.getProperty(), pa.getObject(),todos);
+			} else if (axiom instanceof OWLNegativeDataPropertyAssertionAxiom) {
+				// done
+				OWLNegativeDataPropertyAssertionAxiom pa = (OWLNegativeDataPropertyAssertionAxiom)axiom;
+				Set<OWLClassExpression> classes = new HashSet<OWLClassExpression>();
+				classes.add( datafactory.getOWLObjectOneOf(pa.getSubject()) );
+				classes.add( datafactory.getOWLDataSomeValuesFrom(
+						pa.getProperty(), datafactory.getOWLDataOneOf(pa.getObject()) ) );
+				result = processDisjointClasses(classes, todos);
+			} else { // unknown logical axiom type
+				result = false;
+				System.err.println("The following axiom is not supported: " + axiom + "\n");
+			}
 		return result;
 	}
 
 	protected boolean processSubclassOf(OWLClassExpression c1, OWLClassExpression c2, int todos) throws Exception {
 		boolean result = true;
-		int id1 = storage.getID(c1);
-		int id2 = storage.getID(c2);
+		String c1key = expvisitor.visitAndAct(c1,getVisitorBodyAction(todos));
+		String c2key = expvisitor.visitAndAct(c1,getVisitorHeadAction(todos));
+		if ( (c1key == null) || (c2key == null) ) return false;
+		int id1 = storage.getID(c1key);
+		int id2 = storage.getID(c2key);
 		if ( (todos & BasicKBLoader.ASSERT) != 0 ) { 
 			// trivial cases not stored
 			if (id1 != id2)	storage.makePredicateAssertion("sco",id1,id2);
@@ -176,10 +197,6 @@ public class BasicKBLoader {
 			//if ( (!c1.isOWLNothing()) && (!c2.isOWLThing()) ) { // no need to check if trivial
 				result = storage.checkPredicateAssertion("sco",id1,id2);
 			}
-		}
-		if ( (todos & BasicKBLoader.PREPARE) != 0 ) {
-			result = createBodyFacts(id1,c1,((todos & BasicKBLoader.PREPARECHECK)!=0)) && result;
-			result = createHeadFacts(id2,c2,((todos & BasicKBLoader.PREPARECHECK)!=0)) && result;
 		}
 		return result;
 	}
@@ -343,7 +360,7 @@ public class BasicKBLoader {
 		return result;
 	}
 
-/*	protected boolean processObjectPropertyAssertion(OWLIndividual s, OWLObjectPropertyExpression p, OWLIndividual o, int todos) throws Exception {
+	protected boolean processObjectPropertyAssertion(OWLIndividual s, OWLObjectPropertyExpression p, OWLIndividual o, int todos) throws Exception {
 		boolean result = true;
 		int sid = storage.getID(s);
 		int pid = storage.getID(p);
@@ -360,7 +377,7 @@ public class BasicKBLoader {
 			createHeadFacts(oid,o,((todos & BasicKBLoader.PREPARECHECK)!=0));
 		}
 		return result;
-	}*/
+	}
 
 	protected boolean processDataPropertyAssertion(OWLIndividual s, OWLDataPropertyExpression p, OWLLiteral l, int todos) throws Exception {
 		boolean result = true;
@@ -376,6 +393,7 @@ public class BasicKBLoader {
 			result = storage.checkPredicateAssertion("dsv",sid,pid,lid);
 		}
 		if ( (todos & BasicKBLoader.PREPARE) != 0 ) {
+			result = createPropertyFacts(pid, p) && result;
 			result = createBodyFacts(sid,s,((todos & BasicKBLoader.PREPARECHECK)!=0)) && result;
 			result = createHeadFacts(lid,sl,((todos & BasicKBLoader.PREPARECHECK)!=0)) && result;
 		}
@@ -447,7 +465,7 @@ public class BasicKBLoader {
 			result = result && processSameIndividuals((OWLIndividual)inds[i],(OWLIndividual)inds[j], todos);
 		}
 		return result;
-	}
+	}*/
 	
 
 	/**
@@ -460,7 +478,7 @@ public class BasicKBLoader {
 	 * @param i
 	 * @throws Exception
 	 */
-	protected boolean createBodyFacts(int id, OWLIndividual i, boolean invert) throws Exception {
+/*	protected boolean createBodyFacts(int id, OWLIndividual i, boolean invert) throws Exception {
 		if (invert) {
 			return createHeadFacts(id,i,false);
 		}
@@ -477,6 +495,37 @@ public class BasicKBLoader {
 		storage.makePredicateAssertion("dnominal",id);
 		storage.makePredicateAssertion("dnonempty",id);
 		return true;
+	}
+	
+	protected boolean createBodyFacts(int id, OWLDataRange d, boolean invert) throws Exception {
+		if (invert) {
+			return createHeadFacts(id,d,false);
+		}
+		boolean result = true;
+		createDataRangeTautologies(id);
+		if (d instanceof OWLDataOneOf) {
+			Set<OWLLiteral> values = ((OWLDataOneOf)d).getValues();
+			SimpleLiteral value;
+			if (values.size() == 1) {
+				value = Literals.makeSimpleLiteral(values.iterator().next());
+				if (value == null) return false;
+				result = createBodyFacts(id,value,false);
+			} else {
+				Iterator<OWLLiteral> litit = values.iterator();
+				int sid;
+				while (litit.hasNext()) {
+					value = Literals.makeSimpleLiteral(litit.next());
+					if (value == null) continue;
+					sid = storage.getID(value);
+					storage.makePredicateAssertion("dsco",sid,id);
+					result = createBodyFacts(sid,value,false) && result;
+				}
+			}
+		} else {// TODO: add more data range types
+			System.err.println("Unsupported body data range: " + d.toString());
+			result = false;
+		}
+		return result;
 	}
 	
 	protected boolean createBodyFacts(int id, OWLClassExpression d, boolean invert) throws Exception {
@@ -522,6 +571,21 @@ public class BasicKBLoader {
 			} else {
 				result = createBodyFacts(id,((OWLObjectOneOf)d).asObjectUnionOf(),false);
 			}
+		} else if (d instanceof OWLDataSomeValuesFrom) {
+			int pid = storage.getID(((OWLDataSomeValuesFrom)d).getProperty());
+			OWLDataRange filler = ((OWLDataSomeValuesFrom)d).getFiller();
+			int sid = storage.getID(filler);
+			storage.makePredicateAssertion("dsubsomevalues",pid,sid,id);
+			result = createPropertyFacts(pid,((OWLDataSomeValuesFrom)d).getProperty());
+			result = createBodyFacts(sid,filler,false) && result;
+		} else if (d instanceof OWLDataHasValue) {
+			int pid = storage.getID(((OWLDataHasValue)d).getProperty());
+			SimpleLiteral value = Literals.makeSimpleLiteral(((OWLDataHasValue)d).getValue());
+			if (value == null) return false;
+			int sid = storage.getID(value);
+			storage.makePredicateAssertion("dsubsomevalues",pid,sid,id);
+			result = createPropertyFacts(pid,((OWLDataHasValue)d).getProperty());
+			result = createBodyFacts(sid,value,false) && result;
 		} else if (d instanceof OWLObjectHasSelf) {
 			int pid = storage.getID(((OWLObjectHasSelf)d).getProperty());
 			storage.makePredicateAssertion("subself",pid,id);
@@ -569,7 +633,7 @@ public class BasicKBLoader {
 			result = createConjunctionBodyFacts(oid2,newops) && result;
 		}
 		return result;
-	}
+	} //*/
 
 	/**
 	 * Create auxiliary tuples for nominals appearing in head positions, where
@@ -581,7 +645,7 @@ public class BasicKBLoader {
 	 * @param i
 	 * @throws Exception
 	 */
-	protected boolean createHeadFacts(int id, OWLIndividual i, boolean invert) throws Exception {
+/*	protected boolean createHeadFacts(int id, OWLIndividual i, boolean invert) throws Exception {
 		if (invert) {
 			return createBodyFacts(id,i,false);
 		}
@@ -602,6 +666,29 @@ public class BasicKBLoader {
 			storage.makePredicateAssertion("dsco",id,storage.getIDForDatatypeURI(typeuris.get(i)));
 		}
 		return true;
+	}
+	
+	protected boolean createHeadFacts(int sid, OWLDataRange d, boolean invert) throws Exception {
+		if (invert) {
+			return createBodyFacts(sid,d,false);
+		}
+		boolean result = true;
+		createDataRangeTautologies(sid);
+		if (d instanceof OWLDataOneOf) {
+			Set<OWLLiteral> vals = ((OWLDataOneOf)d).getValues();
+			if (vals.size() == 1) {
+				SimpleLiteral sl = Literals.makeSimpleLiteral(vals.iterator().next());
+				if (sl == null) return false;
+				result = createHeadFacts(sid,sl,false);
+			} else { // only unary data-one-ofs can occur in heads
+				System.err.println("Unsupported head data range expression: " + d.toString());
+				result = false;
+			}
+		} else {// TODO: add more data range types
+				System.err.println("Unsupported head data range: " + d.toString());
+				result = false;
+		}
+		return result;
 	}
 
 	protected boolean createHeadFacts(int sid, OWLClassExpression d, boolean invert) throws Exception {
@@ -635,7 +722,7 @@ public class BasicKBLoader {
 			int pid = storage.getID(((OWLObjectHasValue)d).getProperty());
 			result = createPropertyFacts(pid,((OWLObjectHasValue)d).getProperty());
 			OWLIndividual value = ((OWLObjectHasValue)d).getValue();
-			int auxid = storage.getSkolemID(d);
+			int auxid = storage.getSkolemID(d); // TODO: can we drop the auxid for real individuals?
 			int oid = storage.getID(value);
 			storage.makePredicateAssertion("sv",sid,pid,auxid);
 			storage.makePredicateAssertion("sco",auxid,oid);
@@ -648,6 +735,16 @@ public class BasicKBLoader {
 				System.err.println("Unsupported head class expression: " + d.toString());
 				result = false;
 			}
+		} else if (d instanceof OWLDataHasValue) {
+			int pid = storage.getID(((OWLDataHasValue)d).getProperty());
+			result = createPropertyFacts(pid,((OWLDataHasValue)d).getProperty());
+			SimpleLiteral value = Literals.makeSimpleLiteral(((OWLDataHasValue)d).getValue());
+			if (value == null) return false;
+			int auxid = storage.getSkolemID(d); // TODO: can we drop the auxid for real individuals?
+			int oid = storage.getID(value);
+			storage.makePredicateAssertion("dsv",sid,pid,auxid);
+			storage.makePredicateAssertion("dsco",auxid,oid);
+			result = createHeadFacts(oid,value,false) && result;
 		} else if (d instanceof OWLObjectHasSelf) {
 			int pid = storage.getID(((OWLObjectHasSelf)d).getProperty());
 			result = createPropertyFacts(pid,((OWLObjectHasSelf)d).getProperty());
@@ -671,16 +768,44 @@ public class BasicKBLoader {
 		storage.makePredicateAssertion("sco",id,storage.getIDForThing());
 		storage.makePredicateAssertion("sco",storage.getIDForNothing(),id);
 	}
+
+	public void createDataRangeTautologies(int id) throws Exception {
+		storage.makePredicateAssertion("dsco",id,id);
+		//storage.makePredicateAssertion("sco",id,storage.getIDForThing());
+		//storage.makePredicateAssertion("sco",storage.getIDForNothing(),id);
+	}
 	
-	public boolean createPropertyFacts(int id, OWLObjectPropertyExpression p) throws Exception {
+	public boolean createPropertyFacts(int id, OWLPropertyExpression<?,?> p) throws Exception {
 		storage.makePredicateAssertion("spo",id,id);
 		if (p instanceof OWLObjectInverseOf) {
 			return false; // currently not supported
 		} else if ( p.isOWLTopObjectProperty() || p.isOWLBottomObjectProperty() ) {
 			return false; // currently not supported
+		} else if ( p.isOWLTopDataProperty() || p.isOWLBottomDataProperty() ) {
+			return false; // currently not supported
 		} else {
 			return true;
 		}
 	}
+	
+	protected BasicExpressionVisitor.Action getVisitorBodyAction(int todos) {
+		if ( (todos & PREPAREASSERT) != 0) {
+			return BasicExpressionVisitor.Action.WRITEBODY;
+		} else if ( (todos & PREPARECHECK) != 0 ) {
+			return BasicExpressionVisitor.Action.WRITEHEAD;
+		} else {
+			return BasicExpressionVisitor.Action.READ; 
+		}
+	}
+	
+	protected BasicExpressionVisitor.Action getVisitorHeadAction(int todos) {
+		if ( (todos & PREPAREASSERT) != 0) {
+			return BasicExpressionVisitor.Action.WRITEHEAD;
+		} else if ( (todos & PREPARECHECK) != 0 ) {
+			return BasicExpressionVisitor.Action.WRITEBODY;
+		} else {
+			return BasicExpressionVisitor.Action.READ; 
+		}
+	}*/
 
 }
