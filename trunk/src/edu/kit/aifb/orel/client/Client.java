@@ -177,7 +177,7 @@ public class Client {
 				kbmanager.materialize();
 			}
 		} catch (Exception e) {
-			System.err.println(e.toString());
+			e.printStackTrace();
 			return;
 		}
 		System.out.println("Done in " + (System.currentTimeMillis()-sTime) + " ms.\n");
