@@ -146,21 +146,33 @@ public class OWLWGTestCaseChecker {
 					if ( (result.premiseOntology == null) && 
 					     ( propname.equals("<" + TEST_NS + "rdfXmlPremiseOntology>") ||
 					       propname.equals("<" + TEST_NS + "fsPremiseOntology>") ) ) {
-						result.premiseOntology = OWLManager.createOWLOntologyManager().loadOntologyFromOntologyDocument(
-								                  (OWLOntologyDocumentSource)new StringDocumentSource( ((OWLDataPropertyAssertionAxiom)axiom).getObject().getLiteral() )
-								                 );
+						try {
+							result.premiseOntology = OWLManager.createOWLOntologyManager().loadOntologyFromOntologyDocument(
+									(OWLOntologyDocumentSource)new StringDocumentSource( ((OWLDataPropertyAssertionAxiom)axiom).getObject().getLiteral() )
+							);
+						} catch (UnloadableImportException e) {
+							System.err.println("Test cases with imports are not supported yet.");
+						}
 					} else if ( (result.conclusionOntology == null) && 
 							    ( propname.equals("<" + TEST_NS + "rdfXmlConclusionOntology>") ||
 							      propname.equals("<" + TEST_NS + "fsConclusionOntology>") ) ) {
-						result.conclusionOntology = OWLManager.createOWLOntologyManager().loadOntologyFromOntologyDocument(
-						                             (OWLOntologyDocumentSource)new StringDocumentSource(((OWLDataPropertyAssertionAxiom)axiom).getObject().getLiteral())
-						                            );
+						try {
+							result.conclusionOntology = OWLManager.createOWLOntologyManager().loadOntologyFromOntologyDocument(
+									(OWLOntologyDocumentSource)new StringDocumentSource(((OWLDataPropertyAssertionAxiom)axiom).getObject().getLiteral())
+							);
+						} catch (UnloadableImportException e) {
+							System.err.println("Test cases with imports are not supported yet.");
+						}
 					} else if ( (result.nonConclusionOntology == null) && 
 							    ( propname.equals("<" + TEST_NS + "rdfXmlNonConclusionOntology>") ||
 							      propname.equals("<" + TEST_NS + "fsNonConclusionOntology>") ) ) {
-						result.nonConclusionOntology = OWLManager.createOWLOntologyManager().loadOntologyFromOntologyDocument(
-						                                new StringDocumentSource(((OWLDataPropertyAssertionAxiom)axiom).getObject().getLiteral())
-						                               );
+						try {
+							result.nonConclusionOntology = OWLManager.createOWLOntologyManager().loadOntologyFromOntologyDocument(
+									new StringDocumentSource(((OWLDataPropertyAssertionAxiom)axiom).getObject().getLiteral())
+							);
+						}  catch (UnloadableImportException e) {
+							System.err.println("Test cases with imports are not supported yet.");
+						}
 					}
 				}
 			} else if (axiom instanceof OWLObjectPropertyAssertionAxiom) {
