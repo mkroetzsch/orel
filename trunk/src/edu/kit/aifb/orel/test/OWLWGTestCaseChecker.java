@@ -21,7 +21,7 @@ import java.io.*;
  */
 public class OWLWGTestCaseChecker {
 	static final String TEST_NS = "http://www.w3.org/2007/OWL/testOntology#";
-	static final String TEST_ONTOLOGY_STUB = "Ontology(<http://www.w3.org/2007/OWL/testOntology>)";
+	static final String TEST_ONTOLOGY_STUB = "Ontology(<http://www.w3.org/2007/OWL/testOntology.rdf>)";
 	static public enum TestResult { PASS,FAIL,INCOMPLETE };
 	static public enum TestType { ENTAILMENT,NONENTAILMENT,CONSISTENCY,INCONSISTENCY,UNKNOWN };
 	
