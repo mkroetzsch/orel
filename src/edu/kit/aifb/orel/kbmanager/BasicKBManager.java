@@ -1,5 +1,7 @@
 package edu.kit.aifb.orel.kbmanager;
 
+import java.util.Iterator;
+
 import org.semanticweb.owlapi.model.*;
 
 import edu.kit.aifb.orel.inferencing.PredicateDeclaration;
@@ -72,8 +74,14 @@ public class BasicKBManager {
 	 * @param donotassert if true then only load the relevant subexpressions without asserting the axioms 
 	 */
 	public boolean loadOntology(OWLOntology ontology) throws Exception {
+		boolean result = true;
 		BasicKBLoader loader = new BasicKBLoader(storage);
-		return loader.processOntology(ontology, (BasicKBLoader.PREPAREASSERT | BasicKBLoader.ASSERT) );
+		// TODO Do we need to guard against input loops (cyclic imports)?
+		Iterator<OWLOntology> ontit = ontology.getDirectImports().iterator();
+		while (ontit.hasNext()) {
+			result = loadOntology(ontit.next()) && result;
+		}
+		return loader.processOntology(ontology, (BasicKBLoader.PREPAREASSERT | BasicKBLoader.ASSERT) ) && result;
 	}
 
 	/**
