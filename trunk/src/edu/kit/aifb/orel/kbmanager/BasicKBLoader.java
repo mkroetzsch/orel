@@ -41,9 +41,16 @@ public class BasicKBLoader {
 		// iterate over ontology to load all axioms:
 		Set<OWLLogicalAxiom> axiomset = ontology.getLogicalAxioms();
 		Iterator<OWLLogicalAxiom> axiomiterator = axiomset.iterator();
+		OWLLogicalAxiom axiom;
+		boolean curresult;
 		int count = 0;
 		while ( (result || writing) && axiomiterator.hasNext() ) {
-			result = axiomiterator.next().accept(axiomvisitor) && result;
+			axiom = axiomiterator.next();
+			curresult = axiom.accept(axiomvisitor);
+			if ( !curresult && ((todos & (BasicKBLoader.ASSERT | BasicKBLoader.CHECK)) != 0) ) {
+				System.out.println("Unsupported axiom: " + axiom.toString());
+			}
+			result = curresult && result;
 			count++;
 			if (count % 100  == 0 ) System.out.print(".");
 		}
