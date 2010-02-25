@@ -82,11 +82,12 @@ public class NaiveKBReasoner {
         rules.put("selfran",     "sco(x,y) :- self(x,p), ran(p,y)"); // this is "scoran-self"
         rules.put("selfsubself", "sco(x,y) :- self(x,p), subself(p,y)");
         rules.put("scoran",      "sco(x,y) :- sv(x,p,y), ran(p,y)");
-        /// svp
+        /// sv
         rules.put("svp",          "sv(x,q,y) :- sv(x,p,y), spo(p,q)");
         rules.put("svspoc",       "sv(x,r,z) :- spoc(p,q,r), sv(x,p,x'), sco(x',z'), sv(z',q,z)");
         rules.put("svspoc-self1", "sv(x,r,z) :- spoc(p,q,r), self(x,p), sco(x,z'), sv(z',q,z)");
         rules.put("svspoc-self2", "sv(x,r,y) :- spoc(p,q,r), sv(x,p,y), sco(y,z), self(z,q)");
+        rules.put("sv-self-nom",  "sv(x,p,x) :- self(x,p), nominal(x)");
                 //rules.put("svspoc-self3", "sv(x,r,z) :- spoc(p,q,r), self(x,p), sco(x,z), self(z,q)"); // reincarnated as "svselfspoc"
                 //rules.put("svself",       "sv(x,p,x) :- sco(x,y), self(y,p)"); // this rule would violate the assumptions on sv (referring to aux. ids only)
         /// ran
@@ -103,7 +104,10 @@ public class NaiveKBReasoner {
         rules.put("selfnom-self", "self(x,p) :- nominal(x), sco(x,y), self(y,p), sco(y,x)");
 
 		// <<<Role Disjointness:>>>
-        rules.put("disnom",  "sco(x," + bot + ") :- disjoint(v,w), nominal(y), sco(x,x1), sco(x,x2), sv(x1,v,x1'), sv(x2,w,x2'), sco(x1',y), sco(x2',y)");
+        rules.put("disnom1", "sco(x," + bot + ") :- disjoint(v,w), nominal(y), sco(x,x1), sco(x,x2), sv(x1,v,x1'), sv(x2,w,x2'), sco(x1',y), sco(x2',y)");
+        rules.put("disnom2", "sco(z," + bot + ") :- disjoint(v,w), nonempty(x), sco(x,x1), sv(x1,v,x1'), sco(x1',y1), nominal(y1), sco(x,x2), sv(x2,w,x2'), sco(x2',y2), nominal(y2), sco(z,y1), sco(z,y2)");
+        rules.put("disnomran1", "ran(p," + bot + ") :- disjoint(v,w), nominal(y), ran(p,x1), ran(p,x2), sv(x1,v,x1'), sv(x2,w,x2'), sco(x1',y), sco(x2',y)");
+        rules.put("disnomran2", "ran(p," + bot + ") :- disjoint(v,w), nonempty(x), sco(x,x1), sv(x1,v,x1'), sco(x1',y1), nominal(y1), sco(x,x2), sv(x2,w,x2'), sco(x2',y2), nominal(y2), ran(p,y1), ran(p,y2)");
         rules.put("disspo",  "sco(y," + bot + ") :- sco(y,x), sv(x,u,x'), disjoint(v,w), spo(u,v), spo(u,w)");
         rules.put("disself", "sco(x," + bot + ") :- disjoint(v,w), sco(x,y1), sco(x,y2), self(y1,v), self(y2,w)");
 

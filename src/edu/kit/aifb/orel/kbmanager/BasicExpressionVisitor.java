@@ -59,6 +59,7 @@ public class BasicExpressionVisitor implements
 	final public static String OP_OBJECT_SOME = "ObjectSomeValuesFrom";
 	final public static String OP_DATA_SOME = "DataSomeValuesFrom";
 	final public static String OP_OBJECT_SELF = "ObjectHasSelf";
+	final public static String OP_OBJECT_COMPLEMENT = "ObjectComplementOf";
 	
 	/**
 	 * Defines what the visitor should do, if anything. The write actions 
@@ -175,8 +176,28 @@ public class BasicExpressionVisitor implements
 
 	@Override
 	public String visit(OWLObjectComplementOf ce) {
-		// TODO Auto-generated method stub
-		return null;
+		// process subclass under inverted polarity
+		String subkey;
+		if (action == Action.WRITEBODY) {
+			return null;
+		} else if (action == Action.WRITEHEAD) {
+			action = Action.WRITEBODY;
+			subkey = ce.getOperand().accept(this);
+			action = Action.WRITEHEAD;
+		} else {
+			subkey = ce.getOperand().accept(this);
+		}
+		if (subkey == null) return null;
+		String result = makeNAryExpressionKey(OP_OBJECT_COMPLEMENT,subkey);
+		if (action == Action.WRITEBODY) {
+			return null;
+		} else if (action == Action.WRITEHEAD) {
+			int sid1 = storage.getID(result);
+			int sid2 = storage.getID(subkey);
+			storage.makePredicateAssertion("subconjunctionof",sid1,sid2,storage.getIDForNothing());
+			createClassTautologies(sid1);
+		}
+		return result;
 	}
 
 	@Override
@@ -197,7 +218,7 @@ public class BasicExpressionVisitor implements
 			int pid = storage.getID(propkey);
 			int oid = storage.getID(fillkey);
 			createClassTautologies(sid);
-			int auxid = storage.getID("C(" + sid + ")"); // auxiliary "Skolem" constant
+			int auxid = storage.getID("C(" + result + ")"); // auxiliary "Skolem" constant
 			createClassTautologies(auxid); // TODO: is this needed?
 			storage.makePredicateAssertion("sv",sid,pid,auxid);
 			storage.makePredicateAssertion("sco",auxid,oid);
@@ -299,13 +320,13 @@ public class BasicExpressionVisitor implements
 			createClassTautologies(oid);
 			storage.makePredicateAssertion("dsubsomevalues",pid,sid,oid);
 		} else if (action == Action.WRITEHEAD) {
-			// TODO Currently not supported 
+			// TODO Currently not supported; maybe needs a check for EL admissibility
 			result = null;
 //			int sid = storage.getID(result);
 //			int pid = storage.getID(propkey);
 //			int oid = storage.getID(fillkey);
 //			createClassTautologies(sid);
-//			int auxid = storage.getID("C(" + sid + ")"); // auxiliary "Skolem" constant
+//			int auxid = storage.getID("C(" + result + ")"); // auxiliary "Skolem" constant
 //			createClassTautologies(auxid); // TODO: is this needed?
 //			storage.makePredicateAssertion("dsv",sid,pid,auxid);
 //			storage.makePredicateAssertion("dsco",auxid,oid);
@@ -402,8 +423,16 @@ public class BasicExpressionVisitor implements
 
 	@Override
 	public String visit(OWLAnonymousIndividual individual) {
-		// TODO Currently not supported
-		return null;
+		// TODO Handling of bnodes in OWL RL ontology entailment not clear yet
+		// This code is only correct for bnodes in asserted ontologies, not in entailed ones 
+		String result = makeNAryExpressionKey(OP_OBJECT_ONE_OF, individual.getID().getID());
+		if ( (action == Action.WRITEBODY) || (action == Action.WRITEHEAD) ) {
+			int id = storage.getID(result);
+			createClassTautologies(id);
+			storage.makePredicateAssertion("nominal",id);
+			storage.makePredicateAssertion("nonempty",id);
+		}
+		return result;
 	}
 
 	@Override
