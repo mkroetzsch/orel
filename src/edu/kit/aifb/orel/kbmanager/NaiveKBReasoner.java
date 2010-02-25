@@ -87,7 +87,7 @@ public class NaiveKBReasoner {
         rules.put("svspoc",       "sv(x,r,z) :- spoc(p,q,r), sv(x,p,x'), sco(x',z'), sv(z',q,z)");
         rules.put("svspoc-self1", "sv(x,r,z) :- spoc(p,q,r), self(x,p), sco(x,z'), sv(z',q,z)");
         rules.put("svspoc-self2", "sv(x,r,y) :- spoc(p,q,r), sv(x,p,y), sco(y,z), self(z,q)");
-        rules.put("sv-self-nom",  "sv(x,p,x) :- self(x,p), nominal(x)");
+        rules.put("sv-self-nom",  "sv(x,p,x) :- sco(x,y), self(y,p), nominal(x)");
                 //rules.put("svspoc-self3", "sv(x,r,z) :- spoc(p,q,r), self(x,p), sco(x,z), self(z,q)"); // reincarnated as "svselfspoc"
                 //rules.put("svself",       "sv(x,p,x) :- sco(x,y), self(y,p)"); // this rule would violate the assumptions on sv (referring to aux. ids only)
         /// ran
@@ -97,6 +97,7 @@ public class NaiveKBReasoner {
         /// nonempty
         rules.put("nenom",  "nonempty(x) :- nominal(x)");
         rules.put("nesco",  "nonempty(y) :- nonempty(x), sco(x,y)");
+        rules.put("nesv",   "nonempty(y) :- nonempty(x), sv(x,p,y)");
         /// self
         rules.put("selfp",        "self(x,q) :- self(x,p), spo(p,q)"); // subsumes "svp-self"
         rules.put("svselfspoc",   "self(x,r) :- sco(x,y1), sco(x,y2), self(y1,p), self(y2,q), spoc(p,q,r)");
@@ -137,6 +138,7 @@ public class NaiveKBReasoner {
         /// dnonempty
         rules.put("dnenom",  "dnonempty(x) :- dnominal(x)");
         rules.put("dnesco",  "dnonempty(y) :- dnonempty(x), dsco(x,y)");
+        rules.put("dnesco",  "dnonempty(y) :- nonempty(x), dsv(x,p,y)");
         /// dself [not existing in OWL 2]
 
 		// <<<Role Disjointness:>>>
