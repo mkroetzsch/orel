@@ -119,8 +119,9 @@ public class Client {
 				System.out.println("Ontology loaded in " + (loadeTime-loadsTime) + " ms.");
 				System.out.println("Storing ontology ...");
 				loadsTime = System.currentTimeMillis();
-				kbmanager.loadOntology(ontology);
+				boolean success = kbmanager.loadOntology(ontology);
 				loadeTime = System.currentTimeMillis();
+				if (!success) System.out.println("Some features in the ontology are not (yet) supported by Orel and have been ignored.");
 				System.out.println("Ontology stored in " + (loadeTime-loadsTime) + " ms.");
 				manager.removeOntology(ontology);
 			} else if (operation.equals("runtests")) {
