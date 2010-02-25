@@ -141,8 +141,7 @@ public class BasicAxiomVisitor implements OWLAxiomVisitorEx<Boolean> {
 
 	@Override
 	public Boolean visit(OWLDataPropertyDomainAxiom axiom) {
-		// TODO Auto-generated method stub
-		return false;
+		return processSubClassOfAxiom(datafactory.getOWLDataSomeValuesFrom(axiom.getProperty(), datafactory.getTopDatatype()), axiom.getDomain());
 	}
 
 	@Override
@@ -180,9 +179,11 @@ public class BasicAxiomVisitor implements OWLAxiomVisitorEx<Boolean> {
 			//keys[i] = expvisitor.visitAndAct(nominals[i],getVisitorBodyAction(todos));
 		}
 		boolean result = true;
+		String key;
 		for (int i=0; i<inds.length; i++) {
 			for (int j=i+1; j<inds.length; j++) {
-				result = result && processSubClassOfAxiom(datafactory.getOWLObjectIntersectionOf(nominals[i],nominals[j]), datafactory.getOWLNothing());
+				key = expvisitor.visitAndAct(datafactory.getOWLObjectIntersectionOf(nominals[i],nominals[j]),getVisitorBodyAction(todos));
+				result = result && processSubClassOfAxiom(key, BasicExpressionVisitor.OP_NOTHING);
 			}
 		}
 		return result;
@@ -283,13 +284,13 @@ public class BasicAxiomVisitor implements OWLAxiomVisitorEx<Boolean> {
 
 	@Override
 	public Boolean visit(OWLDeclarationAxiom axiom) {
-		// TODO Auto-generated method stub
+		// Only logical axioms are considered
 		return false;
 	}
 
 	@Override
 	public Boolean visit(OWLAnnotationAssertionAxiom axiom) {
-		// TODO Auto-generated method stub
+		// This visitor only cares about logical axioms
 		return false;
 	}
 
@@ -313,8 +314,14 @@ public class BasicAxiomVisitor implements OWLAxiomVisitorEx<Boolean> {
 
 	@Override
 	public Boolean visit(OWLEquivalentDataPropertiesAxiom axiom) {
-		// TODO Auto-generated method stub
-		return false;
+		Object[] props = axiom.getProperties().toArray();
+		int j;
+		boolean result = true;
+		for (int i=0;i<props.length;i++) {
+			j = ((i+1)%props.length);
+			result = result && processSubDataPropertyOf((OWLDataPropertyExpression)props[i],(OWLDataPropertyExpression)props[j]);
+		}
+		return result;
 	}
 
 	@Override
@@ -356,8 +363,7 @@ public class BasicAxiomVisitor implements OWLAxiomVisitorEx<Boolean> {
 
 	@Override
 	public Boolean visit(OWLSubDataPropertyOfAxiom axiom) {
-		// TODO Auto-generated method stub
-		return false;
+		return processSubDataPropertyOf(axiom.getSubProperty(),axiom.getSuperProperty()); 
 	}
 
 	@Override
@@ -423,25 +429,25 @@ public class BasicAxiomVisitor implements OWLAxiomVisitorEx<Boolean> {
 
 	@Override
 	public Boolean visit(SWRLRule rule) {
-		// TODO Auto-generated method stub
+		// No support for rules at the moment
 		return false;
 	}
 
 	@Override
 	public Boolean visit(OWLSubAnnotationPropertyOfAxiom axiom) {
-		// TODO Auto-generated method stub
+		// Annotations are not considered in Orel
 		return false;
 	}
 
 	@Override
 	public Boolean visit(OWLAnnotationPropertyDomainAxiom axiom) {
-		// TODO Auto-generated method stub
+		// Annotations are not considered in Orel
 		return false;
 	}
 
 	@Override
 	public Boolean visit(OWLAnnotationPropertyRangeAxiom axiom) {
-		// TODO Auto-generated method stub
+		// Annotations are not considered in Orel
 		return false;
 	}
 
@@ -480,6 +486,23 @@ public class BasicAxiomVisitor implements OWLAxiomVisitorEx<Boolean> {
 		if ( (todos & BasicKBLoader.CHECK) != 0 ) {
 			if (pid1 != pid2) { // no need to check if trivial
 				result = storage.checkPredicateAssertion("spo", pid1, pid2);
+			}
+		}
+		return result;
+	}
+
+	protected Boolean processSubDataPropertyOf(OWLDataPropertyExpression p1, OWLDataPropertyExpression p2) {
+		boolean result = true;
+		String key1 = expvisitor.visitAndAct(p1,getVisitorBodyAction(todos));
+		String key2 = expvisitor.visitAndAct(p2,getVisitorHeadAction(todos));
+		int pid1 = storage.getID(key1), pid2 = storage.getID(key2);
+		if ( (todos & BasicKBLoader.ASSERT) != 0 ) {
+			// trivial cases not stored
+			if (pid1 != pid2) storage.makePredicateAssertion("dspo", pid1, pid2);				
+		}
+		if ( (todos & BasicKBLoader.CHECK) != 0 ) {
+			if (pid1 != pid2) { // no need to check if trivial
+				result = storage.checkPredicateAssertion("dspo", pid1, pid2);
 			}
 		}
 		return result;
