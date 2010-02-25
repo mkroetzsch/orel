@@ -56,7 +56,12 @@ public class Literals {
 	public static SimpleLiteral makeSimpleLiteral(OWLLiteral literal) {
 		OWLDatatype type = literal.getDatatype();
 		if (type == null) { // untyped literal, not supported yet
-			return null;
+			if (literal.getLang() == null) {
+				return new SimpleLiteral(literal.getLiteral(), literal.getLiteral(), null);
+			} else {
+				String value = literal.getLiteral() + '@' + literal.getLang();
+				return new SimpleLiteral(value, value, null);
+			}
 		} else {
 			String typeuri = type.getIRI().toString();
 			if (numberRanges.containsKey(typeuri)) {
@@ -73,7 +78,9 @@ public class Literals {
 	
 	public static List<String> getDatatypeURIs(SimpleLiteral sl) {
 		ArrayList<String> result = new ArrayList<String>();
-		if (sl.getDatatypeURI().equals(OWL_NS + "real")) {
+		if (sl.getDatatypeURI() == null) {
+			return result;
+		} if (sl.getDatatypeURI().equals(OWL_NS + "real")) {
 			// TODO: case for rationals needed too
 			if (sl.getValue() instanceof BigDecimal) {
 				result.add(OWL_NS + "real");
