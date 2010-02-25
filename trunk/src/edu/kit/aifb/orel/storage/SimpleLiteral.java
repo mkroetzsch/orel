@@ -3,11 +3,13 @@ package edu.kit.aifb.orel.storage;
 /**
  * The simplest possible literal container. It is assumed that this literal
  * is always used with a normalized (canonical) lexical value. Typically, the
- * given datatype is the most general one that the literal belongs to, e.g. it.
- * is owl_real for any numerical type. The valueString is not the lexical value
+ * given datatype is the most general one that the literal belongs to, e.g. it
+ * is owl:real for any numerical type. The valueString is not the lexical value
  * but rather a canonical string version of the semantic value. For example, it 
  * the same string "1" would be used for "1"^^xsd:int and "2/2"^^owl:rational,
  * even though "1" is not in the lexical space of owl:rational.
+ * 
+ * The datatype URI can be null if the literal is untyped.
  * @author Markus Krötzsch
  */
 public class SimpleLiteral {
@@ -40,7 +42,11 @@ public class SimpleLiteral {
 	 * be a valid lexical value for the datatype.
 	 */
 	public String toString() {
-		return '"' + valueString + '"' + "^^" + datatypeURI; 
+		if (datatypeURI != null) {
+			return '"' + valueString + '"' + "^^" + datatypeURI;
+		} else {
+			return '"' + valueString + '"';
+		}
 	}
 
 }
