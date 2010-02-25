@@ -75,12 +75,11 @@ public class OWLWGTestCaseChecker {
 		boolean loaded;
 		InferenceResult infResult,correctResult;
 		while (classIterator.hasNext()) {
-			kbmanager.drop();
-			kbmanager.initialize();
 			classAssert = classIterator.next();
-
 			testcase = extractTestCaseData(dataset, classAssert);
 			if (!testcase.relevantToOrel()) continue;
+			kbmanager.drop();
+			kbmanager.initialize();
 			System.out.println("Considering test case " + testcase.uri + " (" + testcase.type + ") ...");
 			loaded = kbmanager.loadOntology(testcase.premiseOntology);
 			if (testcase.type == TestType.CONSISTENCY) {
