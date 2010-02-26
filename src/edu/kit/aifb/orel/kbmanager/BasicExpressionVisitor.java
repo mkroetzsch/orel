@@ -17,6 +17,7 @@ import org.semanticweb.owlapi.model.OWLDataMaxCardinality;
 import org.semanticweb.owlapi.model.OWLDataMinCardinality;
 import org.semanticweb.owlapi.model.OWLDataOneOf;
 import org.semanticweb.owlapi.model.OWLDataProperty;
+import org.semanticweb.owlapi.model.OWLDataRange;
 import org.semanticweb.owlapi.model.OWLDataSomeValuesFrom;
 import org.semanticweb.owlapi.model.OWLDataUnionOf;
 import org.semanticweb.owlapi.model.OWLDataVisitorEx;
@@ -79,6 +80,11 @@ public class BasicExpressionVisitor implements
 	public String visitAndAct(OWLClassExpression ce, Action a) {
 		action = a;
 		return ce.accept(this);
+	}
+	
+	public String visitAndAct(OWLDataRange dr, Action a) {
+		action = a;
+		return dr.accept(this);
 	}
 	
 	public String visitAndAct(OWLPropertyExpression<?,?> pe, Action a) {
