@@ -40,7 +40,7 @@ public class Client {
 			} else if (arg.equals("-v") || arg.equals("--verbose")) {
 				LogWriter.set(new SystemLogWriter(LogWriter.LEVEL_DEBUG, LogWriter.LEVEL_WARNING));
 			} else if (arg.equals("-q") || arg.equals("--quiet")) {
-				LogWriter.set(new SystemLogWriter(LogWriter.LEVEL_WARNING, LogWriter.LEVEL_WARNING));
+				LogWriter.set(new SystemLogWriter(LogWriter.LEVEL_ERROR, LogWriter.LEVEL_ERROR));
 			} else if (arg.equals("-o") || arg.equals("--output")) {
 				if (i < args.length) {
 					outputfile = args[i++];
