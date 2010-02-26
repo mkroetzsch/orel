@@ -115,7 +115,7 @@ public class BasicAxiomVisitor implements OWLAxiomVisitorEx<Boolean> {
 				ops.add(keys[i]);
 				ops.add(keys[j]);
 				Collections.sort(ops);
-				conkey = expvisitor.makeNAryExpressionKey("ObjectIntersection",ops,ops.size()-1,null);
+				conkey = BasicExpressionVisitor.makeNAryExpressionKey("ObjectIntersection",ops,ops.size()-1,null);
 				conid = storage.getID(conkey);
 				if ( (todos & BasicKBLoader.ASSERT) != 0 ) {
 					storage.makePredicateAssertion("sco",conid,botid);
@@ -124,7 +124,7 @@ public class BasicAxiomVisitor implements OWLAxiomVisitorEx<Boolean> {
 					result = result && storage.checkPredicateAssertion("sco",conid,botid);
 				}
 				if ( (todos & BasicKBLoader.PREPARE) != 0 ) {
-					expvisitor.createClassTautologies(conid);
+					BasicExpressionVisitor.createClassTautologies(conid,storage);
 					id2 = storage.getID(keys[j]);
 					// Note: auxiliary body facts were created in the earlier loop above
 					if ((todos & BasicKBLoader.PREPARECHECK)!=0) {

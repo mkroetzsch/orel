@@ -38,6 +38,7 @@ public interface StorageDriver {
 	
 	public int getIDForNothing();
 	public int getIDForThing();
-	public int getIDForDatatypeURI(String uri);
+	public int getIDForTopDatatype();
+	public int getIDForBottomDatatype();
 	public int getID(String key);
 }

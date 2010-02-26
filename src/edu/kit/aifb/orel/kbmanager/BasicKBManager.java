@@ -1,10 +1,12 @@
 package edu.kit.aifb.orel.kbmanager;
 
 import java.util.Iterator;
+import java.util.List;
 
 import org.semanticweb.owlapi.model.*;
 
 import edu.kit.aifb.orel.inferencing.PredicateDeclaration;
+import edu.kit.aifb.orel.storage.SimpleLiteral;
 import edu.kit.aifb.orel.storage.StorageDriver;
 
 /**
@@ -38,13 +40,87 @@ public class BasicKBManager {
 	public void initialize() throws Exception {
 		storage.initialize();
 		// the fundamental truths of DL reasoning: 
-		int thing = storage.getIDForThing(), nothing = storage.getIDForNothing();
+		int thing = storage.getIDForThing(), nothing = storage.getIDForNothing(); 
 		storage.makePredicateAssertion("sco",thing,thing);
 		storage.makePredicateAssertion("sco",nothing,nothing);
 		storage.makePredicateAssertion("sco",nothing,thing);
-		storage.makePredicateAssertion("subconjunctionof",nothing,thing,nothing);
+		//storage.makePredicateAssertion("subconjunctionof",nothing,thing,nothing);
 		storage.makePredicateAssertion("subconjunctionof",thing,nothing,nothing);
 		storage.makePredicateAssertion("nonempty",thing);
+		
+	    int toptype = storage.getIDForTopDatatype(), bottype = storage.getIDForBottomDatatype();
+		storage.makePredicateAssertion("dsco",toptype,toptype);
+		storage.makePredicateAssertion("dsco",bottype,bottype);
+		storage.makePredicateAssertion("dsco",bottype,toptype);
+		//storage.makePredicateAssertion("dsubconjunctionof",bottype,toptype,bottype);
+		storage.makePredicateAssertion("dsubconjunctionof",toptype,bottype,bottype);
+		storage.makePredicateAssertion("dnonempty",toptype);
+		int owlReal = storage.getID(Literals.OWL_real);
+		int owlRational = storage.getID(Literals.OWL_rational);
+		int xsdDecimal = storage.getID(Literals.XSD_decimal);
+		int xsdInteger = storage.getID(Literals.XSD_integer);
+		int xsdNonNegativeInteger = storage.getID(Literals.XSD_nonNegativeInteger);
+		int xsdNegativeInteger = storage.getID(Literals.XSD_negativeInteger);
+		int xsdNonPositiveInteger = storage.getID(Literals.XSD_nonPositiveInteger);
+		int xsdPositiveInteger = storage.getID(Literals.XSD_positiveInteger);
+		int xsdLong = storage.getID(Literals.XSD_long);
+		int xsdInt = storage.getID(Literals.XSD_int);
+		int xsdShort = storage.getID(Literals.XSD_short);
+		int xsdByte = storage.getID(Literals.XSD_byte);
+		int xsdUnsignedLong = storage.getID(Literals.XSD_unsignedLong);
+		int xsdUnsignedInt = storage.getID(Literals.XSD_unsignedInt);
+		int xsdUnsignedShort = storage.getID(Literals.XSD_unsignedShort);
+		int xsdUnsignedByte = storage.getID(Literals.XSD_unsignedByte);
+		SimpleLiteral zero = Literals.makeSimpleLiteral("0",Literals.XSD_byte);
+		String zerokey = BasicExpressionVisitor.visitSimpleLiteral(zero, storage, BasicExpressionVisitor.Action.WRITEHEAD);
+		int zeroid = storage.getID(zerokey);
+		
+		storage.makePredicateAssertion("dsco",owlRational,owlReal);
+		storage.makePredicateAssertion("dsco",xsdDecimal,owlRational);
+		storage.makePredicateAssertion("dsco",xsdInteger,xsdDecimal);
+		storage.makePredicateAssertion("dsco",xsdNonNegativeInteger,xsdInteger);
+		storage.makePredicateAssertion("dsco",xsdPositiveInteger,xsdNonNegativeInteger);
+		storage.makePredicateAssertion("dsco",xsdNonPositiveInteger,xsdInteger);
+		storage.makePredicateAssertion("dsco",xsdNegativeInteger,xsdNonPositiveInteger);
+		storage.makePredicateAssertion("dsco",xsdLong,xsdInteger);
+		storage.makePredicateAssertion("dsco",xsdInt,xsdLong);
+		storage.makePredicateAssertion("dsco",xsdShort,xsdInt);
+		storage.makePredicateAssertion("dsco",xsdByte,xsdShort);
+		storage.makePredicateAssertion("dsco",xsdUnsignedLong,xsdNonNegativeInteger);
+		storage.makePredicateAssertion("dsco",xsdUnsignedInt,xsdUnsignedLong);
+		storage.makePredicateAssertion("dsco",xsdUnsignedShort,xsdUnsignedInt);
+		storage.makePredicateAssertion("dsco",xsdUnsignedByte,xsdUnsignedShort);
+		storage.makePredicateAssertion("dsubconjunctionof",xsdLong,xsdNonNegativeInteger,xsdUnsignedLong);
+		storage.makePredicateAssertion("dsubconjunctionof",xsdInt,xsdUnsignedLong,xsdUnsignedInt);
+		storage.makePredicateAssertion("dsubconjunctionof",xsdShort,xsdUnsignedInt,xsdUnsignedShort);
+		storage.makePredicateAssertion("dsubconjunctionof",xsdByte,xsdUnsignedShort,xsdUnsignedByte);
+		storage.makePredicateAssertion("dsubconjunctionof",xsdNonNegativeInteger,xsdNegativeInteger,bottype);
+		storage.makePredicateAssertion("dsubconjunctionof",xsdNonPositiveInteger,xsdPositiveInteger,bottype);
+		storage.makePredicateAssertion("dsubconjunctionof",xsdNonPositiveInteger,xsdNonNegativeInteger,zeroid);
+		
+		List<String> eltypes = Literals.getELDatatypeURIs();
+		for (int i=0; i<eltypes.size(); i++) {
+			storage.makePredicateAssertion("eltype",storage.getID(eltypes.get(i)));
+		}
+		List<String> numerictypes = Literals.getNumericDatatypeURIs(), othertypes = Literals.getOtherDatatypeURIs();
+		for (int i=0; i<numerictypes.size(); i++) {
+			int ntypeid = storage.getID(numerictypes.get(i));
+			BasicExpressionVisitor.createDatarangeTautologies(ntypeid,storage);
+			storage.makePredicateAssertion("dnonempty",ntypeid);
+			for (int j=0; j<othertypes.size(); j++) {
+				int otypeid = storage.getID(othertypes.get(j));
+				storage.makePredicateAssertion("dsubconjunctionof",ntypeid,otypeid,bottype);
+			}
+		}
+		for (int i=0; i<othertypes.size(); i++) {
+			int otypeid1 = storage.getID(othertypes.get(i));
+			BasicExpressionVisitor.createDatarangeTautologies(otypeid1,storage);
+			storage.makePredicateAssertion("dnonempty",otypeid1);
+			for (int j=i+1; j<othertypes.size(); j++) {
+				int otypeid2 = storage.getID(othertypes.get(j));
+				storage.makePredicateAssertion("dsubconjunctionof",otypeid1,otypeid2,bottype);
+			}
+		}
 		storage.commit();
 	}
 
@@ -135,6 +211,8 @@ public class BasicKBManager {
 		storage.registerPredicate( new PredicateDeclaration("dnominal",1,false,false) );
 		storage.registerPredicate( new PredicateDeclaration("nonempty",1,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("dnonempty",1,true,false) );
+		
+		storage.registerPredicate( new PredicateDeclaration("eltype",1,true,false) );
 		
 		storage.registerPredicate( new PredicateDeclaration("av",3,true,false) );
 	}
