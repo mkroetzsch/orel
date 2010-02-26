@@ -27,6 +27,7 @@ public class Client {
 		int i = 0;
 		String arg;
 		String operation = "", inputfile = "", configfile = "./settings.cfg", outputfile = "";
+		LogWriter.set(new SystemLogWriter(LogWriter.LEVEL_NOTE, LogWriter.LEVEL_WARNING));
 		// add more intelligence to those checks later		
 		while (i < args.length) {
 			arg = args[i++];
@@ -34,13 +35,13 @@ public class Client {
 				if (i < args.length) {
 					configfile = args[i++];
 				} else {
-					System.err.println(arg + " requires a filename of the configuration file");
+					LogWriter.get().printlnError(arg + " requires a filename of the configuration file");
 				}
 			} if (arg.equals("-o") || arg.equals("--output")) {
 				if (i < args.length) {
 					outputfile = args[i++];
 				} else {
-					System.err.println(arg + " requires a filename of the output file");
+					LogWriter.get().printlnError(arg + " requires a filename of the output file");
 				}
 			} else if (arg.startsWith("-")) {
 				System.err.println("Unknown option " + arg);
@@ -49,34 +50,34 @@ public class Client {
 				if (i < args.length) {
 					inputfile = args[i++];
 				} else {
-					System.err.println(arg + " requires a filename of the input file");
+					LogWriter.get().printlnError(arg + " requires a filename of the input file");
 				}
 			} else if (arg.equals("materialize") || arg.equals("init") || arg.equals("drop") || 
 					   arg.equals("clear") || arg.equals("clearall") || arg.equals("checkconsistency") ) {
 				operation = arg;
 			} else {
-				System.err.println("Unknown command " + arg);
+				LogWriter.get().printlnError("Unknown command " + arg);
 			}
 		}
 
 		if ( operation.equals("") ) {
-			System.out.println("No operation given. Usage:\n orel.sh <command> [<inputfile>] [-c <configfile>] [-o <ouptutfile>] \n" +
+			LogWriter.get().printNote("No operation given. Usage:\n orel.sh <command> [<inputfile>] [-c <configfile>] [-o <ouptutfile>] \n" +
 					           " <command>       : one of \"load\", \"materialize\", \"init\", \"drop\", \"clear\", \"clearall\", \"checkentailment\", \"checkconsistency\", \"runtests\"\n" +
 					           "                   where \"load\", \"checkentailment\", and \"runtests\" must be followed by an input ontology URI\n" +
 					           " -c <configfile> : path to the configuration file\n" +
 					           " -o <outputfile> : name of the output file, if relevant to the current operation\n");
-			System.out.println("Exiting.");
+			LogWriter.get().printlnNote("Exiting.");
 			return;
 		}
 
 		try {
 			Settings.load(configfile);
 		} catch (Exception e) {
-			System.err.println(e.toString());
+			e.printStackTrace();
 			return;
 		}
 		if ( Settings.getDBServer().equals("") || Settings.getDBUser().equals("") || Settings.getDBName().equals("") ) {
-			System.err.println("Insufficient database configuration.\nPlease be sure to specify at leat 'dbname', dbuser' and 'dbserver' in your local configuration.");
+			LogWriter.get().printlnError("Insufficient database configuration.\nPlease be sure to specify at leat 'dbname', dbuser' and 'dbserver' in your local configuration.");
 			return;
 		}
 
@@ -85,30 +86,30 @@ public class Client {
 			storage = new MySQLStorageDriver(Settings.getDBServer(),Settings.getDBName(),Settings.getDBUser(),Settings.getDBPassword());
 			kbmanager = new BasicKBManager(storage);
 			if (operation.equals("init")) {
-				System.out.println("Initialising store ... ");
+				LogWriter.get().printlnNote("Initialising store ... ");
 				kbmanager.initialize();
 			} else if (operation.equals("drop")) {
-				System.out.println("Deleting all database tables ...");
+				LogWriter.get().printlnNote("Deleting all database tables ...");
 				Thread.sleep(1000);
-				System.out.println("(CTRL+C to abort within the next 3 seconds!)");
+				LogWriter.get().printlnNote("(CTRL+C to abort within the next 3 seconds!)");
 				Thread.sleep(3000);
 				kbmanager.drop();
 			} else if (operation.equals("clear")) {
-				System.out.println("Deleting derived database content ...");
+				LogWriter.get().printlnNote("Deleting derived database content ...");
 				Thread.sleep(1000);
-				System.out.println("(CTRL+C to abort within the next 3 seconds!)");
+				LogWriter.get().printlnNote("(CTRL+C to abort within the next 3 seconds!)");
 				Thread.sleep(3000);
 				kbmanager.clearDatabase(true);
 			} else if (operation.equals("clearall")) {
-				System.out.println("Deleting ALL database content ...");
+				LogWriter.get().printlnNote("Deleting ALL database content ...");
 				Thread.sleep(1000);
-				System.out.println("(CTRL+C to abort within the next 3 seconds!)");
+				LogWriter.get().printlnNote("(CTRL+C to abort within the next 3 seconds!)");
 				Thread.sleep(3000);
 				kbmanager.clearDatabase(false);
 			} else if (operation.equals("load")) {
-				System.out.println("Loading ontology ...");
+				LogWriter.get().printlnNote("Loading ontology ...");
 				if (inputfile.equals("")) {
-					System.err.println("Please provide the URI of the input ontology using the parameter -i.");
+					LogWriter.get().printlnError("Please provide the URI of the input ontology using the parameter -i.");
 					return;
 				}
 				long loadsTime = System.currentTimeMillis();
@@ -116,18 +117,18 @@ public class Client {
 				IRI physicalURI = IRI.create(inputfile);
 				OWLOntology ontology = manager.loadOntologyFromOntologyDocument(physicalURI);
 				long loadeTime = System.currentTimeMillis();
-				System.out.println("Ontology loaded in " + (loadeTime-loadsTime) + " ms.");
-				System.out.println("Storing ontology ...");
+				LogWriter.get().printlnNote("Ontology loaded in " + (loadeTime-loadsTime) + " ms.");
+				LogWriter.get().printlnNote("Storing ontology ...");
 				loadsTime = System.currentTimeMillis();
 				boolean success = kbmanager.loadOntology(ontology);
 				loadeTime = System.currentTimeMillis();
-				if (!success) System.out.println("Some features in the ontology are not (yet) supported by Orel and have been ignored.");
-				System.out.println("Ontology stored in " + (loadeTime-loadsTime) + " ms.");
+				if (!success) LogWriter.get().printlnWarning("Some features in the ontology are not (yet) supported by Orel and have been ignored.");
+				LogWriter.get().printlnNote("Ontology stored in " + (loadeTime-loadsTime) + " ms.");
 				manager.removeOntology(ontology);
 			} else if (operation.equals("runtests")) {
-				System.out.println("Loading and executing OWL test cases ...");
+				LogWriter.get().printlnNote("Loading and executing OWL test cases ...");
 				if (inputfile.equals("")) {
-					System.err.println("Please provide the URI of the input ontology using the parameter -i.");
+					LogWriter.get().printlnError("Please provide the URI of the input ontology using the parameter -i.");
 					return;
 				}
 				if (outputfile.equals("")) {
@@ -136,11 +137,11 @@ public class Client {
 				IRI physicalURI = IRI.create(inputfile);
 				OWLWGTestCaseChecker testchecker = new OWLWGTestCaseChecker(physicalURI,kbmanager);
 				testchecker.runTests(outputfile);
-				System.out.println("\n Test results written to file " + outputfile + ".");
+				LogWriter.get().printlnNote("\n Test results written to file " + outputfile + ".");
 			} else if (operation.equals("checkentailment")) {
-				System.out.println("Checking entailment of ontology ...");
+				LogWriter.get().printlnNote("Checking entailment of ontology ...");
 				if (inputfile.equals("")) {
-					System.err.println("Please provide the URI of the input ontology using the parameter -i.");
+					LogWriter.get().printlnError("Please provide the URI of the input ontology using the parameter -i.");
 					return;
 				}
 				long loadsTime=System.currentTimeMillis();
@@ -149,39 +150,39 @@ public class Client {
 				IRI physicalURI = IRI.create(inputfile);
 				OWLOntology ontology = manager.loadOntologyFromOntologyDocument(physicalURI);
 				long loadeTime = System.currentTimeMillis();
-				System.out.println("Ontology loaded in " + (loadeTime-loadsTime) + " ms.");
-				System.out.println("Processing ontology ...");
+				LogWriter.get().printlnNote("Ontology loaded in " + (loadeTime-loadsTime) + " ms.");
+				LogWriter.get().printlnNote("Processing ontology ...");
 				loadsTime = System.currentTimeMillis();
 				InferenceResult result = kbmanager.checkEntailment(ontology);
 				if (result == InferenceResult.YES) {
-					System.out.println("Ontology is entailed.");
+					LogWriter.get().printlnNote("Ontology is entailed.");
 				} else if (result == InferenceResult.NO) {
-					System.out.println("Ontology is not entailed.");
+					LogWriter.get().printlnNote("Ontology is not entailed.");
 				} else {
-					System.out.println("It could not be decided if the ontology is entailed, since the ontology contains unsupported features.");
+					LogWriter.get().printlnNote("It could not be decided if the ontology is entailed, since the ontology contains unsupported features.");
 				}
 				loadeTime=System.currentTimeMillis();
-				System.out.println("Ontology processed in " + (loadeTime-loadsTime) + " ms.");
+				LogWriter.get().printlnNote("Ontology processed in " + (loadeTime-loadsTime) + " ms.");
 				manager.removeOntology(ontology);
 			} else if (operation.equals("checkconsistency")) {
-				System.out.println("Checking consistency of loaded ontology ...");
+				LogWriter.get().printlnNote("Checking consistency of loaded ontology ...");
 				InferenceResult result = kbmanager.checkConsistency();
 				if (result == InferenceResult.YES) {
-					System.out.println("Ontology is consistent.");
+					LogWriter.get().printlnNote("Ontology is consistent.");
 				} else if (result == InferenceResult.NO) {
-					System.out.println("Ontology is not consistent.");
+					LogWriter.get().printlnNote("Ontology is not consistent.");
 				} else {
-					System.out.println("It could not be decided if the ontology is consistent, since the ontology contains unsupported features.");
+					LogWriter.get().printlnNote("It could not be decided if the ontology is consistent, since the ontology contains unsupported features.");
 				}
 			} else if (operation.equals("materialize")) {
-				System.out.println("Materialising consequences ...");
+				LogWriter.get().printlnNote("Materialising consequences ...");
 				kbmanager.materialize();
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
 			return;
 		}
-		System.out.println("Done in " + (System.currentTimeMillis()-sTime) + " ms.\n");
+		LogWriter.get().printlnNote("Done in " + (System.currentTimeMillis()-sTime) + " ms.\n");
 	}
 
 }
