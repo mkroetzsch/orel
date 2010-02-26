@@ -83,8 +83,8 @@ public class BasicAxiomVisitor implements OWLAxiomVisitorEx<Boolean> {
 
 	@Override
 	public Boolean visit(OWLAsymmetricObjectPropertyAxiom axiom) {
-		// TODO Auto-generated method stub
-		return false;
+		return visit(datafactory.getOWLDisjointObjectPropertiesAxiom(
+				datafactory.getOWLObjectInverseOf(axiom.getProperty()),axiom.getProperty()));
 	}
 
 	@Override
@@ -267,8 +267,8 @@ public class BasicAxiomVisitor implements OWLAxiomVisitorEx<Boolean> {
 
 	@Override
 	public Boolean visit(OWLFunctionalObjectPropertyAxiom axiom) {
-		// TODO Auto-generated method stub
-		return false;
+		return visit(datafactory.getOWLSubClassOfAxiom(datafactory.getOWLThing(), 
+				datafactory.getOWLObjectMaxCardinality(1, axiom.getProperty(), datafactory.getOWLThing())));
 	}
 
 	@Override
@@ -296,8 +296,7 @@ public class BasicAxiomVisitor implements OWLAxiomVisitorEx<Boolean> {
 
 	@Override
 	public Boolean visit(OWLSymmetricObjectPropertyAxiom axiom) {
-		// TODO Auto-generated method stub
-		return false;
+		return processSubObjectPropertyOf(datafactory.getOWLObjectInverseOf(axiom.getProperty()), axiom.getProperty());
 	}
 
 	@Override
@@ -318,8 +317,8 @@ public class BasicAxiomVisitor implements OWLAxiomVisitorEx<Boolean> {
 
 	@Override
 	public Boolean visit(OWLFunctionalDataPropertyAxiom axiom) {
-		// TODO Auto-generated method stub
-		return false;
+		return visit(datafactory.getOWLSubClassOfAxiom(datafactory.getOWLThing(), 
+				datafactory.getOWLDataMaxCardinality(1, axiom.getProperty(), datafactory.getTopDatatype())));
 	}
 
 	@Override
@@ -362,13 +361,12 @@ public class BasicAxiomVisitor implements OWLAxiomVisitorEx<Boolean> {
 		ArrayList<OWLObjectPropertyExpression> chain = new ArrayList<OWLObjectPropertyExpression>(2);
 		chain.add(axiom.getProperty());
 		chain.add(axiom.getProperty());
-		return datafactory.getOWLSubPropertyChainOfAxiom(chain, axiom.getProperty()).accept(this);
+		return visit(datafactory.getOWLSubPropertyChainOfAxiom(chain, axiom.getProperty()));
 	}
 
 	@Override
 	public Boolean visit(OWLIrreflexiveObjectPropertyAxiom axiom) {
-		// TODO Auto-generated method stub
-		return false;
+		return processSubClassOfAxiom(datafactory.getOWLObjectHasSelf(axiom.getProperty()), datafactory.getOWLNothing());
 	}
 
 	@Override
@@ -378,8 +376,8 @@ public class BasicAxiomVisitor implements OWLAxiomVisitorEx<Boolean> {
 
 	@Override
 	public Boolean visit(OWLInverseFunctionalObjectPropertyAxiom axiom) {
-		// TODO Auto-generated method stub
-		return false;
+		return visit(datafactory.getOWLSubClassOfAxiom(datafactory.getOWLThing(), 
+				datafactory.getOWLObjectMaxCardinality(1, datafactory.getOWLObjectInverseOf(axiom.getProperty()), datafactory.getOWLThing())));
 	}
 
 	@Override
@@ -421,8 +419,19 @@ public class BasicAxiomVisitor implements OWLAxiomVisitorEx<Boolean> {
 
 	@Override
 	public Boolean visit(OWLInverseObjectPropertiesAxiom axiom) {
-		// TODO Auto-generated method stub
-		return false;
+		boolean result = true;
+		String pkey1, pkey2;
+		pkey1 = expvisitor.visitAndAct(axiom.getFirstProperty(),getVisitorBodyAction(todos));
+		pkey2 = expvisitor.visitAndAct(axiom.getSecondProperty(),getVisitorBodyAction(todos));
+		if ( (pkey1 == null) || (pkey2 == null) ) return false;
+		int pid1 = storage.getID(pkey1), pid2 = storage.getID(pkey2);
+		if ( (todos & BasicKBLoader.ASSERT) != 0 ) {
+			storage.makePredicateAssertion("inverserof", pid1, pid2);				
+		}
+		if ( (todos & BasicKBLoader.CHECK) != 0 ) {
+			result = storage.checkPredicateAssertion("inverserof", pid1, pid2);
+		}
+		return result;		
 	}
 
 	@Override
@@ -433,8 +442,23 @@ public class BasicAxiomVisitor implements OWLAxiomVisitorEx<Boolean> {
 
 	@Override
 	public Boolean visit(OWLDatatypeDefinitionAxiom axiom) {
-		// TODO Auto-generated method stub
-		return false;
+		String typekey = expvisitor.visitAndAct(axiom.getDatatype(),getVisitorBodyAction(todos));
+		String rangekey = expvisitor.visitAndAct(axiom.getDataRange(),getVisitorBodyAction(todos));
+		if ( (typekey==null) || (rangekey==null) ) return null;
+		// generate data for both polarities
+		if (expvisitor.visitAndAct(axiom.getDataRange(),getVisitorHeadAction(todos)) == null) return null;
+		
+		boolean result = true;
+		int keyid = storage.getID(typekey);
+		int rangeid = storage.getID(rangekey);
+		if ( (todos & BasicKBLoader.ASSERT) != 0 ) {
+			storage.makePredicateAssertion("dsco",keyid,rangeid);
+			storage.makePredicateAssertion("dsco",rangeid,keyid);
+		}
+		if ( (todos & BasicKBLoader.CHECK) != 0 ) {
+			result = storage.checkPredicateAssertion("dsco",keyid,rangeid) && storage.checkPredicateAssertion("dsco",rangeid,keyid);
+		}
+		return result;
 	}
 
 	@Override
