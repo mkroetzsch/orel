@@ -19,7 +19,7 @@ public class BasicKBManager {
 	static public enum InferenceResult {
 	    YES, NO, DONTKNOW 
 	}
-	protected StorageDriver storage = null;
+	protected StorageDriver storage;
 	
 	/**
 	 * Constructor that also establishes a database connection, since this object cannot really work without a database.
@@ -192,17 +192,16 @@ public class BasicKBManager {
 		storage.registerPredicate( new PredicateDeclaration("dsco",2,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("sv",3,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("dsv",3,true,false) );
+		storage.registerPredicate( new PredicateDeclaration("av",3,true,false) );
+		storage.registerPredicate( new PredicateDeclaration("dav",3,true,false) );
+		storage.registerPredicate( new PredicateDeclaration("atmostone",3,true,false) );
+		storage.registerPredicate( new PredicateDeclaration("datmostone",3,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("ran",2,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("dran",2,true,false) );
-
-		storage.registerPredicate( new PredicateDeclaration("self",2,true,false) );
-		storage.registerPredicate( new PredicateDeclaration("subself",2,false,false) );
 		storage.registerPredicate( new PredicateDeclaration("subconjunctionof",3,false,false) );
 		storage.registerPredicate( new PredicateDeclaration("dsubconjunctionof",3,false,false) );
 		storage.registerPredicate( new PredicateDeclaration("subsomevalues",3,false,false) );
 		storage.registerPredicate( new PredicateDeclaration("dsubsomevalues",3,false,false) );
-		storage.registerPredicate( new PredicateDeclaration("suballvalues",3,false,false) );
-		storage.registerPredicate( new PredicateDeclaration("spoc",3,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("spo",2,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("dspo",2,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("disjoint",2,true,false) );
@@ -214,7 +213,9 @@ public class BasicKBManager {
 		
 		storage.registerPredicate( new PredicateDeclaration("eltype",1,true,false) );
 		
-		storage.registerPredicate( new PredicateDeclaration("av",3,true,false) );
+		storage.registerPredicate( new PredicateDeclaration("spoc",3,true,false) );
+		storage.registerPredicate( new PredicateDeclaration("self",2,true,false) );
+		storage.registerPredicate( new PredicateDeclaration("subself",2,false,false) );		
 	}
 
 }

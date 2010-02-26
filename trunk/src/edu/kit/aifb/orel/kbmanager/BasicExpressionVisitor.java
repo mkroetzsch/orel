@@ -61,6 +61,11 @@ public class BasicExpressionVisitor implements
 	final public static String OP_DATA_SOME = "DataSomeValuesFrom";
 	final public static String OP_OBJECT_SELF = "ObjectHasSelf";
 	final public static String OP_OBJECT_COMPLEMENT = "ObjectComplementOf";
+	final public static String OP_OBJECT_INVERSE_OF = "ObjectInverseOf";
+	final public static String OP_OBJECT_ALL = "ObjectAllValuesFrom";
+	final public static String OP_DATA_ALL = "DataAllValuesFrom";
+	final public static String OP_OBJECT_MAX = "ObjectMaxCardinality";
+	final public static String OP_DATA_MAX = "DataMaxCardinality";
 	
 	/**
 	 * Defines what the visitor should do, if anything. The write actions 
@@ -195,9 +200,7 @@ public class BasicExpressionVisitor implements
 		}
 		if (subkey == null) return null;
 		String result = makeNAryExpressionKey(OP_OBJECT_COMPLEMENT,subkey);
-		if (action == Action.WRITEBODY) {
-			return null;
-		} else if (action == Action.WRITEHEAD) {
+		if (action == Action.WRITEHEAD) {
 			int sid1 = storage.getID(result);
 			int sid2 = storage.getID(subkey);
 			storage.makePredicateAssertion("subconjunctionof",sid1,sid2,storage.getIDForNothing());
@@ -234,8 +237,21 @@ public class BasicExpressionVisitor implements
 
 	@Override
 	public String visit(OWLObjectAllValuesFrom ce) {
-		// TODO Auto-generated method stub
-		return null;
+		String propkey = ce.getProperty().accept(this);
+		if (propkey == null) return null;
+		String fillkey = ce.getFiller().accept(this);
+		if (fillkey == null) return null;
+		String result = makeNAryExpressionKey(OP_OBJECT_ALL,propkey,fillkey);
+		if (action == Action.WRITEBODY) {
+			return null; // not supported in EL or RL
+		} else if (action == Action.WRITEHEAD) {
+			int sid = storage.getID(result);
+			int pid = storage.getID(propkey);
+			int oid = storage.getID(fillkey);
+			createClassTautologies(sid,storage);
+			storage.makePredicateAssertion("av",sid,pid,oid);
+		}
+		return result;
 	}
 
 	@Override
@@ -263,20 +279,50 @@ public class BasicExpressionVisitor implements
 
 	@Override
 	public String visit(OWLObjectMinCardinality ce) {
-		// TODO Auto-generated method stub
+		// not supported in OWL EL or RL
 		return null;
 	}
 
 	@Override
 	public String visit(OWLObjectExactCardinality ce) {
-		// TODO Auto-generated method stub
+		// not supported in OWL EL or RL
 		return null;
 	}
 
 	@Override
 	public String visit(OWLObjectMaxCardinality ce) {
-		// TODO Auto-generated method stub
-		return null;
+		if (action == Action.WRITEBODY) return null;
+		if (ce.getCardinality() > 1) return null;
+		String propkey = ce.getProperty().accept(this);
+		if (propkey == null) return null;
+		String fillkey;
+		if (action == Action.WRITEHEAD) {
+			action = Action.WRITEBODY;
+			fillkey = ce.getFiller().accept(this);
+			action = Action.WRITEHEAD;
+		} else {
+			assert action == Action.READ;
+			fillkey = ce.getFiller().accept(this);
+		}
+		if (fillkey == null) return null;
+		String result = makeNAryExpressionKey(OP_OBJECT_MAX,new Integer(ce.getCardinality()).toString(),propkey,fillkey);
+		if (action == Action.WRITEHEAD) {
+			int rid = storage.getID(result);
+			int pid = storage.getID(propkey);
+			int fillid = storage.getID(fillkey);
+			createClassTautologies(rid,storage);
+			if (ce.getCardinality() == 1) {
+				storage.makePredicateAssertion("atmostone",rid,pid,fillid);
+			} else {
+				assert ce.getCardinality() == 0;
+				String auxkey = makeNAryExpressionKey(OP_OBJECT_SOME,propkey,fillkey);
+				int someid = storage.getID(auxkey);
+				createClassTautologies(someid,storage);
+				storage.makePredicateAssertion("subsomevalues",pid,fillid,someid);
+				storage.makePredicateAssertion("subconjunctionof",rid,someid,storage.getIDForNothing());
+			}
+		}
+		return result;
 	}
 
 	@Override
@@ -341,8 +387,21 @@ public class BasicExpressionVisitor implements
 
 	@Override
 	public String visit(OWLDataAllValuesFrom ce) {
-		// TODO Auto-generated method stub
-		return null;
+		String propkey = ce.getProperty().accept(this);
+		if (propkey == null) return null;
+		String fillkey = ce.getFiller().accept(this);
+		if (fillkey == null) return null;
+		String result = makeNAryExpressionKey(OP_DATA_ALL,propkey,fillkey);
+		if (action == Action.WRITEBODY) {
+			return null; // not supported in EL or RL
+		} else if (action == Action.WRITEHEAD) {
+			int sid = storage.getID(result);
+			int pid = storage.getID(propkey);
+			int oid = storage.getID(fillkey);
+			createClassTautologies(sid,storage);
+			storage.makePredicateAssertion("dav",sid,pid,oid);
+		}
+		return result;
 	}
 
 	@Override
@@ -370,20 +429,50 @@ public class BasicExpressionVisitor implements
 
 	@Override
 	public String visit(OWLDataMinCardinality ce) {
-		// TODO Auto-generated method stub
+		// not supported in OWL EL or RL
 		return null;
 	}
 
 	@Override
 	public String visit(OWLDataExactCardinality ce) {
-		// TODO Auto-generated method stub
+		// not supported in OWL EL or RL
 		return null;
 	}
 
 	@Override
 	public String visit(OWLDataMaxCardinality ce) {
-		// TODO Auto-generated method stub
-		return null;
+		if (action == Action.WRITEBODY) return null;
+		if (ce.getCardinality() > 1) return null;
+		String propkey = ce.getProperty().accept(this);
+		if (propkey == null) return null;
+		String fillkey;
+		if (action == Action.WRITEHEAD) {
+			action = Action.WRITEBODY;
+			fillkey = ce.getFiller().accept(this);
+			action = Action.WRITEHEAD;
+		} else {
+			assert action == Action.READ;
+			fillkey = ce.getFiller().accept(this);
+		}
+		if (fillkey == null) return null;
+		String result = makeNAryExpressionKey(OP_DATA_MAX,new Integer(ce.getCardinality()).toString(),propkey,fillkey);
+		if (action == Action.WRITEHEAD) {
+			int rid = storage.getID(result);
+			int pid = storage.getID(propkey);
+			int fillid = storage.getID(fillkey);
+			createClassTautologies(rid,storage);
+			if (ce.getCardinality() == 1) {
+				storage.makePredicateAssertion("datmostone",rid,pid,fillid);
+			} else {
+				assert ce.getCardinality() == 0;
+				String auxkey = makeNAryExpressionKey(OP_DATA_SOME,propkey,fillkey);
+				int someid = storage.getID(auxkey);
+				createClassTautologies(someid,storage);
+				storage.makePredicateAssertion("dsubsomevalues",pid,fillid,someid);
+				storage.makePredicateAssertion("subconjunctionof",rid,someid,storage.getIDForNothing());
+			}
+		}
+		return result;
 	}
 	
 	@Override
@@ -392,15 +481,24 @@ public class BasicExpressionVisitor implements
 			return null;
 		}
 		String result = property.toString();
-		int id = storage.getID(result); 
-		storage.makePredicateAssertion("spo",id,id);
+		if ( (action == Action.WRITEBODY) || (action == Action.WRITEHEAD) ) {
+			int id = storage.getID(result); 
+			storage.makePredicateAssertion("spo",id,id);
+		}
 		return result;
 	}
 
 	@Override
 	public String visit(OWLObjectInverseOf property) {
-		// TODO Currently not supported
-		return null;
+		String propkey = property.getInverse().accept(this);
+		if (propkey == null) return null;
+		String result = makeNAryExpressionKey(OP_OBJECT_INVERSE_OF, propkey);
+		if ( (action == Action.WRITEBODY) || (action == Action.WRITEHEAD) ) {
+			int pid = storage.getID(propkey); 
+			int id = storage.getID(result); 
+			storage.makePredicateAssertion("inverseof",id,pid);
+		}
+		return result;
 	}
 
 	@Override
@@ -409,8 +507,10 @@ public class BasicExpressionVisitor implements
 			return null;
 		}
 		String result = property.toString();
-		int id = storage.getID(result); 
-		storage.makePredicateAssertion("dspo",id,id);
+		if ( (action == Action.WRITEBODY) || (action == Action.WRITEHEAD) ) {
+			int id = storage.getID(result); 
+			storage.makePredicateAssertion("dspo",id,id);
+		}
 		return result;
 	}
 	

@@ -90,6 +90,9 @@ public class NaiveKBReasoner {
 		rules.put("svspoc-self1", "sv(x,r,z) :- spoc(p,q,r), self(x,p), sco(x,z'), sv(z',q,z)");
 		rules.put("svspoc-self2", "sv(x,r,y) :- spoc(p,q,r), sv(x,p,y), sco(y,z), self(z,q)");
 		rules.put("sv-self-nom",  "sv(x,p,x) :- sco(x,y), self(y,p), nominal(x)");
+		rules.put("absnom1",     "sv(x',p,y) :- sco(x',x), sv(x,p,y), nominal(x')"); 
+		rules.put("absnom2",     "sv(x,p,y') :- sv(x,p,y), sco(y,y'), nominal(y')"); 
+
 			//rules.put("svspoc-self3", "sv(x,r,z) :- spoc(p,q,r), self(x,p), sco(x,z), self(z,q)"); // reincarnated as "svselfspoc"
 			//rules.put("svself",       "sv(x,p,x) :- sco(x,y), self(y,p)"); // this rule would violate the assumptions on sv (referring to aux. ids only)
 		/// ran
@@ -125,7 +128,6 @@ public class NaiveKBReasoner {
 		// NOTE: dspo(p,p) is created at load time
 		rules.put("dspo",           "dspo(p,r) :- dspo(p,q), dspo(q,r)");
 		/// dsco
-		// TODO create dsco(x,toptype), dsco(bottype,x), and dsco(x,x) at load time
 		rules.put("dsco",    "dsco(x,z) :- dsco(x,y), dsco(y,z)"); 
 		rules.put("dcon",    "dsco(x,z) :- dsco(x,y1), dsco(x,y2), dsubconjunctionof(y1,y2,z)");
 		rules.put("dsvr-el", "dsco(x,z) :- dsv(x,p,y), dsco(y,y1), eltype(y1), dsubsomevalues(p,y1,z)");
@@ -135,8 +137,10 @@ public class NaiveKBReasoner {
 		/// eltype
 		rules.put("eltypesco", "eltype(y) :- eltype(x), dsco(x,y)");
 		rules.put("eltypecon", "eltype(y) :- eltype(x1), eltype(x2), dsubconjunctionof(x1,x2,y)");
-		/// dsvp
-		rules.put("dsvp",    "dsv(x,q,y) :- dsv(x,p,y), dspo(p,q)");
+		/// dsv
+		rules.put("dsvp",      "dsv(x,q,y) :- dsv(x,p,y), dspo(p,q)");
+		rules.put("dabsnom1", "dsv(x',p,y) :- sco(x',x), dsv(x,p,y), nominal(x')"); 
+		rules.put("dabsnom2", "dsv(x,p,y') :- dsv(x,p,y), sco(y,y'), dnominal(y')");
 		/// dran
 		rules.put("dranp",   "dran(q,x) :- dran(p,x), dspo(q,p)");
 		rules.put("dransco", "dran(p,y) :- dran(p,x), dsco(x,y)");
@@ -158,55 +162,6 @@ public class NaiveKBReasoner {
 		rules.put("ddissub2", "ddisjoint(p,q) :- dsubsomevalues(p," + dtop + ",x), dsubsomevalues(q," + dtop + ",y), dsco(x,x'), dsco(y,y'), dsubconjunctionof(x',y',z'), dsco(z'," + dbot + ")");
 		rules.put("ddissub3", "ddisjoint(p,q) :- dran(p,x), dran(q,y), dsco(x,x'), dsco(y,y'), dsubconjunctionof(x',y',z'), sco(z'," + dbot + ")");
 		rules.put("ddissym",  "ddisjoint(p,q) :- ddisjoint(q,p)");
-		
-		/* old rule set below
-		 
-		// rules with "top" extension account for the lack of sco(x,top) and nonempty(top)
-		
-		rules.put("spo", "spo(x,z) :- spo(x,y,0), spo(y,z)");
-		rules.put("chain-spo1", "spoc(u,v2,w) :- spo(u,v1), spoc(v1,v2,w)");
-		rules.put("chain-spo2", "spoc(v1,u,w) :- spo(u,v2), spoc(v1,v2,w)");
-		
-		//rules.put("del-ref",  "-sco(x,x) :- ");
-		
-		rules.put("sco",    "sco(x,z)  :- sco(x,y), sco(y,z)");
-		rules.put("con",    "sco(x,z)  :- subconjunctionof(y1,y2,z), sco(x,y1), sco(x,y2)");
-		rules.put("con r1", "sco(x,z)  :- subconjunctionof(x,y,z), sco(x,y)");
-		rules.put("con r2", "sco(x,z)  :- subconjunctionof(y,x,z), sco(x,y)");
-		rules.put("con-top1","sco(y,z) :- subconjunctionof(x,y,z), sco(" + top + ",x)");
-		rules.put("con-top1","sco(x,z) :- subconjunctionof(x,y,z), sco(" + top + ",y)");
-		//rules.put("con r3", "sco(x,z)  :- subconjunctionof(x,x,z)"); // taken into account during loading now
-		rules.put("subsome",  "sco(x,y) :- sv(x,v,z), subsomevalues(v,z,y)");
-		rules.put("subsome-p","sco(x,y) :- sv(x,v,z), spo(v,u), subsomevalues(u,z,y)");
-		rules.put("chain",   "sv(x,w,z) :- sv(x,v1,y), sv(y,v2,z), spoc(v1,v2,w)");
-		//rules.put("sv-x",  "sv(x,p,z) :- sco(x,y), sv(y,p,z)");
-		rules.put("sv-y",    "sv(x,p,z) :- sv(x,p,y), sco(y,z)");
-		rules.put("sv-top", "sv(x,p," + top + ") :- sv(x,p,y)");
-		//rules.put("sv-p",   "sv(x,q,y) :- sv(x,p,y), spo(p,q)");
-		
-		rules.put("nom1", "sco(y,x) :- sco(x,y), nonempty(x), nominal(y)");
-		rules.put("nom2", "nonempty(y) :- sco(x,y), nonempty(x)");
-		rules.put("nom3", "nonempty(y) :- sv(x,v,y), nonempty(x)");
-		rules.put("nom2-top", "nonempty(y) :- sco(" + top + ",y)");
-		rules.put("nom3-top", "nonempty(y) :- sv(" + top + ",v,y)");
-		
-		// below rules still need "top" extension
-		
-		rules.put("self-weak", "sv(x,p,x) :- self(x,p)");
-		rules.put("self-ind",  "self(x,p) :- sv(x,p,x), nominal(x)");
-		rules.put("self-x",    "self(x,p) :- sco(x,y), self(y,p)");
-		//rules.put("self-p",    "self(x,q) :- self(x,p), spo(p,q)");
-		rules.put("self-ind-sco",  "self(x,p) :- sco(x,y), sv(y,p,x), nominal(x)");
-		rules.put("subself",   "sco(x,y)  :- self(x,p), subself(p,y)");
-		
-		rules.put("av-p", "av(x,q,y) :- spo(q,p), av(x,p,y)");
-		rules.put("av1", "sco(y1,y2) :- nominal(v), sco(v,x1), sco(v,x2), sv(x1,p,y1), av(x2,p,y2), nominal(y1)");
-		rules.put("av2", "sco(y1,y2) :- nominal(v),            sco(v,x2), sv(v ,p,y1), av(x2,p,y2), nominal(y1)");
-		rules.put("av3", "sco(y1,y2) :- nominal(v), sco(v,x1),            sv(x1,p,y1), av(v ,p,y2), nominal(y1)");
-		rules.put("av4", "sco(y1,y2) :- nominal(v),                       sv(v ,p,y1), av(v ,p,y2), nominal(y1)");
-		
-		rules.put("suball",     "sco(x,z) :- av(x,p,y), suballvalues(p,y,z)");
-		rules.put("suball-sco", "sco(x,z) :- av(x,p,y1), sco(y1,y2), suballvalues(p,y2,z)");*/
 		
 		// now register those rules:
 		Iterator<String> nameit = rules.keySet().iterator();
