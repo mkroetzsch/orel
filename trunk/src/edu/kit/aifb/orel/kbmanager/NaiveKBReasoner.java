@@ -62,6 +62,8 @@ public class NaiveKBReasoner {
 		HashMap<String,String> rules = new HashMap<String,String>();
 		int top = storage.getIDForThing();
 		int bot = storage.getIDForNothing();
+		int dtop = storage.getIDForTopDatatype();
+		int dbot = storage.getIDForBottomDatatype();
 		// make the rule declaration as readable as possible;
 		// it is crucial to have this error free and customizable
 
@@ -142,11 +144,20 @@ public class NaiveKBReasoner {
 		/// dnonempty
 		rules.put("dnenom",  "dnonempty(x) :- dnominal(x)");
 		rules.put("dnesco",  "dnonempty(y) :- dnonempty(x), dsco(x,y)");
-		rules.put("dnesco",  "dnonempty(y) :- nonempty(x), dsv(x,p,y)");
+		rules.put("dnesv",   "dnonempty(y) :- nonempty(x), dsv(x,p,y)");
 		/// dself [not existing in OWL 2]
 
 		// <<<Role Disjointness:>>>
-		// TODO
+		rules.put("ddisnom1", "sco(x," + bot + ")   :- ddisjoint(v,w), dnominal(y), sco(x,x1), sco(x,x2), dsv(x1,v,x1'), dsv(x2,w,x2'), dsco(x1',y), dsco(x2',y)");
+		rules.put("ddisnom2", "dsco(z," + dbot + ") :- ddisjoint(v,w), nonempty(x), sco(x,x1), dsv(x1,v,x1'), dsco(x1',y1), dnominal(y1), sco(x,x2), dsv(x2,w,x2'), dsco(x2',y2), dnominal(y2), dsco(z,y1), dsco(z,y2)");
+		rules.put("ddisnomran1", "ran(p," + bot + ")   :- ddisjoint(v,w), nominal(y), ran(p,x1), ran(p,x2), dsv(x1,v,x1'), dsv(x2,w,x2'), dsco(x1',y), dsco(x2',y)");
+		rules.put("ddisnomran2", "dran(p," + dbot + ") :- ddisjoint(v,w), nonempty(x), sco(x,x1), dsv(x1,v,x1'), dsco(x1',y1), dnominal(y1), sco(x,x2), dsv(x2,w,x2'), dsco(x2',y2), dnominal(y2), dran(p,y1), dran(p,y2)");
+		rules.put("ddisspo",  "sco(y," + bot + ") :- sco(y,x), dsv(x,u,x'), ddisjoint(v,w), dspo(u,v), dspo(u,w)");
+		
+		rules.put("ddissub1", "ddisjoint(p,q) :- ddisjoint(p1,q1), dspo(p,p1), dspo(q,q1)");
+		rules.put("ddissub2", "ddisjoint(p,q) :- dsubsomevalues(p," + dtop + ",x), dsubsomevalues(q," + dtop + ",y), dsco(x,x'), dsco(y,y'), dsubconjunctionof(x',y',z'), dsco(z'," + dbot + ")");
+		rules.put("ddissub3", "ddisjoint(p,q) :- dran(p,x), dran(q,y), dsco(x,x'), dsco(y,y'), dsubconjunctionof(x',y',z'), sco(z'," + dbot + ")");
+		rules.put("ddissym",  "ddisjoint(p,q) :- ddisjoint(q,p)");
 		
 		/* old rule set below
 		 
@@ -237,7 +248,8 @@ public class NaiveKBReasoner {
 		materialize();
 		registerCheckRules();
 		// inconsistent ontologies entail anything
-		if (storage.checkPredicateAssertion("nonempty",storage.getIDForNothing())) {
+		if ( storage.checkPredicateAssertion("nonempty",storage.getIDForNothing()) || 
+			 storage.checkPredicateAssertion("dnonempty",storage.getIDForBottomDatatype())) {
 			return InferenceResult.YES;
 		} else if (!loaded) { // if checked axioms failed to load, neither YES nor NO are sure answers
 			return InferenceResult.DONTKNOW;
@@ -255,7 +267,8 @@ public class NaiveKBReasoner {
 	public InferenceResult checkConsistency() throws Exception {
 		materialize();
 		registerCheckRules();
-		if (storage.checkPredicateAssertion("nonempty",storage.getIDForNothing())) {
+		if ( storage.checkPredicateAssertion("nonempty",storage.getIDForNothing()) || 
+			 storage.checkPredicateAssertion("dnonempty",storage.getIDForBottomDatatype()) ) {
 			return InferenceResult.NO;
 		} else {
 			return InferenceResult.YES;

@@ -302,8 +302,18 @@ public class BasicAxiomVisitor implements OWLAxiomVisitorEx<Boolean> {
 
 	@Override
 	public Boolean visit(OWLDataPropertyRangeAxiom axiom) {
-		// TODO Auto-generated method stub
-		return false;
+		boolean result = true;
+		String propkey = expvisitor.visitAndAct(axiom.getProperty(),getVisitorBodyAction(todos));
+		String rangekey = expvisitor.visitAndAct(axiom.getRange(),getVisitorHeadAction(todos));
+		if ( (propkey == null) || (rangekey == null) ) return false;
+		int pid = storage.getID(propkey), oid = storage.getID(rangekey);
+		if ( (todos & BasicKBLoader.ASSERT) != 0 ) {
+			storage.makePredicateAssertion("dran", pid, oid);				
+		}
+		if ( (todos & BasicKBLoader.CHECK) != 0 ) {
+			result = storage.checkPredicateAssertion("dran", pid, oid);
+		}
+		return result;
 	}
 
 	@Override
