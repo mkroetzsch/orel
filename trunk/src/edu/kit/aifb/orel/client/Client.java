@@ -37,7 +37,11 @@ public class Client {
 				} else {
 					LogWriter.get().printlnError(arg + " requires a filename of the configuration file");
 				}
-			} if (arg.equals("-o") || arg.equals("--output")) {
+			} else if (arg.equals("-v") || arg.equals("--verbose")) {
+				LogWriter.set(new SystemLogWriter(LogWriter.LEVEL_DEBUG, LogWriter.LEVEL_WARNING));
+			} else if (arg.equals("-q") || arg.equals("--quiet")) {
+				LogWriter.set(new SystemLogWriter(LogWriter.LEVEL_WARNING, LogWriter.LEVEL_WARNING));
+			} else if (arg.equals("-o") || arg.equals("--output")) {
 				if (i < args.length) {
 					outputfile = args[i++];
 				} else {
@@ -65,7 +69,9 @@ public class Client {
 					           " <command>       : one of \"load\", \"materialize\", \"init\", \"drop\", \"clear\", \"clearall\", \"checkentailment\", \"checkconsistency\", \"runtests\"\n" +
 					           "                   where \"load\", \"checkentailment\", and \"runtests\" must be followed by an input ontology URI\n" +
 					           " -c <configfile> : path to the configuration file\n" +
-					           " -o <outputfile> : name of the output file, if relevant to the current operation\n");
+					           " -o <outputfile> : name of the output file, if relevant to the current operation\n" +
+					           " -v              : increase verbosity to show debug outputs \n" +
+					           " -q              : be quiet amd report only errors \n");
 			LogWriter.get().printlnNote("Exiting.");
 			return;
 		}
