@@ -3,6 +3,8 @@ package edu.kit.aifb.orel.kbmanager;
 import java.util.Iterator;
 import java.util.Set;
 import org.semanticweb.owlapi.model.*;
+
+import edu.kit.aifb.orel.client.LogWriter;
 import edu.kit.aifb.orel.storage.StorageDriver;
 
 public class BasicKBLoader {
@@ -48,13 +50,13 @@ public class BasicKBLoader {
 			axiom = axiomiterator.next();
 			curresult = axiom.accept(axiomvisitor);
 			if ( !curresult && ((todos & (BasicKBLoader.ASSERT | BasicKBLoader.CHECK)) != 0) ) {
-				System.out.println("Unsupported axiom: " + axiom.toString());
+				LogWriter.get().printlnWarning("Unsupported axiom: " + axiom.toString());
 			}
 			result = curresult && result;
 			count++;
 			if (count % 100  == 0 ) System.out.print(".");
 		}
-		System.out.println(" processed " + count + " axiom(s).");
+		LogWriter.get().printlnNote(" processed " + count + " axiom(s).");
 		if ( writing ) { // close, commit, and recompute indexes
 			storage.endLoading();
 		}
