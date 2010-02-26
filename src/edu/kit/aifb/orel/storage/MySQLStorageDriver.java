@@ -14,6 +14,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import edu.kit.aifb.orel.client.LogWriter;
 import edu.kit.aifb.orel.inferencing.InferenceRuleDeclaration;
 import edu.kit.aifb.orel.inferencing.PredicateAtom;
 import edu.kit.aifb.orel.inferencing.PredicateDeclaration;
@@ -119,8 +120,8 @@ public class MySQLStorageDriver implements StorageDriver {
         } catch (SQLException e) { // TODO either do something useful or drop this catch block
             throw e;
         } catch (ClassNotFoundException e) {
-        	System.err.println("Database driver not found:\n");
-        	System.err.println(e.toString());
+        	LogWriter.get().printError("Database driver not found.\n");
+        	e.printStackTrace();
         }
 	}
 	
@@ -256,10 +257,10 @@ public class MySQLStorageDriver implements StorageDriver {
 	public void dumpStatistics() {
 		Iterator<String> statit = inferenceruleruntimes.keySet().iterator();
 		String rulename;
-		System.out.println("Times spent on inference rules:");
+		LogWriter.get().printlnDebug("Times spent on inference rules:");
 		while (statit.hasNext()) {
 			rulename = statit.next();
-			System.out.println("  Rule " + rulename + ": " + inferenceruleruntimes.get(rulename) + "ms.");
+			LogWriter.get().printlnDebug("  Rule " + rulename + ": " + inferenceruleruntimes.get(rulename) + "ms.");
 		}
 	}
 	
@@ -289,7 +290,7 @@ public class MySQLStorageDriver implements StorageDriver {
 			con.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
 			enableKeys(false);
 		} catch (SQLException e) {
-			System.err.println(e.toString());
+			e.printStackTrace();
 		}
 		loadmode=true;
 	}
@@ -306,7 +307,7 @@ public class MySQLStorageDriver implements StorageDriver {
 			con.setAutoCommit(true);
 			enableKeys(true);
 		} catch (SQLException e) {
-			System.err.println(e.toString());
+			e.printStackTrace();
 		}
 		loadmode=false;
 	}
@@ -349,7 +350,7 @@ public class MySQLStorageDriver implements StorageDriver {
 				prepinsertstmtsizes.put(predicate,cursize);
 			}
 		} catch (SQLException e) {
-			System.err.println(e.toString());
+			e.printStackTrace();
 		}
 	}
 	
@@ -391,7 +392,7 @@ public class MySQLStorageDriver implements StorageDriver {
 				res.close();
 			}
 		} catch (SQLException e) {
-			System.err.println(e.toString());
+			e.printStackTrace();
 		}
 		return result;
 	}
@@ -408,7 +409,7 @@ public class MySQLStorageDriver implements StorageDriver {
 			try {
 				return con.prepareStatement(sql);
 			} catch (SQLException e) {
-				System.err.println(e.toString());
+				e.printStackTrace();
 				return null;
 			}
 		} else { 
@@ -418,7 +419,7 @@ public class MySQLStorageDriver implements StorageDriver {
 	
 	public int changeStep(String predicate, int oldstep, int newstep) throws SQLException {
 		Statement stmt = con.createStatement();
-		//System.out.println("Changestep: " + oldstep + " -> " + newstep + " on " + predicate); // debug
+		//LogWriter.get().printlnDebug("Changestep: " + oldstep + " -> " + newstep + " on " + predicate); // debug
 		return stmt.executeUpdate("UPDATE " + predicate + " SET step=\"" + newstep + "\" WHERE step=\"" + oldstep + "\"");
 	}
 
@@ -450,10 +451,10 @@ public class MySQLStorageDriver implements StorageDriver {
 	public int runRule(String rulename, int newstep) {
 		ArrayList<PreparedStatement> stmts = inferencerulestmts.get(rulename);
 		if ((stmts == null) || (stmts.size() == 0)) { // internal error, just print it
-			System.err.println("Call to unknown rule " + rulename);
+			LogWriter.get().printlnError("Call to unknown rule " + rulename);
 			return 0;
 		}
-		System.out.print("  Rule " + rulename + "(*) -> " + newstep + " ... "); // debug
+		LogWriter.get().printDebug("  Rule " + rulename + "(*) -> " + newstep + " ... "); // debug
 		long sTime = System.currentTimeMillis();
 		PreparedStatement stmt = stmts.get(0);
 		int result = 0;
@@ -463,9 +464,9 @@ public class MySQLStorageDriver implements StorageDriver {
 			}
 			result = stmt.executeUpdate();
 		} catch (SQLException e) { // internal bug, just print the message
-			System.err.println(e.toString());
+			e.printStackTrace();
 		}
-		System.out.println("[" + result + "]"); // debug
+		LogWriter.get().printlnDebug("[" + result + "]"); // debug
 		if (inferenceruleruntimes.containsKey(rulename)) {
 			sTime = sTime - inferenceruleruntimes.get(rulename);
 		}
@@ -484,10 +485,10 @@ public class MySQLStorageDriver implements StorageDriver {
 	public int runRule(String rulename, int newstep, int[] params) {
 		ArrayList<PreparedStatement> stmts = inferencerulestmts.get(rulename);
 		if ((stmts == null) || (stmts.size() == 0)) { // internal error, just print it
-			System.err.println("Call to unknown rule " + rulename);
+			LogWriter.get().printError("Call to unknown rule " + rulename);
 			return 0;
 		}
-		System.out.print("  Rule " + rulename + "(*) -> " + newstep + " ... "); // debug
+		LogWriter.get().printDebug("  Rule " + rulename + "(*) -> " + newstep + " ... "); // debug
 		long sTime = System.currentTimeMillis();
 		PreparedStatement stmt = stmts.get(0);
 		int result = 0, pos=1;
@@ -500,9 +501,9 @@ public class MySQLStorageDriver implements StorageDriver {
 			}
 			result = stmt.executeUpdate();
 		} catch (SQLException e) { // internal bug, just print the message
-			System.err.println(e.toString());
+			e.printStackTrace();
 		}
-		System.out.println("[" + result + "]"); // debug
+		LogWriter.get().printlnDebug("[" + result + "]"); // debug
 		if (inferenceruleruntimes.containsKey(rulename)) {
 			sTime = sTime - inferenceruleruntimes.get(rulename);
 		}
@@ -524,12 +525,12 @@ public class MySQLStorageDriver implements StorageDriver {
 		if (min_cur_step == 0) min_cur_step = -1; // make sure that sub-zero (late) base facts are considered in this case 
 		ArrayList<PreparedStatement> stmts = inferencerulestmts.get(rulename);
 		if ((stmts == null) || (stmts.size() == 0)) { // internal error, just print it
-			System.err.println("Call to unknown rule " + rulename);
+			LogWriter.get().printError("Call to unknown rule " + rulename);
 			return 0;
 		}
 		if (stmts.size() == 1) return runRule(rulename,max_cur_step+1); // no steps in body
 		int result = 0;
-		System.out.print("  Rule " + rulename + "(" + min_cur_step + "-" + max_cur_step + ") ... "); // debug
+		LogWriter.get().printDebug("  Rule " + rulename + "(" + min_cur_step + "-" + max_cur_step + ") ... "); // debug
 		long sTime = System.currentTimeMillis();
 		try {
 			int pos;
@@ -547,9 +548,9 @@ public class MySQLStorageDriver implements StorageDriver {
 				result = result + stmt.executeUpdate();
 			}
 		} catch (SQLException e) { // internal bug, just print the message
-			System.err.println(e.toString());
+			e.printStackTrace();
 		}
-		System.out.println("[" + result + "]"); // debug
+		LogWriter.get().printlnDebug("[" + result + "]"); // debug
 		if (inferenceruleruntimes.containsKey(rulename)) {
 			sTime = sTime - inferenceruleruntimes.get(rulename);
 		}
@@ -622,7 +623,7 @@ public class MySQLStorageDriver implements StorageDriver {
 					if (varequalities.containsKey(pt.getValue())) {
 						select = select + varequalities.get(pt.getValue()).get(0) + " AS f" + (i);
 					} else { // else: unsafe rule, drop it
-						System.err.println("Rule " + rd.getName() + " is unsafe. Ignoring it."); 
+						LogWriter.get().printError("Rule " + rd.getName() + " is unsafe. Ignoring it."); 
 						pd = null;
 					}
 				} else {
@@ -630,7 +631,7 @@ public class MySQLStorageDriver implements StorageDriver {
 				}
 			}
 			if (pd == null) {
-				System.err.println("There was a problem registering rule " + rd.getName());
+				LogWriter.get().printError("There was a problem registering rule " + rd.getName());
 				return result;
 			}
 			if (pd.isInferred()) {
@@ -670,10 +671,10 @@ public class MySQLStorageDriver implements StorageDriver {
 		// always make step-less version at index 0
 		try {
 			if (rd.getMode() == InferenceRuleDeclaration.MODE_CHECK) on = on + " LIMIT 1";
-			//System.out.println(rd.getName() + ":\n " + insert + select + " FROM " + from + on + "\n\n"); // DEBUG
+			//LogWriter.get().printlnDebug(rd.getName() + ":\n " + insert + select + " FROM " + from + on + "\n\n"); // DEBUG
 			result.add(con.prepareStatement( insert + select + " FROM " + from + on));
 		} catch (SQLException e) { // bug in the above code, just print it
-			System.err.println(e.toString()); 
+			e.printStackTrace();
 		}
 		String sql;
 		// other indices k hold semi-naive rule for the k-th inferred predicate 
@@ -689,11 +690,11 @@ public class MySQLStorageDriver implements StorageDriver {
 						sql = sql + on_op + inferredTables.get(j) + ".step>=? AND " + inferredTables.get(j) + ".step<=?";
 					}
 				}
-				//System.out.println(sql); // DEBUG
+				//LogWriter.get().printlnDebug(sql); // DEBUG
 				try {
 					result.add(con.prepareStatement(sql));
 				} catch (SQLException e) { // bug in the above code, just print it
-					System.err.println(e.toString()); 
+					e.printStackTrace(); 
 				}
 			}
 		}		
@@ -775,7 +776,7 @@ public class MySQLStorageDriver implements StorageDriver {
 	
 	public int getID(String key) {
 		int id = 0;
-		//System.out.println("Getting id for " + description); // debug
+		//LogWriter.get().printlnDebug("Getting id for " + description); // debug
 		String hash;
 		if (key.toCharArray().length < namefieldlength) { // try to keep names intact ...
 			hash = key;
@@ -843,7 +844,7 @@ public class MySQLStorageDriver implements StorageDriver {
 			res.close();
 			ids.put(hash,id);
 		} catch (SQLException e) { // should happen only on programming errors in above code
-			System.err.println(e.toString());
+			e.printStackTrace();
 			id = -1;
 		}
 		return id;

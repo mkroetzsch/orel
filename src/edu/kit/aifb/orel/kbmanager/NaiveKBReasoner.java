@@ -7,6 +7,7 @@ import java.util.Iterator;
 import org.semanticweb.owlapi.model.OWLOntology;
 
 
+import edu.kit.aifb.orel.client.LogWriter;
 import edu.kit.aifb.orel.inferencing.InferenceRuleDeclaration;
 import edu.kit.aifb.orel.kbmanager.BasicKBManager.InferenceResult;
 import edu.kit.aifb.orel.storage.StorageDriver;
@@ -181,14 +182,14 @@ public class NaiveKBReasoner {
 		registerInferenceRules();
 		int affectedrows = 1, curstep = 0;
 		while (affectedrows > 0) {
-			System.out.println("============");
+			LogWriter.get().printlnDebug("============");
 			affectedrows = 0;
 			for (int i=0; i<inferencerules.size(); i++) {
 				affectedrows = affectedrows + storage.runRule(inferencerules.get(i),curstep,curstep);
 			}
 			curstep++;
 		}
-		System.out.println("Done in " + (System.currentTimeMillis() - sTime) + "ms.");
+		LogWriter.get().printlnNote("Completed materialization in " + (System.currentTimeMillis() - sTime) + "ms.");
 		storage.dumpStatistics();
 	}
 	
