@@ -237,7 +237,7 @@ public class Literals {
 	}
 	
 	public static boolean isELRLType(String datatypeuri) {
-		return ( elNumberTypes.contains(datatypeuri) || rlNumberTypes.contains(datatypeuri)  || rlOtherTypes.contains(datatypeuri) );
+		return ( datatypeuri.equals(RDFS_Literal) || elNumberTypes.contains(datatypeuri) || rlNumberTypes.contains(datatypeuri)  || rlOtherTypes.contains(datatypeuri) );
 	}
 	
 	protected static Object parseValue(String lexicalValue, String typeuri) {
