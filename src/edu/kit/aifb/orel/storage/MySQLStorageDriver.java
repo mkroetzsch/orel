@@ -120,7 +120,7 @@ public class MySQLStorageDriver implements StorageDriver {
         } catch (SQLException e) { // TODO either do something useful or drop this catch block
             throw e;
         } catch (ClassNotFoundException e) {
-        	LogWriter.get().printError("Database driver not found.\n");
+        	LogWriter.get().printlnError("Database driver not found.\n");
         	e.printStackTrace();
         }
 	}
@@ -485,7 +485,7 @@ public class MySQLStorageDriver implements StorageDriver {
 	public int runRule(String rulename, int newstep, int[] params) {
 		ArrayList<PreparedStatement> stmts = inferencerulestmts.get(rulename);
 		if ((stmts == null) || (stmts.size() == 0)) { // internal error, just print it
-			LogWriter.get().printError("Call to unknown rule " + rulename);
+			LogWriter.get().printlnError("Call to unknown rule " + rulename);
 			return 0;
 		}
 		LogWriter.get().printDebug("  Rule " + rulename + "(*) -> " + newstep + " ... "); // debug
@@ -525,7 +525,7 @@ public class MySQLStorageDriver implements StorageDriver {
 		if (min_cur_step == 0) min_cur_step = -1; // make sure that sub-zero (late) base facts are considered in this case 
 		ArrayList<PreparedStatement> stmts = inferencerulestmts.get(rulename);
 		if ((stmts == null) || (stmts.size() == 0)) { // internal error, just print it
-			LogWriter.get().printError("Call to unknown rule " + rulename);
+			LogWriter.get().printlnError("Call to unknown rule " + rulename);
 			return 0;
 		}
 		if (stmts.size() == 1) return runRule(rulename,max_cur_step+1); // no steps in body
@@ -623,7 +623,7 @@ public class MySQLStorageDriver implements StorageDriver {
 					if (varequalities.containsKey(pt.getValue())) {
 						select = select + varequalities.get(pt.getValue()).get(0) + " AS f" + (i);
 					} else { // else: unsafe rule, drop it
-						LogWriter.get().printError("Rule " + rd.getName() + " is unsafe. Ignoring it."); 
+						LogWriter.get().printlnError("Rule " + rd.getName() + " is unsafe. Ignoring it."); 
 						pd = null;
 					}
 				} else {
@@ -631,7 +631,7 @@ public class MySQLStorageDriver implements StorageDriver {
 				}
 			}
 			if (pd == null) {
-				LogWriter.get().printError("There was a problem registering rule " + rd.getName());
+				LogWriter.get().printlnError("There was a problem registering rule " + rd.getName());
 				return result;
 			}
 			if (pd.isInferred()) {
