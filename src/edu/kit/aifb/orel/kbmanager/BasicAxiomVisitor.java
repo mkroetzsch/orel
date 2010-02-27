@@ -501,7 +501,7 @@ public class BasicAxiomVisitor implements OWLAxiomVisitorEx<Boolean> {
 			if (id1 != id2)	storage.makePredicateAssertion("sco",id1,id2);
 		}
 		if ( (todos & BasicKBLoader.CHECK) != 0 ) {
-			if ( (id1 != id2) && (!key1.equals("owl:Nothing")) && (!key2.equals("owl:Thing")) ) { // no need to check if trivial
+			if ( (id1 != id2) && (!key1.equals(BasicExpressionVisitor.OP_NOTHING)) && (!key2.equals(BasicExpressionVisitor.OP_THING)) ) { // no need to check if trivial
 				result = storage.checkPredicateAssertion("sco",id1,id2);
 			}
 		}
