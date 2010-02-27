@@ -49,7 +49,7 @@ public class BasicKBLoader {
 		while ( (result || writing) && axiomiterator.hasNext() ) {
 			axiom = axiomiterator.next();
 			curresult = axiom.accept(axiomvisitor);
-			if ( !curresult && ((todos & (BasicKBLoader.ASSERT | BasicKBLoader.CHECK)) != 0) ) {
+			if ( !curresult && ((todos & (BasicKBLoader.ASSERT | BasicKBLoader.PREPARE)) != 0) ) {
 				LogWriter.get().printlnWarning("Unsupported axiom: " + axiom.toString());
 			}
 			result = curresult && result;

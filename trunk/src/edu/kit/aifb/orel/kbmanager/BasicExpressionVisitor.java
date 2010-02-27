@@ -51,8 +51,8 @@ public class BasicExpressionVisitor implements
 		OWLClassExpressionVisitorEx<String>, OWLPropertyExpressionVisitorEx<String>,
 		OWLIndividualVisitorEx<String>, OWLDataVisitorEx<String> {
 
-	final public static String OP_NOTHING = "owl:Nothing";
-	final public static String OP_THING = "owl:Thing";
+	final public static String OP_NOTHING = "http://www.w3.org/2002/07/owl#Nothing";
+	final public static String OP_THING = "http://www.w3.org/2002/07/owl#Thing";
 	final public static String OP_OBJECT_INTERSECTION = "ObjectIntersectionOf";
 	final public static String OP_OBJECT_UNION = "ObjectUnionOf";
 	final public static String OP_OBJECT_ONE_OF = "ObjectOneOf";

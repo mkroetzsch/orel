@@ -123,6 +123,43 @@ public class NaiveKBReasoner {
 		rules.put("dissub3", "disjoint(p,q) :- ran(p,x), ran(q,y), sco(x,x'), sco(y,y'), subconjunctionof(x',y',z'), sco(z'," + bot + ")");
 		rules.put("dissym",  "disjoint(p,q) :- disjoint(q,p)");
 		
+		// <<<Inverse roles>>>
+		// Support for inverse is known to be incomplete in this calculus; it is not clear yet if the new intentional Orel calculus can have a practical support for complete inverseof reasoning
+		rules.put("svinv",   "sv(y,q,x) :- inverseof(p,q), sv(x,p,y), nominal(x), nominal(y)"); 
+		rules.put("selfinv", "self(x,q) :- self(x,p), inverseof(p,q)"); 
+		rules.put("spoinv1", "spo(p,r)  :- inverseof(p,q), inverseof(q,r)");
+		rules.put("spoinv2", "spo(p,q)  :- spo(p',q'), inverseof(p,p'), inverseof(q,q')");
+		rules.put("disjinv", "disjoint(p,q)  :- disjoint(p',q'), inverseof(p,p'), inverseof(q,q')"); 
+		rules.put("spocinv", "spoc(p,q,r)    :- spoc(q',p',r'), inverseof(p,p'), inverseof(q,q'), inverseof(r,r')"); 
+		rules.put("invinv",  "inverseof(p,q) :- inverseof(q,p)"); 
+		rules.put("invnom",  "inverseof(p,q) :- nominal(x), nominal(y), ran(p,x1), sco(x1,x), subsomevalues(p," + top + ", y1), sco(y1,y), ran(q,x2), sco(x2,x), subsomevalues(q," + top + ", y2), sco(y2,y)");
+		rules.put("spoinv",  "spo(p,q) :- spo(p',q'), inverseof(p,p'), inverseof(q,q')");
+		
+		// <<<Other RL stuff>>>
+		//rules.put("svpnomleft",   "sv(x,q,y) :- nominal(x), sco(x,x'), sv(x',p,y)");
+		//rules.put("svpnomright",  "sv(x,q,y) :- sv(x,p,y'), sco(y',y), nominal(y)");
+
+		rules.put("avsco1",        "av(x,p,y)     :- sco(x,z), av(z,p,y)");
+		rules.put("avspo",         "av(x,q,y)     :- spo(q,p), av(x,p,y)");
+		rules.put("avsco2",        "av(x,p,y)     :- av(x,p,z), sco(z,y)");
+		rules.put("avran",         "av(" + top + ",p,x)   :- ran(p,x)");
+		rules.put("avsubsome",     "av(x,q,y)     :- subsomevalues(p,x,y), inverseof(p,q)");
+		rules.put("avselfatmost",  "av(x,p,x)     :- self(x,p), atmostone(x,p,x)");
+		rules.put("avsvnomatmost", "av(x,p,y)     :- sv(x,p,y), nominal(y), atmostone(x,p," + top + ")");
+		rules.put("avbotrole",     "av(" + top + ",p," + bot + ") :- disjoint(p,p)");
+		rules.put("funcbackwards", "sco(x'," + bot + ") :- atmostone(x,p,y), nominal(x1), nominal(x2), nominal(y1), nominal(y2), subconjunctionof(y1,y2,z), sco(z," + bot + "), sv(x1,p,y1), sv(x2,p,y2), sco(y1,y), sco(y2,y), sco(x1,x), sco(x2,x), sco(x',x1), sco(x',x2)");
+		
+		rules.put("scoavsafe",     "sco(y,z)   :- sv(x,p,y), nominal(x), nominal(y), sco(x,w), av(w,p,z)");
+		rules.put("scoatmostsafe", "sco(w1,w2) :- atmostone(x,p,y), nominal(x), sv(x,p,w1), nominal(w1), sco(w1,y), sv(x,p,w2), nominal(w2), sco(w2,y)"); 
+		
+		rules.put("amosco1",     "atmostone(x,p,y)                     :- sco(x,z), atmostone(z,p,y)");
+		rules.put("amosco2",     "atmostone(x,p,y)                     :- atmostone(x,p,z), sco(y,z)");
+		rules.put("amospo",      "atmostone(x,p,y)                     :- atmostone(x,q,y), spo(p,q)");
+		//rules.put("amonom",      "atmostone(x,p,y)                     :- nominal(y)");    // unsafe, but only needed for output
+		rules.put("amoav",       "atmostone(x,p," + top + ")           :- av(x,p,y), atmostone(x,p,y)");
+		rules.put("amobotrole",  "atmostone(" + top + ",p," + top + ") :- disjoint(p,p)");
+		
+		
 		//// Datatype property versions of rules below:
 		/// dspoc [not existing in OWL 2] 
 		/// dspo
@@ -163,6 +200,24 @@ public class NaiveKBReasoner {
 		rules.put("ddissub2", "ddisjoint(p,q) :- dsubsomevalues(p," + dtop + ",x), dsubsomevalues(q," + dtop + ",y), dsco(x,x'), dsco(y,y'), dsubconjunctionof(x',y',z'), dsco(z'," + dbot + ")");
 		rules.put("ddissub3", "ddisjoint(p,q) :- dran(p,x), dran(q,y), dsco(x,x'), dsco(y,y'), dsubconjunctionof(x',y',z'), sco(z'," + dbot + ")");
 		rules.put("ddissym",  "ddisjoint(p,q) :- ddisjoint(q,p)");
+		
+		rules.put("davsco1",        "dav(x,p,y)     :- sco(x,z), dav(z,p,y)");
+		rules.put("davspo",         "dav(x,q,y)     :- dspo(q,p), dav(x,p,y)");
+		rules.put("davsco2",        "dav(x,p,y)     :- dav(x,p,z), dsco(z,y)");
+		rules.put("davran",         "dav(" + top + ",p,x)   :- dran(p,x)");
+		rules.put("davsvnomatmost", "dav(x,p,y)     :- dsv(x,p,y), nominal(y), datmostone(x,p," + dtop + ")");
+		rules.put("davbotrole",     "dav(" + top + ",p," + dbot + ") :- ddisjoint(p,p)");
+		rules.put("dfuncbackwards", "sco(x'," + bot + ") :- datmostone(x,p,y), nominal(x1), nominal(x2), dnominal(y1), dnominal(y2), dsubconjunctionof(y1,y2,z), dsco(z," + dbot + "), dsv(x1,p,y1), dsv(x2,p,y2), dsco(y1,y), dsco(y2,y), sco(x1,x), sco(x2,x), sco(x',x1), sco(x',x2)");
+		
+		rules.put("dscoavsafe",     "dsco(y,z)   :- dsv(x,p,y), nominal(x), dnominal(y), sco(x,w), dav(w,p,z)");
+		rules.put("dscoatmostsafe", "dsco(w1,w2) :- nominal(x), datmostone(x,p,y), dsv(x,p,w1), dnominal(w1), dsv(x,p,w2), nominal(w2), dsco(w1,y), dsco(w2,y)"); 
+		
+		rules.put("damosco1",     "datmostone(x,p,y)                     :- sco(x,z), datmostone(z,p,y)");
+		rules.put("damosco2",     "datmostone(x,p,y)                     :- datmostone(x,p,z), dsco(y,z)");
+		rules.put("damospo",      "datmostone(x,p,y)                     :- datmostone(x,q,y), dspo(p,q)");
+		//rules.put("damonom",      "datmostone(x,p,y)                     :- dnominal(y)");    // unsafe, but only needed for output
+		rules.put("damoav",       "datmostone(x,p," + dtop + ")           :- dav(x,p,y), datmostone(x,p,y)");
+		rules.put("damobotrole",  "datmostone(" + top + ",p," + dtop + ") :- ddisjoint(p,p)");
 		
 		// now register those rules:
 		Iterator<String> nameit = rules.keySet().iterator();

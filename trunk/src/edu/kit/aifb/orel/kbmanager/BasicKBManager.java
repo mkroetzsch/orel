@@ -215,7 +215,8 @@ public class BasicKBManager {
 		
 		storage.registerPredicate( new PredicateDeclaration("spoc",3,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("self",2,true,false) );
-		storage.registerPredicate( new PredicateDeclaration("subself",2,false,false) );		
+		storage.registerPredicate( new PredicateDeclaration("subself",2,false,false) );
+		storage.registerPredicate( new PredicateDeclaration("inverseof",2,true,false) );
 	}
 
 }
