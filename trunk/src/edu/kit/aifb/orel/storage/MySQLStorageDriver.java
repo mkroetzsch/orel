@@ -41,6 +41,14 @@ public class MySQLStorageDriver implements StorageDriver {
 	protected HashMap<String,PreparedStatement> prepinsertstmts;
 	protected HashMap<String,Integer> prepinsertstmtsizes;
 	protected HashMap<String,ArrayList<PreparedStatement>> prepcheckstmts;
+	class StringPair {
+		public String value1;
+		public String value2;
+		public StringPair(String v1, String v2) {
+			value1 = v1;
+			value2 = v2;
+		}
+	}
 	
 	// true if we are in bulk loading, auto commit=off mode
 	protected boolean loadmode = false;
@@ -572,6 +580,7 @@ public class MySQLStorageDriver implements StorageDriver {
 		ArrayList<String> inferredTables = new ArrayList<String>();
 		HashMap<String,ArrayList<String>> varequalities = new HashMap<String,ArrayList<String>>();
 		HashMap<String,ArrayList<String>> constequalities = new HashMap<String,ArrayList<String>>();
+		ArrayList<StringPair> varinequalities = new ArrayList<StringPair>();
 		String from = "", insert, select = "", on = "", 
 		       on_op = " WHERE ";  // use WHERE while there is just one table
 		PredicateTerm pt;
@@ -582,11 +591,15 @@ public class MySQLStorageDriver implements StorageDriver {
 		// iterate over body to collect all variables and their variable->column mappings
 		// also make join string for FROM here
 		for (int i=0; i<rd.getBody().size(); i++) {
-			if (i>0) {
-				from = from + " INNER JOIN ";
-				on_op = " ON ";
+			if (rd.getBody().get(i).getName().equals("orel:distinct")) {
+				varinequalities.add(new StringPair(rd.getBody().get(i).getArguments().get(0).getValue(),rd.getBody().get(i).getArguments().get(1).getValue()));
+			} else {
+				if (!from.equals("")) {
+					from = from + " INNER JOIN ";
+					on_op = " ON ";
+				}
+				from = from + prepareRuleBodyAtom(rd, rd.getBody().get(i), i, inferredTables, varequalities, constequalities);
 			}
-			from = from + prepareRuleBodyAtom(rd, rd.getBody().get(i), i, inferredTables, varequalities, constequalities);
 		}
 		
 		// make strings for INSERT and SELECT part
@@ -597,9 +610,9 @@ public class MySQLStorageDriver implements StorageDriver {
 		} else if (rd.getMode() == InferenceRuleDeclaration.MODE_CHECK) { // SELECT all (we just care about the non-zero count here)
 			insert = "";
 			select = "SELECT * ";
-			// Note: we build the "on" string here instead of adding equalities to our HashMaps, since otherwise the order of ? in the statement would not be correct
+			// Note: we build the "ON" string here instead of adding equalities to our HashMaps, since otherwise the order of ? in the statement would not be correct
 			for (int i=0; i<rd.getHead().getArguments().size(); i++) {
-				if (!on.equals("")) on = on + " AND "; else on = on_op + " ";
+				on = on.equals("") ? (on_op + " ") : (on + " AND ");
 				pt = rd.getHead().getArguments().get(i);
 				if (pt.isVariable()) {
 					if (varequalities.containsKey(pt.getValue())) {
@@ -611,7 +624,8 @@ public class MySQLStorageDriver implements StorageDriver {
 				}
 			}
 			hasParameterConstants = true; // never make stepped statements for checks
-		} else { // INSERT SELECTed data 
+		} else { // INSERT SELECTed data
+			assert rd.getMode() == InferenceRuleDeclaration.MODE_INFER;
 			insert = "INSERT IGNORE INTO " + rd.getHead().getName() + " (";
 			PredicateDeclaration pd = predicates.get(rd.getHead().getName()); // use "pd == null" to indicate that rule is broken
 			for (int i=0; i<rd.getHead().getArguments().size(); i++) {
@@ -648,7 +662,7 @@ public class MySQLStorageDriver implements StorageDriver {
 		while (keyit.hasNext()) {
 			key = keyit.next();
 			for (int i=0; i<constequalities.get(key).size(); i++) {
-				if (!on.equals("")) on = on + " AND "; else on = on_op + " ";
+				on = on.equals("") ? (on_op + " ") : (on + " AND ");
 				if (key.equals("?")) { // keep as parameter
 					on = on + key + constequalities.get(key).get(i);
 					hasParameterConstants = true;
@@ -662,8 +676,14 @@ public class MySQLStorageDriver implements StorageDriver {
 		while (fieldsit.hasNext()) {
 			fields = fieldsit.next();
 			for (int i=0; i<fields.size()-1; i++) {
-				if (!on.equals("")) on = on + " AND "; else on = on_op + " ";
+				on = on.equals("") ? (on_op + " ") : (on + " AND ");
 				on = on + fields.get(i) + "=" + fields.get(i+1);
+			}
+		}
+		for (int i=0; i<varinequalities.size(); i++) {
+			if (varequalities.containsKey(varinequalities.get(i).value1) && varequalities.containsKey(varinequalities.get(i).value2)) {
+				on = on.equals("") ? (on_op + " ") : (on + " AND ");
+				on = on + varequalities.get(varinequalities.get(i).value1).get(0) + "!=" + varequalities.get(varinequalities.get(i).value2).get(0);
 			}
 		}
 	
@@ -671,7 +691,7 @@ public class MySQLStorageDriver implements StorageDriver {
 		// always make step-less version at index 0
 		try {
 			if (rd.getMode() == InferenceRuleDeclaration.MODE_CHECK) on = on + " LIMIT 1";
-			//LogWriter.get().printlnDebug(rd.getName() + ":\n " + insert + select + " FROM " + from + on + "\n\n"); // DEBUG
+			//if (rd.getName().equals("dclash")) LogWriter.get().printlnDebug(rd.getName() + ":\n " + insert + select + " FROM " + from + on + "\n\n"); // DEBUG
 			result.add(con.prepareStatement( insert + select + " FROM " + from + on));
 		} catch (SQLException e) { // bug in the above code, just print it
 			e.printStackTrace();
@@ -682,7 +702,7 @@ public class MySQLStorageDriver implements StorageDriver {
 			// make rule variants for semi-naive evaluation			
 			for (int i=0; i<inferredTables.size(); i++) {
 				sql = insert + select + " FROM " + from + on;
-				if (on.equals("")) on_op = " WHERE "; else on_op = " AND ";
+				on_op = on.equals("") ? " WHERE " : " AND ";
 				for (int j=0; j<=i; j++) {
 					if (j<i) {
 						sql = sql + on_op + inferredTables.get(j) + ".step<?";
@@ -708,7 +728,7 @@ public class MySQLStorageDriver implements StorageDriver {
 	 * @param inferredTables
 	 * @param varequalities
 	 * @param constequalities
-	 * @return
+	 * @return String that is to be added to the FROM part of the generated query
 	 */
 	protected String prepareRuleBodyAtom(InferenceRuleDeclaration rd, PredicateAtom pa, int i, 
 			ArrayList<String> inferredTables, 
@@ -717,7 +737,7 @@ public class MySQLStorageDriver implements StorageDriver {
 		PredicateTerm pt;
 		PredicateDeclaration pd;
 		pd = predicates.get(pa.getName());
-		if (pd == null) return ""; // ignore unknown predicates
+		if (pd == null) throw new IllegalArgumentException("Unknown predicate " + pa.getName() + " used in inference rule."); // ignore unknown predicates
 		// collect inferred body tables unless "step" value is given explicitly
 		if ( (pd.isInferred() && (pa.getArguments().size()==pd.getFieldCount()) )) {
 			inferredTables.add("t" + (i));
@@ -850,7 +870,7 @@ public class MySQLStorageDriver implements StorageDriver {
 		return id;
 	}
 
-	static final String HEXES = "0123456789ABCDEF";
+	protected static final String HEXES = "0123456789ABCDEF";
 	/**
 	 * Convert a byte array to a string that shows its entries in Hex format.
 	 * Based on code from http://www.rgagnon.com/javadetails/java-0596.html.
