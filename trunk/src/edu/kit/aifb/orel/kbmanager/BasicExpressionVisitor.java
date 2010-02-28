@@ -51,8 +51,8 @@ public class BasicExpressionVisitor implements
 		OWLClassExpressionVisitorEx<String>, OWLPropertyExpressionVisitorEx<String>,
 		OWLIndividualVisitorEx<String>, OWLDataVisitorEx<String> {
 
-	final public static String OP_NOTHING = "http://www.w3.org/2002/07/owl#Nothing";
-	final public static String OP_THING = "http://www.w3.org/2002/07/owl#Thing";
+	final public static String OP_NOTHING = "owl:Nothing"; // "http://www.w3.org/2002/07/owl#Nothing";
+	final public static String OP_THING = "owl:Thing";
 	final public static String OP_OBJECT_INTERSECTION = "ObjectIntersectionOf";
 	final public static String OP_OBJECT_UNION = "ObjectUnionOf";
 	final public static String OP_OBJECT_ONE_OF = "ObjectOneOf";
@@ -66,6 +66,8 @@ public class BasicExpressionVisitor implements
 	final public static String OP_DATA_ALL = "DataAllValuesFrom";
 	final public static String OP_OBJECT_MAX = "ObjectMaxCardinality";
 	final public static String OP_DATA_MAX = "DataMaxCardinality";
+	final public static String OP_BOTTOM_OBJECT_PROPERTY = "owl:bottomObjectProperty";
+	final public static String OP_BOTTOM_DATA_PROPERTY = "owl:bottomDataProperty";
 	
 	/**
 	 * Defines what the visitor should do, if anything. The write actions 
@@ -477,13 +479,14 @@ public class BasicExpressionVisitor implements
 	
 	@Override
 	public String visit(OWLObjectProperty property) {
-		if ( property.isOWLTopObjectProperty() || property.isOWLBottomObjectProperty() ) {
+		if ( property.isOWLTopObjectProperty() ) {
 			return null;
 		}
 		String result = property.toString();
 		if ( (action == Action.WRITEBODY) || (action == Action.WRITEHEAD) ) {
 			int id = storage.getID(result); 
 			storage.makePredicateAssertion("spo",id,id);
+			storage.makePredicateAssertion("spo",storage.getID(OP_BOTTOM_OBJECT_PROPERTY),id);
 		}
 		return result;
 	}
@@ -503,13 +506,14 @@ public class BasicExpressionVisitor implements
 
 	@Override
 	public String visit(OWLDataProperty property) {
-		if ( property.isOWLTopDataProperty() || property.isOWLBottomDataProperty() ) {
+		if ( property.isOWLTopDataProperty() ) {
 			return null;
 		}
 		String result = property.toString();
 		if ( (action == Action.WRITEBODY) || (action == Action.WRITEHEAD) ) {
 			int id = storage.getID(result); 
 			storage.makePredicateAssertion("dspo",id,id);
+			storage.makePredicateAssertion("dspo",storage.getID(OP_BOTTOM_DATA_PROPERTY),id);
 		}
 		return result;
 	}
