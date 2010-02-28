@@ -196,6 +196,8 @@ public class BasicKBManager {
 		storage.registerPredicate( new PredicateDeclaration("dav",3,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("atmostone",3,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("datmostone",3,true,false) );
+		storage.registerPredicate( new PredicateDeclaration("atmostoneaux",4,true,false) );
+		storage.registerPredicate( new PredicateDeclaration("datmostoneaux",4,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("ran",2,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("dran",2,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("subconjunctionof",3,false,false) );
@@ -206,6 +208,8 @@ public class BasicKBManager {
 		storage.registerPredicate( new PredicateDeclaration("dspo",2,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("disjoint",2,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("ddisjoint",2,true,false) );
+		storage.registerPredicate( new PredicateDeclaration("disjointaux",3,true,false) );
+		storage.registerPredicate( new PredicateDeclaration("ddisjointaux",3,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("nominal",1,false,false) );
 		storage.registerPredicate( new PredicateDeclaration("dnominal",1,false,false) );
 		storage.registerPredicate( new PredicateDeclaration("nonempty",1,true,false) );

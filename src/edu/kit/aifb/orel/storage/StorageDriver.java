@@ -29,6 +29,7 @@ public interface StorageDriver {
 	public void makePredicateAssertion(String predicate, int... ids);
 	public boolean checkPredicateAssertion(String predicate, int... ids);
 	public int changeStep(String predicate, int oldstep, int newstep) throws Exception;
+	public int getMaxStep();
 
 	public void registerInferenceRule(InferenceRuleDeclaration rd);
 	

@@ -92,7 +92,7 @@ public class MySQLStorageDriver implements StorageDriver {
 		try {
 			digest = java.security.MessageDigest.getInstance("MD5");
 		} catch (NoSuchAlgorithmException e) {
-			// unlikely
+			e.printStackTrace(); // unlikely
 		}
 	}
 	
@@ -430,6 +430,28 @@ public class MySQLStorageDriver implements StorageDriver {
 		//LogWriter.get().printlnDebug("Changestep: " + oldstep + " -> " + newstep + " on " + predicate); // debug
 		return stmt.executeUpdate("UPDATE " + predicate + " SET step=\"" + newstep + "\" WHERE step=\"" + oldstep + "\"");
 	}
+	
+	public int getMaxStep() {
+		int result = 0;
+		try {
+			Statement stmt = con.createStatement();
+			ResultSet res;
+			Iterator<PredicateDeclaration> pit = predicates.values().iterator();
+			PredicateDeclaration pd;
+			while (pit.hasNext()) {
+				pd = pit.next();
+				if (pd.isInferred()) {
+					res = stmt.executeQuery("SELECT MAX(step) FROM " + pd.getName());
+					if ( (res.next()) && (res.getInt(1)>result) ) {
+						result = res.getInt(1);
+					}
+				}
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return result;
+	}
 
 	/* *** Rule execution *** */
 	
@@ -692,7 +714,7 @@ public class MySQLStorageDriver implements StorageDriver {
 		try {
 			if (rd.getMode() == InferenceRuleDeclaration.MODE_CHECK) on = on + " LIMIT 1";
 			//if (rd.getName().equals("dclash")) LogWriter.get().printlnDebug(rd.getName() + ":\n " + insert + select + " FROM " + from + on + "\n\n"); // DEBUG
-			result.add(con.prepareStatement( insert + select + " FROM " + from + on));
+			result.add(con.prepareStatement( "/*" + rd.getName() + "*/" + insert + select + " FROM " + from + on));
 		} catch (SQLException e) { // bug in the above code, just print it
 			e.printStackTrace();
 		}
@@ -712,7 +734,7 @@ public class MySQLStorageDriver implements StorageDriver {
 				}
 				//LogWriter.get().printlnDebug(sql); // DEBUG
 				try {
-					result.add(con.prepareStatement(sql));
+					result.add(con.prepareStatement("/*" + rd.getName() + "_" + i + "*/" + sql));
 				} catch (SQLException e) { // bug in the above code, just print it
 					e.printStackTrace(); 
 				}
