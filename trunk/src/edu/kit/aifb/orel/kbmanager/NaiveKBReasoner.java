@@ -1,6 +1,7 @@
 package edu.kit.aifb.orel.kbmanager;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 
@@ -19,7 +20,48 @@ import edu.kit.aifb.orel.storage.StorageDriver;
  */
 public class NaiveKBReasoner {
 	protected StorageDriver storage;
-	protected ArrayList<String> inferencerules = null;
+	//protected ArrayList<String> inferencerules = null;
+	protected ArrayList<RuleInfo> ruleinfo = null;
+	protected class RuleInfo implements Comparable<RuleInfo> {
+		public int laststep;
+		public String name;
+		protected int lastaffected;
+		protected int runs = 0;
+		protected int successfulruns = 0;
+		public RuleInfo (String name) {
+			this.name = name;
+			reset();
+		}
+		public void reset() {
+			laststep = -1;
+			lastaffected = 0;
+		}
+		public int compareTo(RuleInfo ri) {
+			if (this.lastaffected > ri.lastaffected) {
+				return -1;
+			} else if (this.lastaffected < ri.lastaffected) {
+				return 1;
+			} else {
+				float rate1 = (runs>0) ? (successfulruns/runs) : 0;
+				float rate2 = (ri.runs>0) ? (ri.successfulruns/ri.runs) : 0;
+				if (rate1 > rate2) {
+					return -1;
+				} else if (rate1 < rate2) {
+					return 1;
+				} else {
+					return 0;
+				}
+			}
+		}
+		public int getLastAffected() {
+			return lastaffected;
+		}
+		public void setLastAffected(int n) {
+			runs++;
+			if (n>0) successfulruns++;
+			lastaffected = n;
+		}
+	}
 	
 	public NaiveKBReasoner(StorageDriver storage) {
 		this.storage = storage;
@@ -58,8 +100,9 @@ public class NaiveKBReasoner {
 	}
 	
 	protected void registerInferenceRules() {
-		if (inferencerules != null) return; // do not do this multiple times in one run
-		inferencerules = new ArrayList<String>();
+		if (ruleinfo != null) return; // do not do this multiple times in one run
+//		inferencerules = new ArrayList<String>();
+		ruleinfo = new ArrayList<RuleInfo>();
 		HashMap<String,String> rules = new HashMap<String,String>();
 		int top = storage.getIDForThing();
 		int bot = storage.getIDForNothing();
@@ -112,9 +155,10 @@ public class NaiveKBReasoner {
 
 		// <<<Role Disjointness:>>>
 		rules.put("disnom1", "sco(x," + bot + ") :- disjoint(v,w), nominal(y), sco(x,x1), sco(x,x2), sv(x1,v,x1'), sv(x2,w,x2'), sco(x1',y), sco(x2',y)");
-		rules.put("disnom2", "sco(z," + bot + ") :- disjoint(v,w), nonempty(x), sco(x,x1), sv(x1,v,x1'), sco(x1',y1), nominal(y1), sco(x,x2), sv(x2,w,x2'), sco(x2',y2), nominal(y2), sco(z,y1), sco(z,y2)");
+		rules.put("disnom2-aux", "disjointaux(v,x,y1) :- disjoint(v,w), nonempty(x), sco(x,x1), sv(x1,v,x1'), sco(x1',y1), nominal(y1)");
+		rules.put("disnom2", "sco(z," + bot + ") :- disjoint(v,w), disjointaux(v,x,y1), disjointaux(w,x,y2), sco(z,y1), sco(z,y2)");
 		rules.put("disnomran1", "ran(p," + bot + ") :- disjoint(v,w), nominal(y), ran(p,x1), ran(p,x2), sv(x1,v,x1'), sv(x2,w,x2'), sco(x1',y), sco(x2',y)");
-		rules.put("disnomran2", "ran(p," + bot + ") :- disjoint(v,w), nonempty(x), sco(x,x1), sv(x1,v,x1'), sco(x1',y1), nominal(y1), sco(x,x2), sv(x2,w,x2'), sco(x2',y2), nominal(y2), ran(p,y1), ran(p,y2)");
+		rules.put("disnomran2", "ran(p," + dbot + ") :- disjoint(v,w), disjointaux(v,x,y1), disjointaux(w,x,y2), ran(p,y1), ran(p,y2)");
 		rules.put("disspo",  "sco(y," + bot + ") :- sco(y,x), sv(x,u,x'), disjoint(v,w), spo(u,v), spo(u,w)");
 		rules.put("disself", "sco(x," + bot + ") :- disjoint(v,w), sco(x,y1), sco(x,y2), self(y1,v), self(y2,w)");
 		
@@ -147,7 +191,8 @@ public class NaiveKBReasoner {
 		rules.put("avselfatmost",  "av(x,p,x)     :- self(x,p), atmostone(x,p,x)");
 		rules.put("avsvnomatmost", "av(x,p,y)     :- sv(x,p,y), nominal(y), atmostone(x,p," + top + ")");
 		rules.put("avbotrole",     "av(" + top + ",p," + bot + ") :- disjoint(p,p)");
-		rules.put("funcbackwards", "sco(x'," + bot + ") :- atmostone(x,p,y), nominal(x1), nominal(x2), nominal(y1), nominal(y2), subconjunctionof(y1,y2,z), sco(z," + bot + "), sv(x1,p,y1), sv(x2,p,y2), sco(y1,y), sco(y2,y), sco(x1,x), sco(x2,x), sco(x',x1), sco(x',x2)");
+		rules.put("funcbackwards-aux", "atmostoneaux(p,y,x1,y1) :- atmostone(x,p,y), nominal(x1), nominal(y1), sv(x1,p,y1), sco(y1,y), sco(x1,x)");
+		rules.put("funcbackwards", "sco(x'," + bot + ") :- sco(x',x1), sco(x',x2), atmostoneaux(p,y,x1,y1), atmostoneaux(p,y,x2,y2), subconjunctionof(y1,y2,z), sco(z," + bot + ")");
 		
 		rules.put("scoavsafe",     "sco(y,z)   :- sv(x,p,y), nominal(x), nominal(y), sco(x,w), av(w,p,z)");
 		rules.put("scoatmostsafe", "sco(w1,w2) :- atmostone(x,p,y), nominal(x), sv(x,p,w1), nominal(w1), sco(w1,y), sv(x,p,w2), nominal(w2), sco(w2,y)"); 
@@ -166,7 +211,7 @@ public class NaiveKBReasoner {
 		// NOTE: dspo(p,p) is created at load time
 		rules.put("dspo",           "dspo(p,r) :- dspo(p,q), dspo(q,r)");
 		/// dsco
-		rules.put("dclash",  "dsco(x," + dbot + ") :- dnominal(x), dnominal(y), dsco(x,y), orel:distinct(x,y)");
+		rules.put("dclash",  "dnonempty(" + dbot + ") :- dnominal(x), dnominal(y), dsco(x,y), orel:distinct(x,y)");
 		rules.put("dsco",    "dsco(x,z) :- dsco(x,y), dsco(y,z)"); 
 		rules.put("dcon",    "dsco(x,z) :- dsco(x,y1), dsco(x,y2), dsubconjunctionof(y1,y2,z)");
 		rules.put("dsvr-el", "dsco(x,z) :- dsv(x,p,y), dsco(y,y1), eltype(y1), dsubsomevalues(p,y1,z)");
@@ -192,9 +237,10 @@ public class NaiveKBReasoner {
 
 		// <<<Role Disjointness:>>>
 		rules.put("ddisnom1", "sco(x," + bot + ")   :- ddisjoint(v,w), dnominal(y), sco(x,x1), sco(x,x2), dsv(x1,v,x1'), dsv(x2,w,x2'), dsco(x1',y), dsco(x2',y)");
-		rules.put("ddisnom2", "dsco(z," + dbot + ") :- ddisjoint(v,w), nonempty(x), sco(x,x1), dsv(x1,v,x1'), dsco(x1',y1), dnominal(y1), sco(x,x2), dsv(x2,w,x2'), dsco(x2',y2), dnominal(y2), dsco(z,y1), dsco(z,y2)");
+		rules.put("ddisnom2-aux", "ddisjointaux(v,x,y1) :- ddisjoint(v,w), nonempty(x), sco(x,x1), dsv(x1,v,x1'), dsco(x1',y1), dnominal(y1)");
+		rules.put("ddisnom2", "dsco(z," + dbot + ") :- ddisjoint(v,w), ddisjointaux(v,x,y1), ddisjointaux(w,x,y2), dsco(z,y1), dsco(z,y2)");
 		rules.put("ddisnomran1", "ran(p," + bot + ")   :- ddisjoint(v,w), nominal(y), ran(p,x1), ran(p,x2), dsv(x1,v,x1'), dsv(x2,w,x2'), dsco(x1',y), dsco(x2',y)");
-		rules.put("ddisnomran2", "dran(p," + dbot + ") :- ddisjoint(v,w), nonempty(x), sco(x,x1), dsv(x1,v,x1'), dsco(x1',y1), dnominal(y1), sco(x,x2), dsv(x2,w,x2'), dsco(x2',y2), dnominal(y2), dran(p,y1), dran(p,y2)");
+		rules.put("ddisnomran2", "dran(p," + dbot + ") :- ddisjoint(v,w), ddisjointaux(v,x,y1), ddisjointaux(w,x,y2), dran(p,y1), dran(p,y2)");
 		rules.put("ddisspo",  "sco(y," + bot + ") :- sco(y,x), dsv(x,u,x'), ddisjoint(v,w), dspo(u,v), dspo(u,w)");
 		
 		rules.put("ddissub1", "ddisjoint(p,q) :- ddisjoint(p1,q1), dspo(p,p1), dspo(q,q1)");
@@ -208,7 +254,8 @@ public class NaiveKBReasoner {
 		rules.put("davran",         "dav(" + top + ",p,x)   :- dran(p,x)");
 		rules.put("davsvnomatmost", "dav(x,p,y)     :- dsv(x,p,y), dnominal(y), datmostone(x,p," + dtop + ")");
 		rules.put("davbotrole",     "dav(" + top + ",p," + dbot + ") :- ddisjoint(p,p)");
-		rules.put("dfuncbackwards", "sco(x'," + bot + ") :- datmostone(x,p,y), nominal(x1), nominal(x2), dnominal(y1), dnominal(y2), dsubconjunctionof(y1,y2,z), dsco(z," + dbot + "), dsv(x1,p,y1), dsv(x2,p,y2), dsco(y1,y), dsco(y2,y), sco(x1,x), sco(x2,x), sco(x',x1), sco(x',x2)");
+		rules.put("dfuncbackwards-aux", "datmostoneaux(p,y,x1,y1) :- datmostone(x,p,y), nominal(x1), dnominal(y1), dsv(x1,p,y1), dsco(y1,y), sco(x1,x)");
+		rules.put("dfuncbackwards", "sco(x'," + bot + ") :- sco(x',x1), sco(x',x2), datmostoneaux(p,y,x1,y1), datmostoneaux(p,y,x2,y2), dsubconjunctionof(y1,y2,z), dsco(z," + dbot + ")");
 		
 		rules.put("dscoavsafe",     "dsco(y,z)   :- dsv(x,p,y), nominal(x), dnominal(y), sco(x,w), dav(w,p,z)");
 		rules.put("dscoatmostsafe", "dsco(w1,w2) :- nominal(x), datmostone(x,p,y), dsv(x,p,w1), dnominal(w1), dsv(x,p,w2), dnominal(w2), dsco(w1,y), dsco(w2,y)"); 
@@ -225,7 +272,8 @@ public class NaiveKBReasoner {
 		String name;
 		while (nameit.hasNext()) {
 			name = nameit.next();
-			inferencerules.add(name);
+			//inferencerules.add(name);
+			ruleinfo.add(new RuleInfo(name));
 			storage.registerInferenceRule(InferenceRuleDeclaration.buildFromString(name,rules.get(name)));
 		}
 	}
@@ -236,17 +284,29 @@ public class NaiveKBReasoner {
 	public void materialize() throws Exception {
 		long sTime=System.currentTimeMillis();
 		registerInferenceRules();
-		int affectedrows = 1, curstep = 0;
+		for (int i=0; i<ruleinfo.size(); i++) {
+			ruleinfo.get(i).reset();
+		}
+		int affectedrows = 1, curstep = storage.getMaxStep();
 		while (affectedrows > 0) {
 			LogWriter.get().printlnDebug("============");
+			Collections.sort(ruleinfo);
 			affectedrows = 0;
-			for (int i=0; i<inferencerules.size(); i++) {
-				affectedrows = affectedrows + storage.runRule(inferencerules.get(i),curstep,curstep);
+			for (int i=0; i<ruleinfo.size(); i++) {
+				affectedrows = affectedrows + runRule(ruleinfo.get(i),curstep);
+				if (affectedrows != 0) i=ruleinfo.size();
 			}
 			curstep++;
 		}
 		LogWriter.get().printlnNote("Completed materialization in " + (System.currentTimeMillis() - sTime) + "ms.");
 		storage.dumpStatistics();
+	}
+	
+	protected int runRule(RuleInfo ri, int curstep) {
+		int affectedrows = storage.runRule(ri.name,ri.laststep+1,curstep);
+		ri.laststep = curstep;
+		ri.setLastAffected(affectedrows);
+		return affectedrows;
 	}
 	
 	/**
