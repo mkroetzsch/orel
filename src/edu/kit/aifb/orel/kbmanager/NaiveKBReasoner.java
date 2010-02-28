@@ -222,9 +222,9 @@ public class NaiveKBReasoner {
 		rules.put("eltypesco", "eltype(y) :- eltype(x), dsco(x,y)");
 		rules.put("eltypecon", "eltype(y) :- eltype(x1), eltype(x2), dsubconjunctionof(x1,x2,y)");
 		/// dsv
-		rules.put("dsvp",      "dsv(x,q,y) :- dsv(x,p,y), dspo(p,q)");
+		rules.put("dsvp",     "dsv(x,q,y)  :- dsv(x,p,y), dspo(p,q)");
 		rules.put("dabsnom1", "dsv(x',p,y) :- sco(x',x), dsv(x,p,y), nominal(x')"); 
-		rules.put("dabsnom2", "dsv(x,p,y') :- dsv(x,p,y), sco(y,y'), dnominal(y')");
+		rules.put("dabsnom2", "dsv(x,p,y') :- dsv(x,p,y), dsco(y,y'), dnominal(y')");
 		/// dran
 		rules.put("dranp",   "dran(q,x) :- dran(p,x), dspo(q,p)");
 		rules.put("dransco", "dran(p,y) :- dran(p,x), dsco(x,y)");
@@ -236,12 +236,12 @@ public class NaiveKBReasoner {
 		/// dself [not existing in OWL 2]
 
 		// <<<Role Disjointness:>>>
-		rules.put("ddisnom1", "sco(x," + bot + ")   :- ddisjoint(v,w), dnominal(y), sco(x,x1), sco(x,x2), dsv(x1,v,x1'), dsv(x2,w,x2'), dsco(x1',y), dsco(x2',y)");
+		rules.put("ddisnom1",     "sco(x," + bot + ")   :- ddisjoint(v,w), dnominal(y), sco(x,x1), sco(x,x2), dsv(x1,v,x1'), dsv(x2,w,x2'), dsco(x1',y), dsco(x2',y)");
 		rules.put("ddisnom2-aux", "ddisjointaux(v,x,y1) :- ddisjoint(v,w), nonempty(x), sco(x,x1), dsv(x1,v,x1'), dsco(x1',y1), dnominal(y1)");
-		rules.put("ddisnom2", "dsco(z," + dbot + ") :- ddisjoint(v,w), ddisjointaux(v,x,y1), ddisjointaux(w,x,y2), dsco(z,y1), dsco(z,y2)");
-		rules.put("ddisnomran1", "ran(p," + bot + ")   :- ddisjoint(v,w), nominal(y), ran(p,x1), ran(p,x2), dsv(x1,v,x1'), dsv(x2,w,x2'), dsco(x1',y), dsco(x2',y)");
-		rules.put("ddisnomran2", "dran(p," + dbot + ") :- ddisjoint(v,w), ddisjointaux(v,x,y1), ddisjointaux(w,x,y2), dran(p,y1), dran(p,y2)");
-		rules.put("ddisspo",  "sco(y," + bot + ") :- sco(y,x), dsv(x,u,x'), ddisjoint(v,w), dspo(u,v), dspo(u,w)");
+		rules.put("ddisnom2",     "dsco(z," + dbot + ") :- ddisjoint(v,w), ddisjointaux(v,x,y1), ddisjointaux(w,x,y2), dsco(z,y1), dsco(z,y2)");
+		rules.put("ddisnomran1",  "ran(p," + bot + ")   :- ddisjoint(v,w), nominal(y), ran(p,x1), ran(p,x2), dsv(x1,v,x1'), dsv(x2,w,x2'), dsco(x1',y), dsco(x2',y)");
+		rules.put("ddisnomran2",  "dran(p," + dbot + ") :- ddisjoint(v,w), ddisjointaux(v,x,y1), ddisjointaux(w,x,y2), dran(p,y1), dran(p,y2)");
+		rules.put("ddisspo",        "sco(y," + bot + ") :- sco(y,x), dsv(x,u,x'), ddisjoint(v,w), dspo(u,v), dspo(u,w)");
 		
 		rules.put("ddissub1", "ddisjoint(p,q) :- ddisjoint(p1,q1), dspo(p,p1), dspo(q,q1)");
 		rules.put("ddissub2", "ddisjoint(p,q) :- dsubsomevalues(p," + dtop + ",x), dsubsomevalues(q," + dtop + ",y), dsco(x,x'), dsco(y,y'), dsubconjunctionof(x',y',z'), dsco(z'," + dbot + ")");
