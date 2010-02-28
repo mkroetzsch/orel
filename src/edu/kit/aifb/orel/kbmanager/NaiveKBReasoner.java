@@ -166,6 +166,7 @@ public class NaiveKBReasoner {
 		// NOTE: dspo(p,p) is created at load time
 		rules.put("dspo",           "dspo(p,r) :- dspo(p,q), dspo(q,r)");
 		/// dsco
+		rules.put("dclash",  "dsco(x," + dbot + ") :- dnominal(x), dnominal(y), dsco(x,y), orel:distinct(x,y)");
 		rules.put("dsco",    "dsco(x,z) :- dsco(x,y), dsco(y,z)"); 
 		rules.put("dcon",    "dsco(x,z) :- dsco(x,y1), dsco(x,y2), dsubconjunctionof(y1,y2,z)");
 		rules.put("dsvr-el", "dsco(x,z) :- dsv(x,p,y), dsco(y,y1), eltype(y1), dsubsomevalues(p,y1,z)");
@@ -205,12 +206,12 @@ public class NaiveKBReasoner {
 		rules.put("davspo",         "dav(x,q,y)     :- dspo(q,p), dav(x,p,y)");
 		rules.put("davsco2",        "dav(x,p,y)     :- dav(x,p,z), dsco(z,y)");
 		rules.put("davran",         "dav(" + top + ",p,x)   :- dran(p,x)");
-		rules.put("davsvnomatmost", "dav(x,p,y)     :- dsv(x,p,y), nominal(y), datmostone(x,p," + dtop + ")");
+		rules.put("davsvnomatmost", "dav(x,p,y)     :- dsv(x,p,y), dnominal(y), datmostone(x,p," + dtop + ")");
 		rules.put("davbotrole",     "dav(" + top + ",p," + dbot + ") :- ddisjoint(p,p)");
 		rules.put("dfuncbackwards", "sco(x'," + bot + ") :- datmostone(x,p,y), nominal(x1), nominal(x2), dnominal(y1), dnominal(y2), dsubconjunctionof(y1,y2,z), dsco(z," + dbot + "), dsv(x1,p,y1), dsv(x2,p,y2), dsco(y1,y), dsco(y2,y), sco(x1,x), sco(x2,x), sco(x',x1), sco(x',x2)");
 		
 		rules.put("dscoavsafe",     "dsco(y,z)   :- dsv(x,p,y), nominal(x), dnominal(y), sco(x,w), dav(w,p,z)");
-		rules.put("dscoatmostsafe", "dsco(w1,w2) :- nominal(x), datmostone(x,p,y), dsv(x,p,w1), dnominal(w1), dsv(x,p,w2), nominal(w2), dsco(w1,y), dsco(w2,y)"); 
+		rules.put("dscoatmostsafe", "dsco(w1,w2) :- nominal(x), datmostone(x,p,y), dsv(x,p,w1), dnominal(w1), dsv(x,p,w2), dnominal(w2), dsco(w1,y), dsco(w2,y)"); 
 		
 		rules.put("damosco1",     "datmostone(x,p,y)                     :- sco(x,z), datmostone(z,p,y)");
 		rules.put("damosco2",     "datmostone(x,p,y)                     :- datmostone(x,p,z), dsco(y,z)");
