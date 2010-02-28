@@ -47,6 +47,12 @@ public class BasicKBManager {
 		//storage.makePredicateAssertion("subconjunctionof",nothing,thing,nothing);
 		storage.makePredicateAssertion("subconjunctionof",thing,nothing,nothing);
 		storage.makePredicateAssertion("nonempty",thing);
+		int botobjprop = storage.getID(BasicExpressionVisitor.OP_BOTTOM_OBJECT_PROPERTY), 
+		    botdatprop = storage.getID(BasicExpressionVisitor.OP_BOTTOM_DATA_PROPERTY);
+		storage.makePredicateAssertion("spo",botobjprop,botobjprop);
+		storage.makePredicateAssertion("disjoint",botobjprop,botobjprop);
+		storage.makePredicateAssertion("dspo",botdatprop,botdatprop);
+		storage.makePredicateAssertion("ddisjoint",botdatprop,botdatprop);
 		
 	    int toptype = storage.getIDForTopDatatype(), bottype = storage.getIDForBottomDatatype();
 		storage.makePredicateAssertion("dsco",toptype,toptype);
