@@ -426,10 +426,10 @@ public class BasicAxiomVisitor implements OWLAxiomVisitorEx<Boolean> {
 		if ( (pkey1 == null) || (pkey2 == null) ) return false;
 		int pid1 = storage.getID(pkey1), pid2 = storage.getID(pkey2);
 		if ( (todos & BasicKBLoader.ASSERT) != 0 ) {
-			storage.makePredicateAssertion("inverserof", pid1, pid2);				
+			storage.makePredicateAssertion("inverseof", pid1, pid2);				
 		}
 		if ( (todos & BasicKBLoader.CHECK) != 0 ) {
-			result = storage.checkPredicateAssertion("inverserof", pid1, pid2);
+			result = storage.checkPredicateAssertion("inverseof", pid1, pid2);
 		}
 		return result;		
 	}
