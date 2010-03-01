@@ -83,7 +83,7 @@ public class Client {
 			return;
 		}
 		if ( Settings.getDBServer().equals("") || Settings.getDBUser().equals("") || Settings.getDBName().equals("") ) {
-			LogWriter.get().printlnError("Insufficient database configuration.\nPlease be sure to specify at leat 'dbname', dbuser' and 'dbserver' in your local configuration.");
+			LogWriter.get().printlnError("Insufficient database configuration.\n  See INSTALL on how to configure Orel.");
 			return;
 		}
 
