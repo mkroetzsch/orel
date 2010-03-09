@@ -6,8 +6,8 @@ import org.semanticweb.owlapi.io.OWLOntologyDocumentSource;
 import org.semanticweb.owlapi.io.StringDocumentSource;
 import org.semanticweb.owlapi.model.*;
 
-import edu.kit.aifb.orel.kbmanager.BasicKBManager;
-import edu.kit.aifb.orel.kbmanager.BasicKBManager.InferenceResult;
+import edu.kit.aifb.orel.kbmanager.KBManager;
+import edu.kit.aifb.orel.kbmanager.KBManager.InferenceResult;
 
 import java.sql.SQLException;
 import java.util.Iterator;
@@ -53,12 +53,12 @@ public class OWLWGTestCaseChecker {
 	protected OWLOntology testCaseOntology;
 	protected BufferedWriter outputbuffer;
 	
-	BasicKBManager kbmanager;
+	KBManager kbmanager;
 	
 	/**
 	 * @param file (String) containing the ontology test 
 	 */
-	public OWLWGTestCaseChecker(IRI testcases,BasicKBManager kbmanager) throws OWLOntologyCreationException, SQLException, IOException {
+	public OWLWGTestCaseChecker(IRI testcases,KBManager kbmanager) throws OWLOntologyCreationException, SQLException, IOException {
 		this.kbmanager = kbmanager;
 		manager = OWLManager.createOWLOntologyManager();
 		manager.loadOntologyFromOntologyDocument(new StringDocumentSource(TEST_ONTOLOGY_STUB));

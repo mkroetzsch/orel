@@ -10,6 +10,14 @@ public abstract class KBManager {
 	}
 	protected StorageDriver storage;
 	
+	public static KBManager getKBManager(String name, StorageDriver storage) {
+		if (name.equals("ELRLManager")) {
+			return new BasicKBManager(storage);
+		} else {
+			return null;
+		}
+	}
+	
 	public KBManager(StorageDriver storage) {
 		this.storage = storage;
 	}

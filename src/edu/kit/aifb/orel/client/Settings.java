@@ -18,6 +18,7 @@ public class Settings {
 	static protected String dbserver = "";
 	static protected String dbname = "";
 	static protected String dbpassword = "";
+	static protected String kbmanager = "";
 
 	/**
 	 * Load the configuration from a file.
@@ -41,6 +42,7 @@ public class Settings {
 		Settings.dbpassword = props.getProperty("dbpassword","");
 		Settings.dbserver = props.getProperty("dbserver","");
 		Settings.dbname = props.getProperty("dbname","");
+		Settings.kbmanager = props.getProperty("kbmanager","ELRLManager");
 	}
 	
 	static public String getDBPassword() {
@@ -57,5 +59,9 @@ public class Settings {
 
 	static public String getDBServer() {
 		return Settings.dbserver;
+	}
+	
+	static public String getKBManager() {
+		return Settings.kbmanager;
 	}
 }

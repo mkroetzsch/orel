@@ -5,7 +5,7 @@ import org.semanticweb.owlapi.model.IRI;
 import org.semanticweb.owlapi.model.OWLOntology;
 import org.semanticweb.owlapi.model.OWLOntologyManager;
 
-import edu.kit.aifb.orel.kbmanager.BasicKBManager;
+import edu.kit.aifb.orel.kbmanager.KBManager;
 import edu.kit.aifb.orel.kbmanager.KBManager.InferenceResult;
 import edu.kit.aifb.orel.storage.MySQLStorageDriver;
 import edu.kit.aifb.orel.storage.StorageDriver;
@@ -13,7 +13,7 @@ import edu.kit.aifb.orel.test.OWLWGTestCaseChecker;
 
 public class Client {
 	protected static StorageDriver storage;
-	protected static BasicKBManager kbmanager; 
+	protected static KBManager kbmanager; 
 
 	/**
 	 * @param args
@@ -90,7 +90,12 @@ public class Client {
 		long sTime=System.currentTimeMillis();
 		try {
 			storage = new MySQLStorageDriver(Settings.getDBServer(),Settings.getDBName(),Settings.getDBUser(),Settings.getDBPassword());
-			kbmanager = new BasicKBManager(storage);
+			LogWriter.get().printlnNote("Using \"" + Settings.getKBManager() + "\" to manage knowledge base.");
+			kbmanager = KBManager.getKBManager(Settings.getKBManager(), storage);
+			if (kbmanager == null) {
+				LogWriter.get().printlnError("The selected knowledge base manager \"" + Settings.getKBManager() + "\" is not known. Aborting.");
+				return;
+			}
 			if (operation.equals("init")) {
 				LogWriter.get().printlnNote("Initialising store ... ");
 				kbmanager.initialize();
