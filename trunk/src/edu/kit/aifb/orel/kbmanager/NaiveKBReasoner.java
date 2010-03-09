@@ -10,7 +10,7 @@ import org.semanticweb.owlapi.model.OWLOntology;
 
 import edu.kit.aifb.orel.client.LogWriter;
 import edu.kit.aifb.orel.inferencing.InferenceRuleDeclaration;
-import edu.kit.aifb.orel.kbmanager.BasicKBManager.InferenceResult;
+import edu.kit.aifb.orel.kbmanager.KBManager.InferenceResult;
 import edu.kit.aifb.orel.storage.StorageDriver;
 
 /**
