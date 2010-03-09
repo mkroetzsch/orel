@@ -11,7 +11,8 @@ public abstract class KBManager {
 	protected StorageDriver storage;
 	
 	public static KBManager getKBManager(String name, StorageDriver storage) {
-		if (name.equals("ELRLManager")) {
+		name = name.toLowerCase(); // compare case insensitive
+		if (name.equals("elrlmanager")) {
 			return new BasicKBManager(storage);
 		} else {
 			return null;
