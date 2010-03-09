@@ -6,7 +6,7 @@ import org.semanticweb.owlapi.model.OWLOntology;
 import org.semanticweb.owlapi.model.OWLOntologyManager;
 
 import edu.kit.aifb.orel.kbmanager.BasicKBManager;
-import edu.kit.aifb.orel.kbmanager.BasicKBManager.InferenceResult;
+import edu.kit.aifb.orel.kbmanager.KBManager.InferenceResult;
 import edu.kit.aifb.orel.storage.MySQLStorageDriver;
 import edu.kit.aifb.orel.storage.StorageDriver;
 import edu.kit.aifb.orel.test.OWLWGTestCaseChecker;
@@ -105,13 +105,13 @@ public class Client {
 				Thread.sleep(1000);
 				LogWriter.get().printlnNote("(CTRL+C to abort within the next 3 seconds!)");
 				Thread.sleep(3000);
-				kbmanager.clearDatabase(true);
+				kbmanager.clear(true);
 			} else if (operation.equals("clearall")) {
 				LogWriter.get().printlnNote("Deleting ALL database content ...");
 				Thread.sleep(1000);
 				LogWriter.get().printlnNote("(CTRL+C to abort within the next 3 seconds!)");
 				Thread.sleep(3000);
-				kbmanager.clearDatabase(false);
+				kbmanager.clear(false);
 			} else if (operation.equals("load")) {
 				LogWriter.get().printlnNote("Loading ontology ...");
 				if (inputfile.equals("")) {

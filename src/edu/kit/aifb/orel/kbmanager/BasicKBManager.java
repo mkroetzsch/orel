@@ -15,28 +15,21 @@ import edu.kit.aifb.orel.storage.StorageDriver;
  * 
  * @author Markus Krötzsch
  */
-public class BasicKBManager {
-	static public enum InferenceResult {
-	    YES, NO, DONTKNOW 
-	}
-	protected StorageDriver storage;
-	
+public class BasicKBManager extends KBManager {
+
 	/**
-	 * Constructor that also establishes a database connection, since this object cannot really work without a database.
-	 * @param dbserver
-	 * @param dbname
-	 * @param dbuser
-	 * @param dbpwd
-	 * @throws Exception
+	 * Constructor that also establishes a database connection, since this
+	 * object cannot really work without a database.
 	 */
-	public BasicKBManager(StorageDriver storage) throws Exception {
-		this.storage = storage;
+	public BasicKBManager(StorageDriver storage) {
+		super(storage);
 		registerPredicates();
 	}
 
 	/**
 	 * Ensure that the DB has the right tables, creating them if necessary.
 	 */
+	@Override
 	public void initialize() throws Exception {
 		storage.initialize();
 		// the fundamental truths of DL reasoning: 
@@ -129,32 +122,13 @@ public class BasicKBManager {
 		}
 		storage.commit();
 	}
-
-	/**
-	 * Delete all of our database tables and their contents.
-	 */
-	public void drop() throws Exception {
-		storage.drop();
-	}
-	
-	/**
-	 * Delete the contents of the database but do not drop the tables we created.
-	 * @throws SQLException
-	 */
-	public void clearDatabase(boolean onlyderived) throws Exception {
-		if (onlyderived) {
-			storage.clear(onlyderived);
-		} else { // faster
-			drop();
-			initialize();
-		}
-	}
 	
 	/**
 	 * Load the content of some ontology to the database.   
 	 * @param ontology
 	 * @param donotassert if true then only load the relevant subexpressions without asserting the axioms 
 	 */
+	@Override
 	public boolean loadOntology(OWLOntology ontology) throws Exception {
 		boolean result = true;
 		BasicKBLoader loader = new BasicKBLoader(storage);
@@ -171,6 +145,7 @@ public class BasicKBManager {
 	 * Unsupported axioms will be ignored, and the result will be as if they had not been given.   
 	 * @param ontology
 	 */
+	@Override
 	public InferenceResult checkEntailment(OWLOntology ontology) throws Exception {
 		NaiveKBReasoner reasoner = new NaiveKBReasoner(storage);
 		return reasoner.checkEntailment(ontology);
@@ -180,6 +155,7 @@ public class BasicKBManager {
 	 * Check if the loaded axioms are consistent.
 	 * Unsupported axioms will be ignored, and the result will be as if they had not been given.   
 	 */
+	@Override
 	public InferenceResult checkConsistency() throws Exception {
 		NaiveKBReasoner reasoner = new NaiveKBReasoner(storage);
 		return reasoner.checkConsistency();
@@ -188,6 +164,7 @@ public class BasicKBManager {
 	/**
 	 * Compute all materialized statements on the database.
 	 */
+	@Override
 	public void materialize() throws Exception {
 		NaiveKBReasoner reasoner = new NaiveKBReasoner(storage);
 		reasoner.materialize();
