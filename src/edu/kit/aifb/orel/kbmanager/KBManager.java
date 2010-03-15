@@ -2,6 +2,7 @@ package edu.kit.aifb.orel.kbmanager;
 
 import org.semanticweb.owlapi.model.OWLOntology;
 
+import edu.kit.aifb.orel.kbmanager.elhmanager.ELKBManager;
 import edu.kit.aifb.orel.storage.StorageDriver;
 
 public abstract class KBManager {
@@ -14,7 +15,10 @@ public abstract class KBManager {
 		name = name.toLowerCase(); // compare case insensitive
 		if (name.equals("elrlmanager")) {
 			return new BasicKBManager(storage);
-		} else {
+		}else if(name.equals("elmanager")){
+			return new ELKBManager(storage);
+		} 
+		else {
 			return null;
 		}
 	}
