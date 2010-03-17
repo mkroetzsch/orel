@@ -15,10 +15,9 @@ public abstract class KBManager {
 		name = name.toLowerCase(); // compare case insensitive
 		if (name.equals("elrlmanager")) {
 			return new BasicKBManager(storage);
-		}else if(name.equals("elmanager")){
+		} else if (name.equals("elmanager")) {
 			return new ELKBManager(storage);
-		} 
-		else {
+		} else {
 			return null;
 		}
 	}
