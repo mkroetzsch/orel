@@ -14,6 +14,8 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import com.mysql.jdbc.exceptions.MySQLSyntaxErrorException;
+
 import edu.kit.aifb.orel.client.LogWriter;
 import edu.kit.aifb.orel.inferencing.InferenceRuleDeclaration;
 import edu.kit.aifb.orel.inferencing.PredicateAtom;
@@ -253,8 +255,12 @@ public class MySQLStorageDriver implements StorageDriver {
 			prepinsertstmtsizes.put(key,0);
 		}
 		if (makeids != null) makeids.executeBatch();
-		Statement stmt = con.createStatement();
-		stmt.execute("DELETE FROM ids WHERE name=\"-\""); // delete any unused pre-allocated ids
+		try {
+			Statement stmt = con.createStatement();
+			stmt.execute("DELETE FROM ids WHERE name=\"-\""); // delete any unused pre-allocated ids
+		} catch (SQLException e) {
+			// don't worry; usually this just means that the table ids was not created yet
+		}
 		if (loadmode) con.commit();
 	}
 	
