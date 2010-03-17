@@ -14,13 +14,13 @@ public class BasicKBLoader {
 	protected BasicAxiomVisitor axiomvisitor;
 	
 	/// Flags for more fine-grained control of actions during axiom processing
-	static protected final int CHECK = 1;
-	static protected final int PREPARECHECK = 2;
-	static protected final int ASSERT = 4;
-	static protected final int PREPAREASSERT = 8;
+	static public final int CHECK = 1;
+	static public final int PREPARECHECK = 2;
+	static public final int ASSERT = 4;
+	static public final int PREPAREASSERT = 8;
 	/// Combination of flags
-	static protected final int PREPARE = PREPAREASSERT | PREPARECHECK;
-	static protected final int WRITE = PREPARE | ASSERT;
+	static public final int PREPARE = PREPAREASSERT | PREPARECHECK;
+	static public final int WRITE = PREPARE | ASSERT;
 	
 	public BasicKBLoader(StorageDriver storage) {
 		this.storage = storage;
