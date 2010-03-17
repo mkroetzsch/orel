@@ -14,8 +14,6 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import com.mysql.jdbc.exceptions.MySQLSyntaxErrorException;
-
 import edu.kit.aifb.orel.client.LogWriter;
 import edu.kit.aifb.orel.inferencing.InferenceRuleDeclaration;
 import edu.kit.aifb.orel.inferencing.PredicateAtom;
