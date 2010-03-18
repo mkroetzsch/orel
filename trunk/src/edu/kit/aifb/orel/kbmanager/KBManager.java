@@ -3,6 +3,7 @@ package edu.kit.aifb.orel.kbmanager;
 import org.semanticweb.owlapi.model.OWLOntology;
 
 import edu.kit.aifb.orel.kbmanager.elhmanager.ELKBManager;
+import edu.kit.aifb.orel.kbmanager.instancemanager.InstanceKBManager;
 import edu.kit.aifb.orel.storage.StorageDriver;
 
 public abstract class KBManager {
@@ -17,6 +18,8 @@ public abstract class KBManager {
 			return new BasicKBManager(storage);
 		} else if (name.equals("elmanager")) {
 			return new ELKBManager(storage);
+		} else if (name.equals("instancemanager")) {
+			return new InstanceKBManager(storage);
 		} else {
 			return null;
 		}
