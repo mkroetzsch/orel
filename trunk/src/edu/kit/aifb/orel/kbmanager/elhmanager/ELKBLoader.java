@@ -5,17 +5,13 @@ import java.util.Set;
 import org.semanticweb.owlapi.model.*;
 
 import edu.kit.aifb.orel.client.LogWriter;
-import edu.kit.aifb.orel.kbmanager.BasicAxiomVisitor;
-import edu.kit.aifb.orel.kbmanager.BasicExpressionVisitor;
-import edu.kit.aifb.orel.kbmanager.BasicKBLoader;
-import edu.kit.aifb.orel.kbmanager.BasicExpressionVisitor.Action;
 import edu.kit.aifb.orel.storage.StorageDriver;
 
 public class ELKBLoader {
 	protected StorageDriver storage;
 	protected OWLDataFactory datafactory;
-	protected BasicExpressionVisitor expvisitor;
-	protected BasicAxiomVisitor axiomvisitor;
+	protected ELExpressionVisitor expvisitor;
+	protected ELAxiomVisitor axiomvisitor;
 	
 	/// Flags for more fine-grained control of actions during axiom processing
 	static protected final int CHECK = 1;
@@ -38,8 +34,8 @@ public class ELKBLoader {
 	public boolean processOntology(OWLOntology ontology, int todos) throws Exception {
 		boolean result = true;
 		datafactory = ontology.getOWLOntologyManager().getOWLDataFactory();
-		expvisitor = new BasicExpressionVisitor(BasicExpressionVisitor.Action.READ,storage);
-		axiomvisitor = new BasicAxiomVisitor(storage,datafactory,expvisitor,todos);
+		expvisitor = new ELExpressionVisitor(ELExpressionVisitor.Action.READ,storage);
+		axiomvisitor = new ELAxiomVisitor(storage,datafactory,expvisitor,todos);
 		boolean writing = ( (todos & ELKBLoader.WRITE) != 0 );
 		if ( writing ) { // initialize bridge and prepare for bulk insert:
 			storage.beginLoading();
