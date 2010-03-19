@@ -7,7 +7,6 @@ import edu.kit.aifb.orel.inferencing.PredicateDeclaration;
 import edu.kit.aifb.orel.kbmanager.BasicExpressionVisitor;
 import edu.kit.aifb.orel.kbmanager.BasicKBLoader;
 import edu.kit.aifb.orel.kbmanager.KBManager;
-import edu.kit.aifb.orel.kbmanager.NaiveKBReasoner;
 import edu.kit.aifb.orel.storage.StorageDriver;
 
 /**
@@ -24,15 +23,15 @@ public class ELKBManager extends KBManager{
 
 	@Override
 	public InferenceResult checkConsistency() throws Exception {
-		// TODO Auto-generated method stub
-		return null;
+		ELKBReasoner reasoner = new ELKBReasoner(storage);
+		return reasoner.checkConsistency();
 	}
 
 	@Override
 	public InferenceResult checkEntailment(OWLOntology ontology)
 			throws Exception {
-		// TODO Auto-generated method stub
-		return null;
+		ELKBReasoner reasoner = new ELKBReasoner(storage);
+		return reasoner.checkEntailment(ontology);
 	}
 
 	@Override
