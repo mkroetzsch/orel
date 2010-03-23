@@ -349,6 +349,7 @@ public class MySQLStorageDriver implements StorageDriver {
 				stmt = getPreparedInsertStatement(predicate);
 				prepinsertstmts.put(predicate, stmt);
 				prepinsertstmtsizes.put(predicate, 0);
+				if (stmt == null) throw new IllegalArgumentException("Cannot insert data into predicate \"" + predicate + "\" -- misspelled predicate name?");
 			}
 			for (int i=0; i<ids.length; i++) {
 				stmt.setInt(i+1, ids[i]);
