@@ -193,7 +193,7 @@ public class InstanceKBManager extends KBManager {
 		storage.registerPredicate( new PredicateDeclaration("self",2,true,false) ); // self(a,R): ∃R.Self(a)
 		storage.registerPredicate( new PredicateDeclaration("triple",3,true,false) ); // triple(a,R,b): R(a,b)
 		storage.registerPredicate( new PredicateDeclaration("dtriple",3,true,false) );
-		storage.registerPredicate( new PredicateDeclaration("extant",1,true,false) ); // is(a): the element a necessarily exists
+		storage.registerPredicate( new PredicateDeclaration("extant",1,true,false) ); // extant(a): the element a necessarily exists
 		storage.registerPredicate( new PredicateDeclaration("dextant",1,true,false) );
 		// auxiliary predicates
 		storage.registerPredicate( new PredicateDeclaration("name",1,false,false) ); // name(a): the element a is named
