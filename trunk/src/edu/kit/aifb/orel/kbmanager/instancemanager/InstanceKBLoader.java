@@ -13,13 +13,37 @@ public class InstanceKBLoader {
 	protected InstanceExpressionVisitor expvisitor;
 	protected InstanceAxiomVisitor axiomvisitor;
 	
-	/// Flags for more fine-grained control of actions during axiom processing
+	/*
+	 * Flag to indicate the activity of reading the store to check for some
+	 * conclusion. This operation returns "true" if the conclusion was found.   
+	 */
 	static public final int CHECK = 1;
+	/*
+	 * Flag to indicate the activity of writing auxiliary axioms to the store
+	 * as needed for being able to check for some conclusion. This involves
+	 * introducing auxiliary axioms for decomposing complex statements, but
+	 * also the creation of "test individuals" that are needed for checking
+	 * some axioms. This operation returns "true" if checking for entailment is
+	 * supported for the given axiom.      
+	 */
 	static public final int PREPARECHECK = 2;
+	/*
+	 * Flag to indicate the activity of writing some axiom to the store. This
+	 * operation returns "true" if the axiom (type) can be written. It is
+	 * normally executed together with PREPAREASSERT.
+	 */
 	static public final int ASSERT = 4;
+	/*
+	 * Flag to indicate the activity of writing auxiliary axioms to the store
+	 * as needed for being able to assert for some axiom. This involves
+	 * introducing auxiliary axioms for decomposing complex statements. This
+	 * operation returns "true" if checking for entailment is supported for the
+	 * given axiom.      
+	 */
 	static public final int PREPAREASSERT = 8;
-	/// Combination of flags
+	/// Flag combination to indicate preparation activities.
 	static public final int PREPARE = PREPAREASSERT | PREPARECHECK;
+	/// Flag combination to indicate activiteis that write to the store.
 	static public final int WRITE = PREPARE | ASSERT;
 	
 	public InstanceKBLoader(StorageDriver storage) {
