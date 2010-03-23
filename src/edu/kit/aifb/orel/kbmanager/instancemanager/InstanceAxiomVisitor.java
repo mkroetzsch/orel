@@ -1,60 +1,31 @@
 package edu.kit.aifb.orel.kbmanager.instancemanager;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
-import org.semanticweb.owlapi.model.OWLAnnotationAssertionAxiom;
-import org.semanticweb.owlapi.model.OWLAnnotationPropertyDomainAxiom;
-import org.semanticweb.owlapi.model.OWLAnnotationPropertyRangeAxiom;
-import org.semanticweb.owlapi.model.OWLAsymmetricObjectPropertyAxiom;
-import org.semanticweb.owlapi.model.OWLAxiomVisitorEx;
-import org.semanticweb.owlapi.model.OWLClassAssertionAxiom;
-import org.semanticweb.owlapi.model.OWLClassExpression;
-import org.semanticweb.owlapi.model.OWLDataFactory;
-import org.semanticweb.owlapi.model.OWLDataPropertyAssertionAxiom;
-import org.semanticweb.owlapi.model.OWLDataPropertyDomainAxiom;
-import org.semanticweb.owlapi.model.OWLDataPropertyExpression;
-import org.semanticweb.owlapi.model.OWLDataPropertyRangeAxiom;
-import org.semanticweb.owlapi.model.OWLDatatypeDefinitionAxiom;
-import org.semanticweb.owlapi.model.OWLDeclarationAxiom;
-import org.semanticweb.owlapi.model.OWLDifferentIndividualsAxiom;
-import org.semanticweb.owlapi.model.OWLDisjointClassesAxiom;
-import org.semanticweb.owlapi.model.OWLDisjointDataPropertiesAxiom;
-import org.semanticweb.owlapi.model.OWLDisjointObjectPropertiesAxiom;
-import org.semanticweb.owlapi.model.OWLDisjointUnionAxiom;
-import org.semanticweb.owlapi.model.OWLEquivalentClassesAxiom;
-import org.semanticweb.owlapi.model.OWLEquivalentDataPropertiesAxiom;
-import org.semanticweb.owlapi.model.OWLEquivalentObjectPropertiesAxiom;
-import org.semanticweb.owlapi.model.OWLFunctionalDataPropertyAxiom;
-import org.semanticweb.owlapi.model.OWLFunctionalObjectPropertyAxiom;
-import org.semanticweb.owlapi.model.OWLHasKeyAxiom;
-import org.semanticweb.owlapi.model.OWLIndividual;
-import org.semanticweb.owlapi.model.OWLInverseFunctionalObjectPropertyAxiom;
-import org.semanticweb.owlapi.model.OWLInverseObjectPropertiesAxiom;
-import org.semanticweb.owlapi.model.OWLIrreflexiveObjectPropertyAxiom;
-import org.semanticweb.owlapi.model.OWLNegativeDataPropertyAssertionAxiom;
-import org.semanticweb.owlapi.model.OWLNegativeObjectPropertyAssertionAxiom;
-import org.semanticweb.owlapi.model.OWLObjectOneOf;
-import org.semanticweb.owlapi.model.OWLObjectPropertyAssertionAxiom;
-import org.semanticweb.owlapi.model.OWLObjectPropertyDomainAxiom;
-import org.semanticweb.owlapi.model.OWLObjectPropertyExpression;
-import org.semanticweb.owlapi.model.OWLObjectPropertyRangeAxiom;
-import org.semanticweb.owlapi.model.OWLReflexiveObjectPropertyAxiom;
-import org.semanticweb.owlapi.model.OWLSameIndividualAxiom;
-import org.semanticweb.owlapi.model.OWLSubAnnotationPropertyOfAxiom;
-import org.semanticweb.owlapi.model.OWLSubClassOfAxiom;
-import org.semanticweb.owlapi.model.OWLSubDataPropertyOfAxiom;
-import org.semanticweb.owlapi.model.OWLSubObjectPropertyOfAxiom;
-import org.semanticweb.owlapi.model.OWLSubPropertyChainOfAxiom;
-import org.semanticweb.owlapi.model.OWLSymmetricObjectPropertyAxiom;
-import org.semanticweb.owlapi.model.OWLTransitiveObjectPropertyAxiom;
-import org.semanticweb.owlapi.model.SWRLRule;
+import org.semanticweb.owlapi.model.*;
 
 import edu.kit.aifb.orel.storage.StorageDriver;
 
+/**
+ * OWLAxiomVisitorEx for processing the axioms of an ontology when used by
+ * InstanceKBManager. Please see the documentation of that class for details
+ * about the storage model.
+ * 
+ * The visitor can perform different reading or writing activities that are
+ * relevant for loading and inferencing. The activites that are to be done
+ * during one visit are defined by the variable todos which is a bitwise
+ * disjunction of the flags InstanceKBLoader.CHECK, InstanceKBLoader.ASSERT,
+ * InstanceKBLoader.PREPAREASSERT, and InstanceKBLoader.PREPARECHECK. See their
+ * documentation for details.
+ * 
+ * All visiting methods return a boolean to indicate the outcome/success of the
+ * performed actions. If multiple actions are performed, the result is their
+ * conjunction.
+ * @author Markus Krötzsch
+ */
 public class InstanceAxiomVisitor implements OWLAxiomVisitorEx<Boolean> {
-	/// Integer for todo flags as defined in BasicKBLoader.
+	/// Integer for todo flags as defined in InstanceKBLoader.
 	protected int todos;
 
 	protected InstanceExpressionVisitor expvisitor;
@@ -96,44 +67,11 @@ public class InstanceAxiomVisitor implements OWLAxiomVisitorEx<Boolean> {
 	public Boolean visit(OWLDisjointClassesAxiom axiom) {
 		Object[] descs = axiom.getClassExpressions().toArray();
 		boolean result = true;
-		int botid = storage.getIDForNothing();
-		String[] keys = new String[descs.length];
+		String key;
 		for (int i=0; i<descs.length; i++) {
-			keys[i] = expvisitor.visitAndAct((OWLClassExpression)descs[i],getVisitorBodyAction(todos));
-			if (keys[i] == null) return false;
-		}
-		int id1, id2, conid;
-		String conkey;
-		ArrayList<String> ops;
-		for (int i=0; i<descs.length; i++) {
-			id1 = storage.getID(keys[i]);
 			for (int j=i+1; j<descs.length; j++) {
-				// TODO: the way how auxiliary conjunctions are created here is not optimal:
-				// more of the work should be done inside BasicExpressionsVisitor.
-				// See visit(OWLDifferentIndividualsAxiom) for an example of doing it in a cleaner way.
-				ops = new ArrayList<String>(2);
-				ops.add(keys[i]);
-				ops.add(keys[j]);
-				Collections.sort(ops);
-				conkey = InstanceExpressionVisitor.makeNAryExpressionKey("ObjectIntersection",ops,ops.size()-1,null);
-				conid = storage.getID(conkey);
-				if ( (todos & InstanceKBLoader.ASSERT) != 0 ) {
-					storage.makePredicateAssertion("sco",conid,botid);
-				}
-				if ( (todos & InstanceKBLoader.CHECK) != 0 ) {
-					result = result && storage.checkPredicateAssertion("sco",conid,botid);
-				}
-				if ( (todos & InstanceKBLoader.PREPARE) != 0 ) {
-					InstanceExpressionVisitor.createClassTautologies(conid,storage);
-					id2 = storage.getID(keys[j]);
-					// Note: auxiliary body facts were created in the earlier loop above
-					if ((todos & InstanceKBLoader.PREPARECHECK)!=0) {
-						storage.makePredicateAssertion("sco",conid,id1);
-						storage.makePredicateAssertion("sco",conid,id2);
-					} else {
-						storage.makePredicateAssertion("subconjunctionof",id1,id2,conid);
-					}
-				}
+				key = expvisitor.visitAndAct(datafactory.getOWLObjectIntersectionOf((OWLClassExpression)descs[i],(OWLClassExpression)descs[j]),getVisitorBodyAction(todos));
+				result = result && processSubClassOfAxiom(key, InstanceExpressionVisitor.OP_NOTHING);
 			}
 		}
 		return result;
@@ -172,11 +110,9 @@ public class InstanceAxiomVisitor implements OWLAxiomVisitorEx<Boolean> {
 	@Override
 	public Boolean visit(OWLDifferentIndividualsAxiom axiom) {
 		Object[] inds = axiom.getIndividuals().toArray();
-		//String[] keys = new String[inds.length];
 		OWLObjectOneOf[] nominals = new OWLObjectOneOf[inds.length];
 		for (int i=0; i<inds.length; i++) {
 			nominals[i] = datafactory.getOWLObjectOneOf((OWLIndividual)inds[i]);
-			//keys[i] = expvisitor.visitAndAct(nominals[i],getVisitorBodyAction(todos));
 		}
 		boolean result = true;
 		String key;
@@ -191,6 +127,9 @@ public class InstanceAxiomVisitor implements OWLAxiomVisitorEx<Boolean> {
 
 	@Override
 	public Boolean visit(OWLDisjointDataPropertiesAxiom axiom) {
+		if ( (todos & InstanceKBLoader.PREPARECHECK) != 0 ) { // currently no support for checking this
+			return false;
+		}
 		Object[] props = axiom.getProperties().toArray();
 		boolean result = true;
 		String[] keys = new String[props.length];
@@ -205,10 +144,10 @@ public class InstanceAxiomVisitor implements OWLAxiomVisitorEx<Boolean> {
 				for (int j=i+1;j<props.length;j++) {
 					pid2 = storage.getID(keys[j]);
 					if ( (todos & InstanceKBLoader.ASSERT) != 0 ) {
-						storage.makePredicateAssertion("ddisjoint",pid1,pid2);
+						storage.makePredicateAssertion("dpdisjoint",pid1,pid2);
 					}
 					if ( (todos & InstanceKBLoader.CHECK) != 0 ) {
-						result = result && storage.checkPredicateAssertion("ddisjoint",pid1,pid2);
+						result = false;
 					}
 				}
 			}
@@ -218,6 +157,9 @@ public class InstanceAxiomVisitor implements OWLAxiomVisitorEx<Boolean> {
 
 	@Override
 	public Boolean visit(OWLDisjointObjectPropertiesAxiom axiom) {
+		if ( (todos & InstanceKBLoader.PREPARECHECK) != 0 ) { // currently no support for checking this
+			return false;
+		}
 		Object[] props = axiom.getProperties().toArray();
 		boolean result = true;
 		String[] keys = new String[props.length];
@@ -232,10 +174,10 @@ public class InstanceAxiomVisitor implements OWLAxiomVisitorEx<Boolean> {
 				for (int j=i+1;j<props.length;j++) {
 					pid2 = storage.getID(keys[j]);
 					if ( (todos & InstanceKBLoader.ASSERT) != 0 ) {
-						storage.makePredicateAssertion("disjoint",pid1,pid2);
+						storage.makePredicateAssertion("pdisjoint",pid1,pid2);
 					}
 					if ( (todos & InstanceKBLoader.CHECK) != 0 ) {
-						result = result && storage.checkPredicateAssertion("disjoint",pid1,pid2);
+						result = false;
 					}
 				}
 			}
@@ -245,18 +187,21 @@ public class InstanceAxiomVisitor implements OWLAxiomVisitorEx<Boolean> {
 
 	@Override
 	public Boolean visit(OWLObjectPropertyRangeAxiom axiom) {
-		boolean result = true;
-		String propkey = expvisitor.visitAndAct(axiom.getProperty(),getVisitorBodyAction(todos));
-		String rangekey = expvisitor.visitAndAct(axiom.getRange(),getVisitorHeadAction(todos));
-		if ( (propkey == null) || (rangekey == null) ) return false;
-		int pid = storage.getID(propkey), oid = storage.getID(rangekey);
-		if ( (todos & InstanceKBLoader.ASSERT) != 0 ) {
-			storage.makePredicateAssertion("ran", pid, oid);				
-		}
-		if ( (todos & InstanceKBLoader.CHECK) != 0 ) {
-			result = storage.checkPredicateAssertion("ran", pid, oid);
-		}
-		return result;
+		return processSubClassOfAxiom( datafactory.getOWLThing(),
+                datafactory.getOWLObjectAllValuesFrom(axiom.getProperty(),axiom.getRange()) );
+		// Do not support EL ranges for now (all ranges are interpreted under RL semantics)
+//		boolean result = true;
+//		String propkey = expvisitor.visitAndAct(axiom.getProperty(),getVisitorBodyAction(todos));
+//		String rangekey = expvisitor.visitAndAct(axiom.getRange(),getVisitorHeadAction(todos));
+//		if ( (propkey == null) || (rangekey == null) ) return false;
+//		int pid = storage.getID(propkey), oid = storage.getID(rangekey);
+//		if ( (todos & InstanceKBLoader.ASSERT) != 0 ) {
+//			storage.makePredicateAssertion("ran", pid, oid);				
+//		}
+//		if ( (todos & InstanceKBLoader.CHECK) != 0 ) {
+//			result = storage.checkPredicateAssertion("ran", pid, oid);
+//		}
+//		return result;
 	}
 
 	@Override
@@ -301,18 +246,21 @@ public class InstanceAxiomVisitor implements OWLAxiomVisitorEx<Boolean> {
 
 	@Override
 	public Boolean visit(OWLDataPropertyRangeAxiom axiom) {
-		boolean result = true;
-		String propkey = expvisitor.visitAndAct(axiom.getProperty(),getVisitorBodyAction(todos));
-		String rangekey = expvisitor.visitAndAct(axiom.getRange(),getVisitorHeadAction(todos));
-		if ( (propkey == null) || (rangekey == null) ) return false;
-		int pid = storage.getID(propkey), oid = storage.getID(rangekey);
-		if ( (todos & InstanceKBLoader.ASSERT) != 0 ) {
-			storage.makePredicateAssertion("dran", pid, oid);				
-		}
-		if ( (todos & InstanceKBLoader.CHECK) != 0 ) {
-			result = storage.checkPredicateAssertion("dran", pid, oid);
-		}
-		return result;
+		return processSubClassOfAxiom( datafactory.getOWLThing(),
+                datafactory.getOWLDataAllValuesFrom(axiom.getProperty(),axiom.getRange()) );
+		// Do not support EL ranges for now (all ranges are interpreted under RL semantics)
+//		boolean result = true;
+//		String propkey = expvisitor.visitAndAct(axiom.getProperty(),getVisitorBodyAction(todos));
+//		String rangekey = expvisitor.visitAndAct(axiom.getRange(),getVisitorHeadAction(todos));
+//		if ( (propkey == null) || (rangekey == null) ) return false;
+//		int pid = storage.getID(propkey), oid = storage.getID(rangekey);
+//		if ( (todos & InstanceKBLoader.ASSERT) != 0 ) {
+//			storage.makePredicateAssertion("dran", pid, oid);				
+//		}
+//		if ( (todos & InstanceKBLoader.CHECK) != 0 ) {
+//			result = storage.checkPredicateAssertion("dran", pid, oid);
+//		}
+//		return result;
 	}
 
 	@Override
@@ -405,20 +353,23 @@ public class InstanceAxiomVisitor implements OWLAxiomVisitorEx<Boolean> {
 			if ( (pkey == null) || (pkey1 == null) || (pkey2 == null) ) return false;
 			int pid = storage.getID(pkey), pid1 = storage.getID(pkey1), pid2 = storage.getID(pkey2);
 			if ( (todos & InstanceKBLoader.ASSERT) != 0 ) {
-				storage.makePredicateAssertion("spoc", pid1, pid2, pid);				
+				storage.makePredicateAssertion("subchain", pid1, pid2, pid);				
 			}
 			if ( (todos & InstanceKBLoader.CHECK) != 0 ) {
-				result = storage.checkPredicateAssertion("spoc", pid1, pid2, pid);
+				result = storage.checkPredicateAssertion("subchain", pid1, pid2, pid);
 			}
 			return result;
 		} else {
-			// TODO recursion (prepare subchains even if todos don't have BasicKBLoader.ASSERT)
+			// TODO recursion (prepare subchains even if todos don't have InstanceKBLoader.ASSERT)
 			return false;
 		}
 	}
 
 	@Override
 	public Boolean visit(OWLInverseObjectPropertiesAxiom axiom) {
+		if ( (todos & InstanceKBLoader.PREPARECHECK) != 0 ) { // currently no support for checking this
+			return false;
+		}		
 		boolean result = true;
 		String pkey1, pkey2;
 		pkey1 = expvisitor.visitAndAct(axiom.getFirstProperty(),getVisitorBodyAction(todos));
@@ -426,17 +377,17 @@ public class InstanceAxiomVisitor implements OWLAxiomVisitorEx<Boolean> {
 		if ( (pkey1 == null) || (pkey2 == null) ) return false;
 		int pid1 = storage.getID(pkey1), pid2 = storage.getID(pkey2);
 		if ( (todos & InstanceKBLoader.ASSERT) != 0 ) {
-			storage.makePredicateAssertion("inverseof", pid1, pid2);				
+			storage.makePredicateAssertion("subinv", pid1, pid2);				
 		}
-		if ( (todos & InstanceKBLoader.CHECK) != 0 ) {
-			result = storage.checkPredicateAssertion("inverseof", pid1, pid2);
+		if ( (todos & InstanceKBLoader.CHECK) != 0 ) { // TODO support checks for subproperties
+			result = false;
 		}
 		return result;		
 	}
 
 	@Override
 	public Boolean visit(OWLHasKeyAxiom axiom) {
-		// TODO Auto-generated method stub
+		// TODO Implement this method.
 		return false;
 	}
 
@@ -444,19 +395,19 @@ public class InstanceAxiomVisitor implements OWLAxiomVisitorEx<Boolean> {
 	public Boolean visit(OWLDatatypeDefinitionAxiom axiom) {
 		String typekey = expvisitor.visitAndAct(axiom.getDatatype(),getVisitorBodyAction(todos));
 		String rangekey = expvisitor.visitAndAct(axiom.getDataRange(),getVisitorBodyAction(todos));
-		if ( (typekey==null) || (rangekey==null) ) return null;
+		if ( (typekey==null) || (rangekey==null) ) return false;
 		// generate data for both polarities
-		if (expvisitor.visitAndAct(axiom.getDataRange(),getVisitorHeadAction(todos)) == null) return null;
+		if (expvisitor.visitAndAct(axiom.getDataRange(),getVisitorHeadAction(todos)) == null) return false;
 		
 		boolean result = true;
 		int keyid = storage.getID(typekey);
 		int rangeid = storage.getID(rangekey);
 		if ( (todos & InstanceKBLoader.ASSERT) != 0 ) {
-			storage.makePredicateAssertion("dsco",keyid,rangeid);
-			storage.makePredicateAssertion("dsco",rangeid,keyid);
+			storage.makePredicateAssertion("dsubc",keyid,rangeid);
+			storage.makePredicateAssertion("dsubc",rangeid,keyid);
 		}
 		if ( (todos & InstanceKBLoader.CHECK) != 0 ) {
-			result = storage.checkPredicateAssertion("dsco",keyid,rangeid) && storage.checkPredicateAssertion("dsco",rangeid,keyid);
+			result = storage.checkPredicateAssertion("dinst",keyid,rangeid) && storage.checkPredicateAssertion("dinst",rangeid,keyid);
 		}
 		return result;
 	}
@@ -492,52 +443,57 @@ public class InstanceAxiomVisitor implements OWLAxiomVisitorEx<Boolean> {
 	}
 		
 	protected Boolean processSubClassOfAxiom(String key1, String key2) {
+		// TODO Should this method really exclude checks/assertions that are "clearly" tautologies? 
 		boolean result = true;
 		if ( (key1 == null) || (key2 == null) ) return false;
 		int id1 = storage.getID(key1);
 		int id2 = storage.getID(key2);
 		if ( (todos & InstanceKBLoader.ASSERT) != 0 ) { 
 			// trivial cases not stored
-			if (id1 != id2)	storage.makePredicateAssertion("sco",id1,id2);
+			if (id1 != id2)	storage.makePredicateAssertion("subc",id1,id2);
 		}
 		if ( (todos & InstanceKBLoader.CHECK) != 0 ) {
 			if ( (id1 != id2) && (!key1.equals(InstanceExpressionVisitor.OP_NOTHING)) && (!key2.equals(InstanceExpressionVisitor.OP_THING)) ) { // no need to check if trivial
-				result = storage.checkPredicateAssertion("sco",id1,id2);
+				result = storage.checkPredicateAssertion("inst",id1,id2);
 			}
 		}
 		return result;
 	}
 
 	protected Boolean processSubObjectPropertyOf(OWLObjectPropertyExpression p1, OWLObjectPropertyExpression p2) {
+		if ( (todos & InstanceKBLoader.PREPARECHECK) != 0 ) { // currently no support for checking this
+			return false;
+		}
 		boolean result = true;
 		String key1 = expvisitor.visitAndAct(p1,getVisitorBodyAction(todos));
 		String key2 = expvisitor.visitAndAct(p2,getVisitorHeadAction(todos));
 		int pid1 = storage.getID(key1), pid2 = storage.getID(key2);
 		if ( (todos & InstanceKBLoader.ASSERT) != 0 ) {
 			// trivial cases not stored
-			if (pid1 != pid2) storage.makePredicateAssertion("spo", pid1, pid2);				
+			if (pid1 != pid2) storage.makePredicateAssertion("subp", pid1, pid2);				
 		}
 		if ( (todos & InstanceKBLoader.CHECK) != 0 ) {
-			if (pid1 != pid2) { // no need to check if trivial
-				result = storage.checkPredicateAssertion("spo", pid1, pid2);
-			}
+			// TODO Support checking for property entailments?
+			result = false;
 		}
 		return result;
 	}
 
 	protected Boolean processSubDataPropertyOf(OWLDataPropertyExpression p1, OWLDataPropertyExpression p2) {
+		if ( (todos & InstanceKBLoader.PREPARECHECK) != 0 ) { // currently no support for checking this
+			return false;
+		}
 		boolean result = true;
 		String key1 = expvisitor.visitAndAct(p1,getVisitorBodyAction(todos));
 		String key2 = expvisitor.visitAndAct(p2,getVisitorHeadAction(todos));
 		int pid1 = storage.getID(key1), pid2 = storage.getID(key2);
 		if ( (todos & InstanceKBLoader.ASSERT) != 0 ) {
 			// trivial cases not stored
-			if (pid1 != pid2) storage.makePredicateAssertion("dspo", pid1, pid2);				
+			if (pid1 != pid2) storage.makePredicateAssertion("dsubp", pid1, pid2);				
 		}
 		if ( (todos & InstanceKBLoader.CHECK) != 0 ) {
-			if (pid1 != pid2) { // no need to check if trivial
-				result = storage.checkPredicateAssertion("dspo", pid1, pid2);
-			}
+			// TODO Support checking for property entailments?
+			result = false;
 		}
 		return result;
 	}

@@ -4,45 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.semanticweb.owlapi.model.OWLAnonymousIndividual;
-import org.semanticweb.owlapi.model.OWLClass;
-import org.semanticweb.owlapi.model.OWLClassExpression;
-import org.semanticweb.owlapi.model.OWLClassExpressionVisitorEx;
-import org.semanticweb.owlapi.model.OWLDataAllValuesFrom;
-import org.semanticweb.owlapi.model.OWLDataComplementOf;
-import org.semanticweb.owlapi.model.OWLDataExactCardinality;
-import org.semanticweb.owlapi.model.OWLDataHasValue;
-import org.semanticweb.owlapi.model.OWLDataIntersectionOf;
-import org.semanticweb.owlapi.model.OWLDataMaxCardinality;
-import org.semanticweb.owlapi.model.OWLDataMinCardinality;
-import org.semanticweb.owlapi.model.OWLDataOneOf;
-import org.semanticweb.owlapi.model.OWLDataProperty;
-import org.semanticweb.owlapi.model.OWLDataRange;
-import org.semanticweb.owlapi.model.OWLDataSomeValuesFrom;
-import org.semanticweb.owlapi.model.OWLDataUnionOf;
-import org.semanticweb.owlapi.model.OWLDataVisitorEx;
-import org.semanticweb.owlapi.model.OWLDatatype;
-import org.semanticweb.owlapi.model.OWLDatatypeRestriction;
-import org.semanticweb.owlapi.model.OWLFacetRestriction;
-import org.semanticweb.owlapi.model.OWLIndividualVisitorEx;
-import org.semanticweb.owlapi.model.OWLNamedIndividual;
-import org.semanticweb.owlapi.model.OWLObjectAllValuesFrom;
-import org.semanticweb.owlapi.model.OWLObjectComplementOf;
-import org.semanticweb.owlapi.model.OWLObjectExactCardinality;
-import org.semanticweb.owlapi.model.OWLObjectHasSelf;
-import org.semanticweb.owlapi.model.OWLObjectHasValue;
-import org.semanticweb.owlapi.model.OWLObjectIntersectionOf;
-import org.semanticweb.owlapi.model.OWLObjectInverseOf;
-import org.semanticweb.owlapi.model.OWLObjectMaxCardinality;
-import org.semanticweb.owlapi.model.OWLObjectMinCardinality;
-import org.semanticweb.owlapi.model.OWLObjectOneOf;
-import org.semanticweb.owlapi.model.OWLObjectProperty;
-import org.semanticweb.owlapi.model.OWLObjectSomeValuesFrom;
-import org.semanticweb.owlapi.model.OWLObjectUnionOf;
-import org.semanticweb.owlapi.model.OWLPropertyExpression;
-import org.semanticweb.owlapi.model.OWLPropertyExpressionVisitorEx;
-import org.semanticweb.owlapi.model.OWLStringLiteral;
-import org.semanticweb.owlapi.model.OWLTypedLiteral;
+import org.semanticweb.owlapi.model.*;
 
 import edu.kit.aifb.orel.kbmanager.Literals;
 import edu.kit.aifb.orel.storage.SimpleLiteral;
@@ -138,7 +100,7 @@ public class InstanceExpressionVisitor implements
 					sid2 = storage.getID(opkeys.get(i));
 					result = makeNAryExpressionKey(OP_OBJECT_INTERSECTION,opkeys,i,null); 
 					oid  = storage.getID(result);
-					storage.makePredicateAssertion("subconjunctionof",sid1,sid2,oid);
+					storage.makePredicateAssertion("subcon",sid1,sid2,oid);
 					createClassTautologies(oid,storage);
 			}
 		} else if (action == Action.WRITEHEAD) {
@@ -146,7 +108,7 @@ public class InstanceExpressionVisitor implements
 			sid1 = storage.getID(result);
 			for (int i=0; i<opkeys.size(); i++) {
 				oid = storage.getID(opkeys.get(i));
-				storage.makePredicateAssertion("sco",sid1,oid);
+				storage.makePredicateAssertion("subc",sid1,oid);
 			}
 			createClassTautologies(sid1,storage);
 		} else {
@@ -176,7 +138,7 @@ public class InstanceExpressionVisitor implements
 			oid = storage.getID(result);
 			for (int i=0; i<opkeys.size(); i++) {
 				sid = storage.getID(opkeys.get(i));
-				storage.makePredicateAssertion("sco",sid,oid);
+				storage.makePredicateAssertion("subc",sid,oid);
 			}
 			createClassTautologies(oid,storage);
 		} else if (action == Action.WRITEHEAD) {
@@ -206,7 +168,7 @@ public class InstanceExpressionVisitor implements
 		if (action == Action.WRITEHEAD) {
 			int sid1 = storage.getID(result);
 			int sid2 = storage.getID(subkey);
-			storage.makePredicateAssertion("subconjunctionof",sid1,sid2,storage.getIDForNothing());
+			storage.makePredicateAssertion("subcon",sid1,sid2,storage.getIDForNothing());
 			createClassTautologies(sid1,storage);
 		}
 		return result;
@@ -224,7 +186,7 @@ public class InstanceExpressionVisitor implements
 			int pid = storage.getID(propkey);
 			int oid = storage.getID(result);
 			createClassTautologies(oid,storage);
-			storage.makePredicateAssertion("subsomevalues",pid,sid,oid);
+			storage.makePredicateAssertion("subsome",pid,sid,oid);
 		} else if (action == Action.WRITEHEAD) {
 			int sid = storage.getID(result);
 			int pid = storage.getID(propkey);
@@ -232,8 +194,8 @@ public class InstanceExpressionVisitor implements
 			createClassTautologies(sid,storage);
 			int auxid = storage.getID("C(" + result + ")"); // auxiliary "Skolem" constant
 			createClassTautologies(auxid,storage); // TODO: is this needed?
-			storage.makePredicateAssertion("sv",sid,pid,auxid);
-			storage.makePredicateAssertion("sco",auxid,oid);
+			storage.makePredicateAssertion("supsome",sid,pid,auxid);
+			storage.makePredicateAssertion("subc",auxid,oid);
 		}
 		return result;
 	}
@@ -252,7 +214,7 @@ public class InstanceExpressionVisitor implements
 			int pid = storage.getID(propkey);
 			int oid = storage.getID(fillkey);
 			createClassTautologies(sid,storage);
-			storage.makePredicateAssertion("av",sid,pid,oid);
+			storage.makePredicateAssertion("supall",sid,pid,oid);
 		}
 		return result;
 	}
@@ -269,13 +231,13 @@ public class InstanceExpressionVisitor implements
 			int pid = storage.getID(propkey);
 			int oid = storage.getID(result);
 			createClassTautologies(oid,storage);
-			storage.makePredicateAssertion("subsomevalues",pid,sid,oid);
+			storage.makePredicateAssertion("subsome",pid,sid,oid);
 		} else if (action == Action.WRITEHEAD) {
 			int sid = storage.getID(result);
 			int pid = storage.getID(propkey);
 			int oid = storage.getID(valuekey);
 			createClassTautologies(sid,storage);
-			storage.makePredicateAssertion("sv",sid,pid,oid);
+			storage.makePredicateAssertion("supsome",sid,pid,oid);
 		}
 		return result;
 	}
@@ -315,14 +277,14 @@ public class InstanceExpressionVisitor implements
 			int fillid = storage.getID(fillkey);
 			createClassTautologies(rid,storage);
 			if (ce.getCardinality() == 1) {
-				storage.makePredicateAssertion("atmostone",rid,pid,fillid);
+				storage.makePredicateAssertion("supfunc",rid,pid,fillid);
 			} else {
 				assert ce.getCardinality() == 0;
 				String auxkey = makeNAryExpressionKey(OP_OBJECT_SOME,propkey,fillkey);
 				int someid = storage.getID(auxkey);
 				createClassTautologies(someid,storage);
-				storage.makePredicateAssertion("subsomevalues",pid,fillid,someid);
-				storage.makePredicateAssertion("subconjunctionof",rid,someid,storage.getIDForNothing());
+				storage.makePredicateAssertion("subsome",pid,fillid,someid);
+				storage.makePredicateAssertion("subcon",rid,someid,storage.getIDForNothing());
 			}
 		}
 		return result;
@@ -340,7 +302,7 @@ public class InstanceExpressionVisitor implements
 			if (action == Action.WRITEBODY) {
 				storage.makePredicateAssertion("subself",pid,id);
 			} else {
-				storage.makePredicateAssertion("self",id,pid);
+				storage.makePredicateAssertion("supself",id,pid);
 			}
 		}
 		return result;
@@ -373,7 +335,7 @@ public class InstanceExpressionVisitor implements
 			int pid = storage.getID(propkey);
 			int oid = storage.getID(result);
 			createClassTautologies(oid,storage);
-			storage.makePredicateAssertion("dsubsomevalues",pid,sid,oid);
+			storage.makePredicateAssertion("dsubsome",pid,sid,oid);
 		} else if (action == Action.WRITEHEAD) {
 			// NOTE: We load all types in RL/EL, and restrict certain inferences to EL datatypes later on.
 			int sid = storage.getID(result);
@@ -382,8 +344,8 @@ public class InstanceExpressionVisitor implements
 			createClassTautologies(sid,storage);
 			int auxid = storage.getID("C(" + result + ")"); // auxiliary "Skolem" constant
 			createDatarangeTautologies(auxid,storage); // TODO: is this needed?
-			storage.makePredicateAssertion("dsv",sid,pid,auxid);
-			storage.makePredicateAssertion("dsco",auxid,oid);
+			storage.makePredicateAssertion("dsupsome",sid,pid,auxid);
+			storage.makePredicateAssertion("dsubc",auxid,oid);
 		}
 		return result;
 	}
@@ -402,7 +364,7 @@ public class InstanceExpressionVisitor implements
 			int pid = storage.getID(propkey);
 			int oid = storage.getID(fillkey);
 			createClassTautologies(sid,storage);
-			storage.makePredicateAssertion("dav",sid,pid,oid);
+			storage.makePredicateAssertion("dsupall",sid,pid,oid);
 		}
 		return result;
 	}
@@ -419,13 +381,13 @@ public class InstanceExpressionVisitor implements
 			int pid = storage.getID(propkey);
 			int oid = storage.getID(result);
 			createClassTautologies(oid,storage);
-			storage.makePredicateAssertion("dsubsomevalues",pid,sid,oid);
+			storage.makePredicateAssertion("dsubsome",pid,sid,oid);
 		} else if (action == Action.WRITEHEAD) {
 			int sid = storage.getID(result);
 			int pid = storage.getID(propkey);
 			int oid = storage.getID(valuekey);
 			createClassTautologies(sid,storage);
-			storage.makePredicateAssertion("dsv",sid,pid,oid);
+			storage.makePredicateAssertion("dsupsome",sid,pid,oid);
 		}
 		return result;
 	}
@@ -465,14 +427,14 @@ public class InstanceExpressionVisitor implements
 			int fillid = storage.getID(fillkey);
 			createClassTautologies(rid,storage);
 			if (ce.getCardinality() == 1) {
-				storage.makePredicateAssertion("datmostone",rid,pid,fillid);
+				storage.makePredicateAssertion("dsupfunc",rid,pid,fillid);
 			} else {
 				assert ce.getCardinality() == 0;
 				String auxkey = makeNAryExpressionKey(OP_DATA_SOME,propkey,fillkey);
 				int someid = storage.getID(auxkey);
 				createClassTautologies(someid,storage);
-				storage.makePredicateAssertion("dsubsomevalues",pid,fillid,someid);
-				storage.makePredicateAssertion("subconjunctionof",rid,someid,storage.getIDForNothing());
+				storage.makePredicateAssertion("dsubsome",pid,fillid,someid);
+				storage.makePredicateAssertion("subcon",rid,someid,storage.getIDForNothing());
 			}
 		}
 		return result;
@@ -486,8 +448,8 @@ public class InstanceExpressionVisitor implements
 		String result = property.toString();
 		if ( (action == Action.WRITEBODY) || (action == Action.WRITEHEAD) ) {
 			int id = storage.getID(result); 
-			storage.makePredicateAssertion("spo",id,id);
-			storage.makePredicateAssertion("spo",storage.getID(OP_BOTTOM_OBJECT_PROPERTY),id);
+			//storage.makePredicateAssertion("subp",id,id); // not needed (no support for property inferences right now) 
+			storage.makePredicateAssertion("subp",storage.getID(OP_BOTTOM_OBJECT_PROPERTY),id);
 		}
 		return result;
 	}
@@ -498,9 +460,9 @@ public class InstanceExpressionVisitor implements
 		if (propkey == null) return null;
 		String result = makeNAryExpressionKey(OP_OBJECT_INVERSE_OF, propkey);
 		if ( (action == Action.WRITEBODY) || (action == Action.WRITEHEAD) ) {
-			int pid = storage.getID(propkey); 
-			int id = storage.getID(result); 
-			storage.makePredicateAssertion("inverseof",id,pid);
+			int pid = storage.getID(propkey);
+			int id = storage.getID(result);
+			storage.makePredicateAssertion("subinv",id,pid);
 		}
 		return result;
 	}
@@ -513,8 +475,8 @@ public class InstanceExpressionVisitor implements
 		String result = property.toString();
 		if ( (action == Action.WRITEBODY) || (action == Action.WRITEHEAD) ) {
 			int id = storage.getID(result); 
-			storage.makePredicateAssertion("dspo",id,id);
-			storage.makePredicateAssertion("dspo",storage.getID(OP_BOTTOM_DATA_PROPERTY),id);
+			//storage.makePredicateAssertion("dsubp",id,id); // not needed (no support for property inferences right now)
+			storage.makePredicateAssertion("dsubp",storage.getID(OP_BOTTOM_DATA_PROPERTY),id);
 		}
 		return result;
 	}
@@ -525,8 +487,8 @@ public class InstanceExpressionVisitor implements
 		if ( (action == Action.WRITEBODY) || (action == Action.WRITEHEAD) ) {
 			int id = storage.getID(result);
 			createClassTautologies(id,storage);
-			storage.makePredicateAssertion("nominal",id);
-			storage.makePredicateAssertion("nonempty",id);
+			storage.makePredicateAssertion("name",id);
+			storage.makePredicateAssertion("extant",id);
 		}
 		return result;
 	}
@@ -539,8 +501,8 @@ public class InstanceExpressionVisitor implements
 		if ( (action == Action.WRITEBODY) || (action == Action.WRITEHEAD) ) {
 			int id = storage.getID(result);
 			createClassTautologies(id,storage);
-			storage.makePredicateAssertion("nominal",id);
-			storage.makePredicateAssertion("nonempty",id);
+			storage.makePredicateAssertion("name",id);
+			storage.makePredicateAssertion("extant",id);
 		}
 		return result;
 	}
@@ -604,13 +566,13 @@ public class InstanceExpressionVisitor implements
 		String result = makeNAryExpressionKey(OP_DATA_ONE_OF, sl.toString());
 		if ( (action == Action.WRITEBODY) || (action == Action.WRITEHEAD) ) {
 			int id = storage.getID(result);
-			storage.makePredicateAssertion("dnominal",id);
-			storage.makePredicateAssertion("dnonempty",id);
+			storage.makePredicateAssertion("dname",id);
+			storage.makePredicateAssertion("dextant",id);
 			createDatarangeTautologies(id,storage);
 			if (action == Action.WRITEHEAD) {
 				List<String> typeuris = Literals.getDatatypeURIs(sl);
 				for (int i=0; i<typeuris.size(); i++) {
-					storage.makePredicateAssertion("dsco",id,storage.getID(typeuris.get(i)));
+					storage.makePredicateAssertion("dsubc",id,storage.getID(typeuris.get(i)));
 				}
 			}
 		}
@@ -622,19 +584,17 @@ public class InstanceExpressionVisitor implements
 		// not supported in OWL EL or RL
 		return null;
 	}
-	
+
 	public static void createClassTautologies(int id, StorageDriver storage) {
-		storage.makePredicateAssertion("sco",id,id);
-		storage.makePredicateAssertion("sco",id,storage.getIDForThing());
-		storage.makePredicateAssertion("sco",storage.getIDForNothing(),id);
+		storage.makePredicateAssertion("inst",id,id);
+		storage.makePredicateAssertion("inst",id,storage.getIDForThing());
 	}
 
 	public static void createDatarangeTautologies(int id, StorageDriver storage) {
-		storage.makePredicateAssertion("dsco",id,id);
-		storage.makePredicateAssertion("dsco",id,storage.getIDForTopDatatype());
-		storage.makePredicateAssertion("dsco",storage.getIDForBottomDatatype(),id);
+		storage.makePredicateAssertion("dinst",id,id);
+		storage.makePredicateAssertion("dinst",id,storage.getIDForTopDatatype());
 	}
-	
+
 	public static String makeNAryExpressionKey(String opname, List<String> operators, int maxindex, String emptyKey) {
 		assert maxindex<operators.size();
 		if (maxindex<0) return emptyKey;
@@ -644,7 +604,7 @@ public class InstanceExpressionVisitor implements
 		}
 		return opname + "(" + oplist + " )";
 	}
-	
+
 	public static String makeNAryExpressionKey(String opname, String... operators) {
 		String oplist = "";
 		for (int i=0; i<operators.length; i++) {
