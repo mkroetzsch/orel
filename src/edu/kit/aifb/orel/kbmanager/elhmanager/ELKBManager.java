@@ -37,7 +37,7 @@ public class ELKBManager extends KBManager{
 	@Override
 	public void initialize() throws Exception {
 		storage.initialize();
-		int thing = storage.getIDForThing(), nothing = storage.getIDForNothing(); 
+		int thing = storage.getID(ELExpressionVisitor.OP_THING), nothing = storage.getID(ELExpressionVisitor.OP_NOTHING); 
 		storage.makePredicateAssertion("sco",thing,thing);
 		storage.makePredicateAssertion("sco",nothing,nothing);
 		storage.makePredicateAssertion("sco",nothing,thing);

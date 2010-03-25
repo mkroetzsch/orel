@@ -79,7 +79,7 @@ public class InstanceKBReasoner {
 		// Many of these rules won't be used for querying, but we still 
 		// use them to document the incompleteness in materializing derived
 		// predicates.
-		int bot = storage.getIDForNothing();
+		int bot = storage.getID(InstanceExpressionVisitor.OP_NOTHING);
 		rules.put("inst-lbot", "?inst(x,A) :- inst(x," + bot + ")");
 		rules.put("self-lbot", "?self(x,R) :- inst(x," + bot + ")");
 		rules.put("triple-lbot", "?triple(x,R,y) :- inst(x," + bot + ")");
@@ -108,7 +108,8 @@ public class InstanceKBReasoner {
 		ruleinfo = new ArrayList<RuleInfo>();
 		HashMap<String,String> rules = new HashMap<String,String>();
 //		int top = storage.getIDForThing();
-		int bot = storage.getIDForNothing();
+		int bot = storage.getID(InstanceExpressionVisitor.OP_NOTHING);
+		int botprop = storage.getID(InstanceExpressionVisitor.OP_BOTTOM_OBJECT_PROPERTY);
 //		int dtop = storage.getIDForTopDatatype();
 //		int dbot = storage.getIDForBottomDatatype();
 		// make the rule declaration as readable as possible;
@@ -144,9 +145,8 @@ public class InstanceKBReasoner {
 		rules.put("(28)", "inst(y1,y2) :- supfunc(A,R,B), name(x), name(y1), name(y2), inst(x,A), triple(x,R,y1), triple(x,R,y2), inst(y1,B), inst(y2,B)");
 		rules.put("(29)", "triple(y,S,x) :- subinv(R,S), name(x), name(y), triple(x,R,y)");
 		// support for top and bottom:
-		// TODO Properly implement these rules (possibly as check rules)
-		//rules.put("(B1)", "inst(x," + bot + ") → <all facts with x in first parameter>");
-		//rules.put("(B2)", "triple(x,bottomrole,y) → inst(x,bottom)");
+		// bottom rule (B1) is implemented via a check rule
+		rules.put("(B2)", "inst(x," + bot + ") :- triple(x," + botprop + ",y)");
 		
 		// TODO Code remaining rules for establishing completeness ...
 
@@ -358,7 +358,7 @@ public class InstanceKBReasoner {
 		materialize();
 		registerCheckRules();
 		// inconsistent ontologies entail everything
-		if ( storage.checkPredicateAssertion("inst",storage.getIDForThing(), storage.getIDForNothing()) ) {
+		if ( storage.checkPredicateAssertion("inst", storage.getID(InstanceExpressionVisitor.OP_THING), storage.getID(InstanceExpressionVisitor.OP_NOTHING)) ) {
 			return InferenceResult.YES;
 		} else if (!loaded) { // if checked axioms failed to load, neither YES nor NO are sure answers
 			return InferenceResult.DONTKNOW;
@@ -376,7 +376,7 @@ public class InstanceKBReasoner {
 	public InferenceResult checkConsistency() throws Exception {
 		materialize();
 		registerCheckRules();
-		if ( storage.checkPredicateAssertion("inst",storage.getIDForThing(), storage.getIDForNothing()) ) {
+		if ( storage.checkPredicateAssertion("inst", storage.getID(InstanceExpressionVisitor.OP_THING), storage.getID(InstanceExpressionVisitor.OP_NOTHING)) ) {
 			return InferenceResult.NO;
 		} else {
 			return InferenceResult.YES;

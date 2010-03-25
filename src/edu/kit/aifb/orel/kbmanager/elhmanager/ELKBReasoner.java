@@ -10,6 +10,7 @@ import org.semanticweb.owlapi.model.OWLOntology;
 
 import edu.kit.aifb.orel.client.LogWriter;
 import edu.kit.aifb.orel.inferencing.InferenceRuleDeclaration;
+import edu.kit.aifb.orel.kbmanager.Literals;
 import edu.kit.aifb.orel.kbmanager.KBManager.InferenceResult;
 import edu.kit.aifb.orel.storage.StorageDriver;
 
@@ -146,8 +147,8 @@ public class ELKBReasoner {
 		materialize();
 		registerCheckRules();
 		// inconsistent ontologies entail anything
-		if ( storage.checkPredicateAssertion("nonempty",storage.getIDForNothing()) || 
-			 storage.checkPredicateAssertion("dnonempty",storage.getIDForBottomDatatype())) {
+		if ( storage.checkPredicateAssertion("nonempty",storage.getID(ELExpressionVisitor.OP_NOTHING)) || 
+			 storage.checkPredicateAssertion("dnonempty",storage.getID(Literals.BOTTOM_DATATYPE))) {
 			return InferenceResult.YES;
 		} else if (!loaded) { // if checked axioms failed to load, neither YES nor NO are sure answers
 			return InferenceResult.DONTKNOW;
@@ -165,8 +166,8 @@ public class ELKBReasoner {
 	public InferenceResult checkConsistency() throws Exception {
 		materialize();
 		registerCheckRules();
-		if ( storage.checkPredicateAssertion("nonempty",storage.getIDForNothing()) || 
-			 storage.checkPredicateAssertion("dnonempty",storage.getIDForBottomDatatype()) ) {
+		if ( storage.checkPredicateAssertion("nonempty",storage.getID(ELExpressionVisitor.OP_NOTHING)) || 
+			 storage.checkPredicateAssertion("dnonempty",storage.getID(Literals.BOTTOM_DATATYPE)) ) {
 			return InferenceResult.NO;
 		} else {
 			return InferenceResult.YES;
