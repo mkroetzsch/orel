@@ -22,6 +22,7 @@ public class NaiveKBReasoner {
 	protected StorageDriver storage;
 	//protected ArrayList<String> inferencerules = null;
 	protected ArrayList<RuleInfo> ruleinfo = null;
+	protected boolean hasCheckRules = false; 
 	protected class RuleInfo implements Comparable<RuleInfo> {
 		public int laststep;
 		public String name;
@@ -68,6 +69,8 @@ public class NaiveKBReasoner {
 	}
 	
 	protected void registerCheckRules() {
+		if (hasCheckRules) return;
+		hasCheckRules = true;
 		HashMap<String,String> rules = new HashMap<String,String>();
 		// make the rule declaration as readable as possible;
 		// it is crucial to have this error free and customizable
