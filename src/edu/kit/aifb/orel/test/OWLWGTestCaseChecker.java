@@ -208,7 +208,7 @@ public class OWLWGTestCaseChecker {
 				outputbuffer.write("INCOMPLETE " + testcase.uri + " (" + testcase.type + ")\n");
 			}
 		} catch (IOException e) {
-			System.err.println("Problem writing test case output: " + e.toString());
+			e.printStackTrace();
 		}
 	}
 	
