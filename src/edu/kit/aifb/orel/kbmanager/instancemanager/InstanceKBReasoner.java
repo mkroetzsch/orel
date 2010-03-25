@@ -354,15 +354,14 @@ public class InstanceKBReasoner {
 		boolean loaded = loader.processOntology(ontology, InstanceKBLoader.PREPARECHECK );
 		materialize();
 		registerCheckRules();
-		// inconsistent ontologies entail anything
-		if ( storage.checkPredicateAssertion("nonempty",storage.getIDForNothing()) || 
-			 storage.checkPredicateAssertion("dnonempty",storage.getIDForBottomDatatype())) {
+		// inconsistent ontologies entail everything
+		if ( storage.checkPredicateAssertion("inst",storage.getIDForThing(), storage.getIDForNothing()) ) {
 			return InferenceResult.YES;
 		} else if (!loaded) { // if checked axioms failed to load, neither YES nor NO are sure answers
 			return InferenceResult.DONTKNOW;
-		} else if (loader.processOntology(ontology, InstanceKBLoader.CHECK )) { // some supported axioms not entailed
+		} else if (loader.processOntology(ontology, InstanceKBLoader.CHECK )) { // all axioms entailed
 			return InferenceResult.YES;
-		} else { 
+		} else { // some supported axioms not entailed
 			return InferenceResult.NO;
 		}
 	}
@@ -374,8 +373,7 @@ public class InstanceKBReasoner {
 	public InferenceResult checkConsistency() throws Exception {
 		materialize();
 		registerCheckRules();
-		if ( storage.checkPredicateAssertion("nonempty",storage.getIDForNothing()) || 
-			 storage.checkPredicateAssertion("dnonempty",storage.getIDForBottomDatatype()) ) {
+		if ( storage.checkPredicateAssertion("inst",storage.getIDForThing(), storage.getIDForNothing()) ) {
 			return InferenceResult.NO;
 		} else {
 			return InferenceResult.YES;
