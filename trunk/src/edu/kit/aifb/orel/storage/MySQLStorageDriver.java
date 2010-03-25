@@ -639,7 +639,7 @@ public class MySQLStorageDriver implements StorageDriver {
 					if (varequalities.containsKey(pt.getValue())) {
 						on = on + varequalities.get(pt.getValue()).get(0) + "=?";
 					} else { // make sure that parameter exists in query since the checking will set its value
-						on = on + "NULL!=?";
+						on = on + "\"\"!=?";
 					}
 					/// FIXME this is unsound if some variable appears more than once in the head but not in the body
 				} else {
@@ -721,7 +721,7 @@ public class MySQLStorageDriver implements StorageDriver {
 		// always make step-less version at index 0
 		String sql = insert + select + " FROM " + from + ( (on.equals("")) ? "" : onOperator) + on;
 		try {
-			//if (rd.getName().equals("dclash")) LogWriter.get().printlnDebug(rd.getName() + ":\n " + sql + ((rd.getMode() == InferenceRuleDeclaration.MODE_CHECK) ? " LIMIT 1" : "") + "\n\n"); // DEBUG
+			//if (rd.getName().equals("inst-gbot")) LogWriter.get().printlnDebug(rd.getName() + ":\n " + sql + ((rd.getMode() == InferenceRuleDeclaration.MODE_CHECK) ? " LIMIT 1" : "") + "\n\n"); // DEBUG
 			result.add(con.prepareStatement( "/*" + rd.getName() + "*/" + sql + ((rd.getMode() == InferenceRuleDeclaration.MODE_CHECK) ? " LIMIT 1" : "") ));
 		} catch (SQLException e) { // bug in the above code, just print it
 			e.printStackTrace();
