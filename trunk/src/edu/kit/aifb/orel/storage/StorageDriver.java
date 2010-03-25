@@ -37,9 +37,5 @@ public interface StorageDriver {
 	public int runRule(String rulename, int newstep, int[] params);
 	public int runRule(String rulename, int min_cur_step, int max_cur_step);
 	
-	public int getIDForNothing();
-	public int getIDForThing();
-	public int getIDForTopDatatype();
-	public int getIDForBottomDatatype();
 	public int getID(String key);
 }

@@ -107,10 +107,10 @@ public class NaiveKBReasoner {
 //		inferencerules = new ArrayList<String>();
 		ruleinfo = new ArrayList<RuleInfo>();
 		HashMap<String,String> rules = new HashMap<String,String>();
-		int top = storage.getIDForThing();
-		int bot = storage.getIDForNothing();
-		int dtop = storage.getIDForTopDatatype();
-		int dbot = storage.getIDForBottomDatatype();
+		int top = storage.getID(BasicExpressionVisitor.OP_THING);
+		int bot = storage.getID(BasicExpressionVisitor.OP_NOTHING);
+		int dtop = storage.getID(Literals.TOP_DATATYPE);
+		int dbot = storage.getID(Literals.BOTTOM_DATATYPE);
 		// make the rule declaration as readable as possible;
 		// it is crucial to have this error free and customizable
 
@@ -323,8 +323,8 @@ public class NaiveKBReasoner {
 		materialize();
 		registerCheckRules();
 		// inconsistent ontologies entail anything
-		if ( storage.checkPredicateAssertion("nonempty",storage.getIDForNothing()) || 
-			 storage.checkPredicateAssertion("dnonempty",storage.getIDForBottomDatatype())) {
+		if ( storage.checkPredicateAssertion("nonempty",storage.getID(BasicExpressionVisitor.OP_NOTHING)) || 
+			 storage.checkPredicateAssertion("dnonempty",storage.getID(Literals.BOTTOM_DATATYPE))) {
 			return InferenceResult.YES;
 		} else if (!loaded) { // if checked axioms failed to load, neither YES nor NO are sure answers
 			return InferenceResult.DONTKNOW;
@@ -342,8 +342,8 @@ public class NaiveKBReasoner {
 	public InferenceResult checkConsistency() throws Exception {
 		materialize();
 		registerCheckRules();
-		if ( storage.checkPredicateAssertion("nonempty",storage.getIDForNothing()) || 
-			 storage.checkPredicateAssertion("dnonempty",storage.getIDForBottomDatatype()) ) {
+		if ( storage.checkPredicateAssertion("nonempty",storage.getID(BasicExpressionVisitor.OP_NOTHING)) || 
+			 storage.checkPredicateAssertion("dnonempty",storage.getID(Literals.BOTTOM_DATATYPE)) ) {
 			return InferenceResult.NO;
 		} else {
 			return InferenceResult.YES;

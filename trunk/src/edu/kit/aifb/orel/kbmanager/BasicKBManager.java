@@ -33,7 +33,7 @@ public class BasicKBManager extends KBManager {
 	public void initialize() throws Exception {
 		storage.initialize();
 		// the fundamental truths of DL reasoning: 
-		int thing = storage.getIDForThing(), nothing = storage.getIDForNothing(); 
+		int thing = storage.getID(BasicExpressionVisitor.OP_THING), nothing = storage.getID(BasicExpressionVisitor.OP_NOTHING); 
 		storage.makePredicateAssertion("sco",thing,thing);
 		storage.makePredicateAssertion("sco",nothing,nothing);
 		storage.makePredicateAssertion("sco",nothing,thing);
@@ -47,7 +47,7 @@ public class BasicKBManager extends KBManager {
 		storage.makePredicateAssertion("dspo",botdatprop,botdatprop);
 		storage.makePredicateAssertion("ddisjoint",botdatprop,botdatprop);
 		
-	    int toptype = storage.getIDForTopDatatype(), bottype = storage.getIDForBottomDatatype();
+	    int toptype = storage.getID(Literals.TOP_DATATYPE), bottype = storage.getID(Literals.BOTTOM_DATATYPE);
 		storage.makePredicateAssertion("dsco",toptype,toptype);
 		storage.makePredicateAssertion("dsco",bottype,bottype);
 		storage.makePredicateAssertion("dsco",bottype,toptype);

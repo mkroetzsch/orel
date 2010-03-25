@@ -96,7 +96,7 @@ public class BasicAxiomVisitor implements OWLAxiomVisitorEx<Boolean> {
 	public Boolean visit(OWLDisjointClassesAxiom axiom) {
 		Object[] descs = axiom.getClassExpressions().toArray();
 		boolean result = true;
-		int botid = storage.getIDForNothing();
+		int botid = storage.getID(BasicExpressionVisitor.OP_NOTHING);
 		String[] keys = new String[descs.length];
 		for (int i=0; i<descs.length; i++) {
 			keys[i] = expvisitor.visitAndAct((OWLClassExpression)descs[i],getVisitorBodyAction(todos));

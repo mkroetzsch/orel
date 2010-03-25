@@ -205,7 +205,7 @@ public class BasicExpressionVisitor implements
 		if (action == Action.WRITEHEAD) {
 			int sid1 = storage.getID(result);
 			int sid2 = storage.getID(subkey);
-			storage.makePredicateAssertion("subconjunctionof",sid1,sid2,storage.getIDForNothing());
+			storage.makePredicateAssertion("subconjunctionof",sid1,sid2,storage.getID(OP_NOTHING));
 			createClassTautologies(sid1,storage);
 		}
 		return result;
@@ -321,7 +321,7 @@ public class BasicExpressionVisitor implements
 				int someid = storage.getID(auxkey);
 				createClassTautologies(someid,storage);
 				storage.makePredicateAssertion("subsomevalues",pid,fillid,someid);
-				storage.makePredicateAssertion("subconjunctionof",rid,someid,storage.getIDForNothing());
+				storage.makePredicateAssertion("subconjunctionof",rid,someid,storage.getID(OP_NOTHING));
 			}
 		}
 		return result;
@@ -471,7 +471,7 @@ public class BasicExpressionVisitor implements
 				int someid = storage.getID(auxkey);
 				createClassTautologies(someid,storage);
 				storage.makePredicateAssertion("dsubsomevalues",pid,fillid,someid);
-				storage.makePredicateAssertion("subconjunctionof",rid,someid,storage.getIDForNothing());
+				storage.makePredicateAssertion("subconjunctionof",rid,someid,storage.getID(OP_NOTHING));
 			}
 		}
 		return result;
@@ -624,14 +624,14 @@ public class BasicExpressionVisitor implements
 	
 	public static void createClassTautologies(int id, StorageDriver storage) {
 		storage.makePredicateAssertion("sco",id,id);
-		storage.makePredicateAssertion("sco",id,storage.getIDForThing());
-		storage.makePredicateAssertion("sco",storage.getIDForNothing(),id);
+		storage.makePredicateAssertion("sco",id,storage.getID(OP_THING));
+		storage.makePredicateAssertion("sco",storage.getID(OP_NOTHING),id);
 	}
 
 	public static void createDatarangeTautologies(int id, StorageDriver storage) {
 		storage.makePredicateAssertion("dsco",id,id);
-		storage.makePredicateAssertion("dsco",id,storage.getIDForTopDatatype());
-		storage.makePredicateAssertion("dsco",storage.getIDForBottomDatatype(),id);
+		storage.makePredicateAssertion("dsco",id,storage.getID(Literals.TOP_DATATYPE));
+		storage.makePredicateAssertion("dsco",storage.getID(Literals.BOTTOM_DATATYPE),id);
 	}
 	
 	public static String makeNAryExpressionKey(String opname, List<String> operators, int maxindex, String emptyKey) {

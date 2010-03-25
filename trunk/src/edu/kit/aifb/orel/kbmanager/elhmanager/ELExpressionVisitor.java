@@ -43,6 +43,8 @@ import org.semanticweb.owlapi.model.OWLPropertyExpression;
 import org.semanticweb.owlapi.model.OWLPropertyExpressionVisitorEx;
 import org.semanticweb.owlapi.model.OWLStringLiteral;
 import org.semanticweb.owlapi.model.OWLTypedLiteral;
+
+import edu.kit.aifb.orel.kbmanager.Literals;
 import edu.kit.aifb.orel.storage.StorageDriver;
 
 public class ELExpressionVisitor implements
@@ -401,14 +403,14 @@ public class ELExpressionVisitor implements
 	
 	public static void createClassTautologies(int id, StorageDriver storage) {
 		storage.makePredicateAssertion("sco",id,id);
-		storage.makePredicateAssertion("sco",id,storage.getIDForThing());
-		storage.makePredicateAssertion("sco",storage.getIDForNothing(),id);
+		storage.makePredicateAssertion("sco",id,storage.getID(OP_THING));
+		storage.makePredicateAssertion("sco",storage.getID(OP_NOTHING),id);
 	}
 
 	public static void createDatarangeTautologies(int id, StorageDriver storage) {
 		storage.makePredicateAssertion("dsco",id,id);
-		storage.makePredicateAssertion("dsco",id,storage.getIDForTopDatatype());
-		storage.makePredicateAssertion("dsco",storage.getIDForBottomDatatype(),id);
+		storage.makePredicateAssertion("dsco",id,storage.getID(Literals.TOP_DATATYPE));
+		storage.makePredicateAssertion("dsco",storage.getID(Literals.BOTTOM_DATATYPE),id);
 	}
 	
 	public static String makeNAryExpressionKey(String opname, List<String> operators, int maxindex, String emptyKey) {

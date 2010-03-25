@@ -168,7 +168,7 @@ public class InstanceExpressionVisitor implements
 		if (action == Action.WRITEHEAD) {
 			int sid1 = storage.getID(result);
 			int sid2 = storage.getID(subkey);
-			storage.makePredicateAssertion("subcon",sid1,sid2,storage.getIDForNothing());
+			storage.makePredicateAssertion("subcon",sid1,sid2,storage.getID(InstanceExpressionVisitor.OP_NOTHING));
 			createClassTautologies(sid1,storage);
 		}
 		return result;
@@ -284,7 +284,7 @@ public class InstanceExpressionVisitor implements
 				int someid = storage.getID(auxkey);
 				createClassTautologies(someid,storage);
 				storage.makePredicateAssertion("subsome",pid,fillid,someid);
-				storage.makePredicateAssertion("subcon",rid,someid,storage.getIDForNothing());
+				storage.makePredicateAssertion("subcon",rid,someid,storage.getID(InstanceExpressionVisitor.OP_NOTHING));
 			}
 		}
 		return result;
@@ -434,7 +434,7 @@ public class InstanceExpressionVisitor implements
 				int someid = storage.getID(auxkey);
 				createClassTautologies(someid,storage);
 				storage.makePredicateAssertion("dsubsome",pid,fillid,someid);
-				storage.makePredicateAssertion("subcon",rid,someid,storage.getIDForNothing());
+				storage.makePredicateAssertion("subcon",rid,someid,storage.getID(InstanceExpressionVisitor.OP_NOTHING));
 			}
 		}
 		return result;
@@ -587,12 +587,12 @@ public class InstanceExpressionVisitor implements
 
 	public static void createClassTautologies(int id, StorageDriver storage) {
 		storage.makePredicateAssertion("inst",id,id);
-		storage.makePredicateAssertion("inst",id,storage.getIDForThing());
+		storage.makePredicateAssertion("inst",id,storage.getID(InstanceExpressionVisitor.OP_THING));
 	}
 
 	public static void createDatarangeTautologies(int id, StorageDriver storage) {
 		storage.makePredicateAssertion("dinst",id,id);
-		storage.makePredicateAssertion("dinst",id,storage.getIDForTopDatatype());
+		storage.makePredicateAssertion("dinst",id,storage.getID(Literals.TOP_DATATYPE));
 	}
 
 	public static String makeNAryExpressionKey(String opname, List<String> operators, int maxindex, String emptyKey) {

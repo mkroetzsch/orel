@@ -19,8 +19,6 @@ import edu.kit.aifb.orel.inferencing.InferenceRuleDeclaration;
 import edu.kit.aifb.orel.inferencing.PredicateAtom;
 import edu.kit.aifb.orel.inferencing.PredicateDeclaration;
 import edu.kit.aifb.orel.inferencing.PredicateTerm;
-import edu.kit.aifb.orel.kbmanager.BasicExpressionVisitor;
-import edu.kit.aifb.orel.kbmanager.Literals;
 
 /**
  * Class for implementing a simple caching interface for DB access, 
@@ -808,22 +806,6 @@ public class MySQLStorageDriver implements StorageDriver {
 	}
 
 	/* *** Id management *** */
-	
-	public int getIDForTopDatatype() {
-		return getID(Literals.TOP_DATATYPE);
-	}
-
-	public int getIDForBottomDatatype() {
-		return getID(Literals.BOTTOM_DATATYPE);
-	}
-	
-	public int getIDForNothing() {
-		return getID(BasicExpressionVisitor.OP_NOTHING);
-	}
-
-	public int getIDForThing() {
-		return getID(BasicExpressionVisitor.OP_THING);
-	}
 	
 	public int getID(String key) {
 		int id = 0;

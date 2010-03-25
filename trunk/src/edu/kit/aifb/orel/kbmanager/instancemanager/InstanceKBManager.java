@@ -59,9 +59,9 @@ public class InstanceKBManager extends KBManager {
 	@Override
 	public void initialize() throws Exception {
 		storage.initialize();
-		int thing = storage.getIDForThing(), //nothing = storage.getIDForNothing(),
-			toptype = storage.getIDForTopDatatype(), bottype = storage.getIDForBottomDatatype();
-		storage.getIDForNothing(); // make sure that this has a fixed low id
+		int thing = storage.getID(InstanceExpressionVisitor.OP_THING), //nothing = storage.getIDForNothing(),
+			toptype = storage.getID(Literals.TOP_DATATYPE), bottype = storage.getID(Literals.BOTTOM_DATATYPE);
+		storage.getID(InstanceExpressionVisitor.OP_NOTHING); // make sure that this has a fixed low id, even if not needed here
 		// use thing as the default instance of itself (punning):
 		storage.makePredicateAssertion("inst",thing,thing);
 		storage.makePredicateAssertion("extant",thing);
