@@ -604,13 +604,11 @@ public class MySQLStorageDriver implements StorageDriver {
 	 */
 	protected ArrayList<PreparedStatement> getInferenceRuleStatements(InferenceRuleDeclaration rd) {
 		ArrayList<PreparedStatement> result = new ArrayList<PreparedStatement>();
+		ArrayList<String> fromTables = new ArrayList<String>();
 		ArrayList<String> inferredTables = new ArrayList<String>();
 		HashMap<String,ArrayList<String>> varequalities = new HashMap<String,ArrayList<String>>();
 		HashMap<String,ArrayList<String>> constequalities = new HashMap<String,ArrayList<String>>();
 		ArrayList<StringPair> varinequalities = new ArrayList<StringPair>();
-		String from = "", insert, select = "", on = "", 
-		       on_op = " WHERE ";  // use WHERE while there is just one table
-		PredicateTerm pt;
 		boolean hasParameterConstants = false; // constants of value "?" are set at application time;
 		                                       // rules with such constants do not support semi-naive
 		                                       // rewriting and can only be called when providing parameters
@@ -621,30 +619,28 @@ public class MySQLStorageDriver implements StorageDriver {
 			if (rd.getBody().get(i).getName().equals("orel:distinct")) {
 				varinequalities.add(new StringPair(rd.getBody().get(i).getArguments().get(0).getValue(),rd.getBody().get(i).getArguments().get(1).getValue()));
 			} else {
-				if (!from.equals("")) {
-					from = from + " INNER JOIN ";
-					on_op = " ON ";
-				}
-				from = from + prepareRuleBodyAtom(rd, rd.getBody().get(i), i, inferredTables, varequalities, constequalities);
+				fromTables.add(prepareRuleBodyAtom(rd, rd.getBody().get(i), i, inferredTables, varequalities, constequalities));
 			}
 		}
 		
 		// make strings for INSERT and SELECT part
+		String insert = "", select = "", on = "";
+		PredicateTerm pt;
 		if (rd.getMode() == InferenceRuleDeclaration.MODE_RETRACT) { // DELETE
 			insert = "DELETE t" + rd.getBody().size() + ".*";
-			if (!from.equals("")) from = from + " INNER JOIN ";
-			from = from + prepareRuleBodyAtom(rd, rd.getHead(), rd.getBody().size(), inferredTables, varequalities, constequalities);
+			fromTables.add(prepareRuleBodyAtom(rd, rd.getHead(), rd.getBody().size(), inferredTables, varequalities, constequalities));
 		} else if (rd.getMode() == InferenceRuleDeclaration.MODE_CHECK) { // SELECT all (we just care about the non-zero count here)
-			insert = "";
 			select = "SELECT * ";
 			// Note: we build the "ON" string here instead of adding equalities to our HashMaps, since otherwise the order of ? in the statement would not be correct
 			for (int i=0; i<rd.getHead().getArguments().size(); i++) {
-				on = on.equals("") ? (on_op + " ") : (on + " AND ");
+				if (!on.equals("")) on = on + " AND ";
 				pt = rd.getHead().getArguments().get(i);
 				if (pt.isVariable()) {
 					if (varequalities.containsKey(pt.getValue())) {
 						on = on + varequalities.get(pt.getValue()).get(0) + "=?";
-					} // else: no constraints on this variable, nothing to check
+					} else { // make sure that parameter exists in query since the checking will set its value
+						on = on + "NULL!=?";
+					}
 					/// FIXME this is unsound if some variable appears more than once in the head but not in the body
 				} else {
 					on = on + "?=\"" + pt.getValue() + "\"";
@@ -689,7 +685,7 @@ public class MySQLStorageDriver implements StorageDriver {
 		while (keyit.hasNext()) {
 			key = keyit.next();
 			for (int i=0; i<constequalities.get(key).size(); i++) {
-				on = on.equals("") ? (on_op + " ") : (on + " AND ");
+				if (!on.equals("")) on = on + " AND ";
 				if (key.equals("?")) { // keep as parameter
 					on = on + key + constequalities.get(key).get(i);
 					hasParameterConstants = true;
@@ -703,43 +699,51 @@ public class MySQLStorageDriver implements StorageDriver {
 		while (fieldsit.hasNext()) {
 			fields = fieldsit.next();
 			for (int i=0; i<fields.size()-1; i++) {
-				on = on.equals("") ? (on_op + " ") : (on + " AND ");
+				if (!on.equals("")) on = on + " AND ";
 				on = on + fields.get(i) + "=" + fields.get(i+1);
 			}
 		}
 		for (int i=0; i<varinequalities.size(); i++) {
 			if (varequalities.containsKey(varinequalities.get(i).value1) && varequalities.containsKey(varinequalities.get(i).value2)) {
-				on = on.equals("") ? (on_op + " ") : (on + " AND ");
+				if (!on.equals("")) on = on + " AND ";
 				on = on + varequalities.get(varinequalities.get(i).value1).get(0) + "!=" + varequalities.get(varinequalities.get(i).value2).get(0);
 			}
 		}
+		
+		// make string for FROM part
+		String from = "";
+		for (int i=0; i<fromTables.size(); i++) {
+			from += ( (i==0) ? "" : " INNER JOIN " ) + fromTables.get(i);  
+		}
+		String onOperator = (fromTables.size()<2) ? " WHERE " : " ON ";
 	
 		/// Now build the final rules ...
 		// always make step-less version at index 0
+		String sql = insert + select + " FROM " + from + ( (on.equals("")) ? "" : onOperator) + on;
 		try {
-			if (rd.getMode() == InferenceRuleDeclaration.MODE_CHECK) on = on + " LIMIT 1";
-			//if (rd.getName().equals("dclash")) LogWriter.get().printlnDebug(rd.getName() + ":\n " + insert + select + " FROM " + from + on + "\n\n"); // DEBUG
-			result.add(con.prepareStatement( "/*" + rd.getName() + "*/" + insert + select + " FROM " + from + on));
+			//if (rd.getName().equals("dclash")) LogWriter.get().printlnDebug(rd.getName() + ":\n " + sql + ((rd.getMode() == InferenceRuleDeclaration.MODE_CHECK) ? " LIMIT 1" : "") + "\n\n"); // DEBUG
+			result.add(con.prepareStatement( "/*" + rd.getName() + "*/" + sql + ((rd.getMode() == InferenceRuleDeclaration.MODE_CHECK) ? " LIMIT 1" : "") ));
 		} catch (SQLException e) { // bug in the above code, just print it
 			e.printStackTrace();
 		}
-		String sql;
+		
 		// other indices k hold semi-naive rule for the k-th inferred predicate 
 		if ( (inferredTables.size() > 0) && (!hasParameterConstants) ) {
 			// make rule variants for semi-naive evaluation			
 			for (int i=0; i<inferredTables.size(); i++) {
-				sql = insert + select + " FROM " + from + on;
-				on_op = on.equals("") ? " WHERE " : " AND ";
+				String stepCondition = "";
+				String on_op = on.equals("") ? " WHERE " : " AND ";
 				for (int j=0; j<=i; j++) {
 					if (j<i) {
-						sql = sql + on_op + inferredTables.get(j) + ".step<?";
+						stepCondition += on_op + inferredTables.get(j) + ".step<?";
 					} else {
-						sql = sql + on_op + inferredTables.get(j) + ".step>=? AND " + inferredTables.get(j) + ".step<=?";
+						stepCondition += on_op + inferredTables.get(j) + ".step>=? AND " + inferredTables.get(j) + ".step<=?";
 					}
+					on_op = " AND ";
 				}
-				//LogWriter.get().printlnDebug(sql); // DEBUG
+				//LogWriter.get().printlnDebug(sql + stepCondition); // DEBUG
 				try {
-					result.add(con.prepareStatement("/*" + rd.getName() + "_" + i + "*/" + sql));
+					result.add(con.prepareStatement("/*" + rd.getName() + "_" + i + "*/" + sql + stepCondition));
 				} catch (SQLException e) { // bug in the above code, just print it
 					e.printStackTrace(); 
 				}
