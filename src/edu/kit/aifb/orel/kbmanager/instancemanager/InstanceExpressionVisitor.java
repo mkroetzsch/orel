@@ -73,7 +73,7 @@ public class InstanceExpressionVisitor implements
 			result = ce.toString();
 		}
 		if ( (action == Action.WRITEBODY) || (action == Action.WRITEHEAD) ) {
-			createClassTautologies(storage.getID(result),storage);
+			createClassTautologies(storage.getID(result), storage, false);
 		}
 		return result;
 	}
@@ -101,7 +101,7 @@ public class InstanceExpressionVisitor implements
 					result = makeNAryExpressionKey(OP_OBJECT_INTERSECTION,opkeys,i,null); 
 					oid  = storage.getID(result);
 					storage.makePredicateAssertion("subcon",sid1,sid2,oid);
-					createClassTautologies(oid,storage);
+					createAuxiliaryClassTautologies(oid,storage);
 			}
 		} else if (action == Action.WRITEHEAD) {
 			result = makeNAryExpressionKey(OP_OBJECT_INTERSECTION,opkeys,opkeys.size()-1,OP_NOTHING);
@@ -110,7 +110,7 @@ public class InstanceExpressionVisitor implements
 				oid = storage.getID(opkeys.get(i));
 				storage.makePredicateAssertion("subc",sid1,oid);
 			}
-			createClassTautologies(sid1,storage);
+			createAuxiliaryClassTautologies(sid1,storage);
 		} else {
 			assert action == Action.READ;
 			result = makeNAryExpressionKey(OP_OBJECT_INTERSECTION,opkeys,opkeys.size()-1,OP_NOTHING);
@@ -140,7 +140,7 @@ public class InstanceExpressionVisitor implements
 				sid = storage.getID(opkeys.get(i));
 				storage.makePredicateAssertion("subc",sid,oid);
 			}
-			createClassTautologies(oid,storage);
+			createAuxiliaryClassTautologies(oid,storage);
 		} else if (action == Action.WRITEHEAD) {
 			result = null; // not supported in OWL EL or RL
 		}  else {
@@ -169,7 +169,7 @@ public class InstanceExpressionVisitor implements
 			int sid1 = storage.getID(result);
 			int sid2 = storage.getID(subkey);
 			storage.makePredicateAssertion("subcon",sid1,sid2,storage.getID(InstanceExpressionVisitor.OP_NOTHING));
-			createClassTautologies(sid1,storage);
+			createAuxiliaryClassTautologies(sid1,storage);
 		}
 		return result;
 	}
@@ -185,15 +185,15 @@ public class InstanceExpressionVisitor implements
 			int sid = storage.getID(fillkey);
 			int pid = storage.getID(propkey);
 			int oid = storage.getID(result);
-			createClassTautologies(oid,storage);
+			createAuxiliaryClassTautologies(oid,storage);
 			storage.makePredicateAssertion("subsome",pid,sid,oid);
 		} else if (action == Action.WRITEHEAD) {
 			int sid = storage.getID(result);
 			int pid = storage.getID(propkey);
 			int oid = storage.getID(fillkey);
-			createClassTautologies(sid,storage);
+			createAuxiliaryClassTautologies(sid,storage);
 			int auxid = storage.getID("C(" + result + ")"); // auxiliary "Skolem" constant
-			createClassTautologies(auxid,storage); // TODO: is this needed?
+			createAuxiliaryClassTautologies(auxid,storage); // TODO: is this needed?
 			storage.makePredicateAssertion("supsome",sid,pid,auxid);
 			storage.makePredicateAssertion("subc",auxid,oid);
 		}
@@ -213,7 +213,7 @@ public class InstanceExpressionVisitor implements
 			int sid = storage.getID(result);
 			int pid = storage.getID(propkey);
 			int oid = storage.getID(fillkey);
-			createClassTautologies(sid,storage);
+			createAuxiliaryClassTautologies(sid,storage);
 			storage.makePredicateAssertion("supall",sid,pid,oid);
 		}
 		return result;
@@ -230,13 +230,13 @@ public class InstanceExpressionVisitor implements
 			int sid = storage.getID(valuekey);
 			int pid = storage.getID(propkey);
 			int oid = storage.getID(result);
-			createClassTautologies(oid,storage);
+			createAuxiliaryClassTautologies(oid,storage);
 			storage.makePredicateAssertion("subsome",pid,sid,oid);
 		} else if (action == Action.WRITEHEAD) {
 			int sid = storage.getID(result);
 			int pid = storage.getID(propkey);
 			int oid = storage.getID(valuekey);
-			createClassTautologies(sid,storage);
+			createAuxiliaryClassTautologies(sid,storage);
 			storage.makePredicateAssertion("supsome",sid,pid,oid);
 		}
 		return result;
@@ -275,14 +275,14 @@ public class InstanceExpressionVisitor implements
 			int rid = storage.getID(result);
 			int pid = storage.getID(propkey);
 			int fillid = storage.getID(fillkey);
-			createClassTautologies(rid,storage);
+			createAuxiliaryClassTautologies(rid,storage);
 			if (ce.getCardinality() == 1) {
 				storage.makePredicateAssertion("supfunc",rid,pid,fillid);
 			} else {
 				assert ce.getCardinality() == 0;
 				String auxkey = makeNAryExpressionKey(OP_OBJECT_SOME,propkey,fillkey);
 				int someid = storage.getID(auxkey);
-				createClassTautologies(someid,storage);
+				createAuxiliaryClassTautologies(someid,storage);
 				storage.makePredicateAssertion("subsome",pid,fillid,someid);
 				storage.makePredicateAssertion("subcon",rid,someid,storage.getID(InstanceExpressionVisitor.OP_NOTHING));
 			}
@@ -298,7 +298,7 @@ public class InstanceExpressionVisitor implements
 		if ( (action == Action.WRITEBODY) || (action == Action.WRITEHEAD) ) {
 			int pid = storage.getID(propkey);
 			int id = storage.getID(result);
-			createClassTautologies(id,storage);
+			createAuxiliaryClassTautologies(id,storage);
 			if (action == Action.WRITEBODY) {
 				storage.makePredicateAssertion("subself",pid,id);
 			} else {
@@ -334,14 +334,14 @@ public class InstanceExpressionVisitor implements
 			int sid = storage.getID(fillkey);
 			int pid = storage.getID(propkey);
 			int oid = storage.getID(result);
-			createClassTautologies(oid,storage);
+			createAuxiliaryClassTautologies(oid,storage);
 			storage.makePredicateAssertion("dsubsome",pid,sid,oid);
 		} else if (action == Action.WRITEHEAD) {
 			// NOTE: We load all types in RL/EL, and restrict certain inferences to EL datatypes later on.
 			int sid = storage.getID(result);
 			int pid = storage.getID(propkey);
 			int oid = storage.getID(fillkey);
-			createClassTautologies(sid,storage);
+			createAuxiliaryClassTautologies(sid,storage);
 			int auxid = storage.getID("C(" + result + ")"); // auxiliary "Skolem" constant
 			createDatarangeTautologies(auxid,storage); // TODO: is this needed?
 			storage.makePredicateAssertion("dsupsome",sid,pid,auxid);
@@ -363,7 +363,7 @@ public class InstanceExpressionVisitor implements
 			int sid = storage.getID(result);
 			int pid = storage.getID(propkey);
 			int oid = storage.getID(fillkey);
-			createClassTautologies(sid,storage);
+			createAuxiliaryClassTautologies(sid,storage);
 			storage.makePredicateAssertion("dsupall",sid,pid,oid);
 		}
 		return result;
@@ -380,13 +380,13 @@ public class InstanceExpressionVisitor implements
 			int sid = storage.getID(valuekey);
 			int pid = storage.getID(propkey);
 			int oid = storage.getID(result);
-			createClassTautologies(oid,storage);
+			createAuxiliaryClassTautologies(oid,storage);
 			storage.makePredicateAssertion("dsubsome",pid,sid,oid);
 		} else if (action == Action.WRITEHEAD) {
 			int sid = storage.getID(result);
 			int pid = storage.getID(propkey);
 			int oid = storage.getID(valuekey);
-			createClassTautologies(sid,storage);
+			createAuxiliaryClassTautologies(sid,storage);
 			storage.makePredicateAssertion("dsupsome",sid,pid,oid);
 		}
 		return result;
@@ -425,14 +425,14 @@ public class InstanceExpressionVisitor implements
 			int rid = storage.getID(result);
 			int pid = storage.getID(propkey);
 			int fillid = storage.getID(fillkey);
-			createClassTautologies(rid,storage);
+			createAuxiliaryClassTautologies(rid,storage);
 			if (ce.getCardinality() == 1) {
 				storage.makePredicateAssertion("dsupfunc",rid,pid,fillid);
 			} else {
 				assert ce.getCardinality() == 0;
 				String auxkey = makeNAryExpressionKey(OP_DATA_SOME,propkey,fillkey);
 				int someid = storage.getID(auxkey);
-				createClassTautologies(someid,storage);
+				createAuxiliaryClassTautologies(someid,storage);
 				storage.makePredicateAssertion("dsubsome",pid,fillid,someid);
 				storage.makePredicateAssertion("subcon",rid,someid,storage.getID(InstanceExpressionVisitor.OP_NOTHING));
 			}
@@ -486,9 +486,8 @@ public class InstanceExpressionVisitor implements
 		String result = makeNAryExpressionKey(OP_OBJECT_ONE_OF, individual.toString());
 		if ( (action == Action.WRITEBODY) || (action == Action.WRITEHEAD) ) {
 			int id = storage.getID(result);
-			createClassTautologies(id,storage);
+			createClassTautologies(id,storage,true);
 			storage.makePredicateAssertion("name",id);
-			storage.makePredicateAssertion("extant",id);
 		}
 		return result;
 	}
@@ -500,9 +499,9 @@ public class InstanceExpressionVisitor implements
 		String result = makeNAryExpressionKey(OP_OBJECT_ONE_OF, individual.getID().getID());
 		if ( (action == Action.WRITEBODY) || (action == Action.WRITEHEAD) ) {
 			int id = storage.getID(result);
-			createClassTautologies(id,storage);
+			createAuxiliaryClassTautologies(id,storage);
 			storage.makePredicateAssertion("name",id);
-			storage.makePredicateAssertion("extant",id);
+			storage.makePredicateAssertion("real",id);
 		}
 		return result;
 	}
@@ -567,7 +566,7 @@ public class InstanceExpressionVisitor implements
 		if ( (action == Action.WRITEBODY) || (action == Action.WRITEHEAD) ) {
 			int id = storage.getID(result);
 			storage.makePredicateAssertion("dname",id);
-			storage.makePredicateAssertion("dextant",id);
+			storage.makePredicateAssertion("dreal",id);
 			createDatarangeTautologies(id,storage);
 			if (action == Action.WRITEHEAD) {
 				List<String> typeuris = Literals.getDatatypeURIs(sl);
@@ -584,13 +583,41 @@ public class InstanceExpressionVisitor implements
 		// not supported in OWL EL or RL
 		return null;
 	}
-
-	public static void createClassTautologies(int id, StorageDriver storage) {
+	
+	/**
+	 * Create basic statements that are used as a seed for applying inference
+	 * rules to class-like expressions, including auxiliary class expressions
+	 * that are generated when normalizing the input.
+	 * @param id
+	 * @param storage
+	 * TODO Do we actually need these statements for auxiliary class expressions?
+	 */
+	protected static void createAuxiliaryClassTautologies(int id, StorageDriver storage) {
 		storage.makePredicateAssertion("inst",id,id);
 		storage.makePredicateAssertion("inst",id,storage.getID(InstanceExpressionVisitor.OP_THING));
 	}
 
-	public static void createDatarangeTautologies(int id, StorageDriver storage) {
+	/**
+	 * Create basic statements for class expressions that are of special
+	 * interest because they are named. If real is true, the class is
+	 * considered to be a nominal (and thus necessarily nonempty). Otherwise,
+	 * the class is considered a usual, possibly empty class. Note that
+	 * non-emptiness of owl:thing is asserted during initialization in
+	 * InstanceKBManager explicitly.  
+	 * @param id
+	 * @param storage
+	 * @param real
+	 */
+	protected static void createClassTautologies(int id, StorageDriver storage, boolean real) {
+		if (real) {
+			storage.makePredicateAssertion("real",id);
+		} else {
+			storage.makePredicateAssertion("unreal",id);
+		}
+		createAuxiliaryClassTautologies(id, storage);
+	}
+
+	protected static void createDatarangeTautologies(int id, StorageDriver storage) {
 		storage.makePredicateAssertion("dinst",id,id);
 		storage.makePredicateAssertion("dinst",id,storage.getID(Literals.TOP_DATATYPE));
 	}
