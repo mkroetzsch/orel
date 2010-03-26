@@ -61,12 +61,17 @@ public class InstanceKBManager extends KBManager {
 		storage.initialize();
 		int thing = storage.getID(InstanceExpressionVisitor.OP_THING), //nothing = storage.getIDForNothing(),
 			toptype = storage.getID(Literals.TOP_DATATYPE), bottype = storage.getID(Literals.BOTTOM_DATATYPE);
-		storage.getID(InstanceExpressionVisitor.OP_NOTHING); // make sure that this has a fixed low id, even if not needed here
+		// make sure that important vocabulary elements have a fixed low id, even if not needed here:
+		storage.getID(InstanceExpressionVisitor.OP_NOTHING);
+		storage.getID(InstanceExpressionVisitor.OP_BOTTOM_OBJECT_PROPERTY);
+		storage.getID(InstanceExpressionVisitor.OP_BOTTOM_DATA_PROPERTY);
+			//storage.getID(InstanceExpressionVisitor.OP_TOP_OBJECT_PROPERTY);
+			//storage.getID(InstanceExpressionVisitor.OP_TOP_DATA_PROPERTY);
 		// use thing as the default instance of itself (punning):
 		storage.makePredicateAssertion("inst",thing,thing);
-		storage.makePredicateAssertion("extant",thing);
+		storage.makePredicateAssertion("real",thing);
 		storage.makePredicateAssertion("dinst",toptype,toptype);
-		storage.makePredicateAssertion("dextant",toptype);
+		storage.makePredicateAssertion("dreal",toptype);
 
 		// axiomatize basic datatype dependencies:
 		int owlReal = storage.getID(Literals.OWL_real);
@@ -121,7 +126,7 @@ public class InstanceKBManager extends KBManager {
 			int ntypeid = storage.getID(numerictypes.get(i));
 			InstanceExpressionVisitor.createDatarangeTautologies(ntypeid,storage);
 			storage.makePredicateAssertion("dinst",ntypeid,ntypeid);
-			storage.makePredicateAssertion("dextant",ntypeid);
+			storage.makePredicateAssertion("dreal",ntypeid);
 			for (int j=0; j<othertypes.size(); j++) {
 				int otypeid = storage.getID(othertypes.get(j));
 				storage.makePredicateAssertion("dsubcon",ntypeid,otypeid,bottype);
@@ -131,7 +136,7 @@ public class InstanceKBManager extends KBManager {
 			int otypeid1 = storage.getID(othertypes.get(i));
 			InstanceExpressionVisitor.createDatarangeTautologies(otypeid1,storage);
 			storage.makePredicateAssertion("dinst",otypeid1,otypeid1);
-			storage.makePredicateAssertion("dextant",otypeid1);
+			storage.makePredicateAssertion("dreal",otypeid1);
 			for (int j=i+1; j<othertypes.size(); j++) {
 				int otypeid2 = storage.getID(othertypes.get(j));
 				storage.makePredicateAssertion("dsubcon",otypeid1,otypeid2,bottype);
@@ -194,11 +199,21 @@ public class InstanceKBManager extends KBManager {
 		storage.registerPredicate( new PredicateDeclaration("self",2,true,false) ); // self(a,R): ∃R.Self(a)
 		storage.registerPredicate( new PredicateDeclaration("triple",3,true,false) ); // triple(a,R,b): R(a,b)
 		storage.registerPredicate( new PredicateDeclaration("dtriple",3,true,false) );
-		storage.registerPredicate( new PredicateDeclaration("extant",1,true,false) ); // extant(a): the element a necessarily exists
-		storage.registerPredicate( new PredicateDeclaration("dextant",1,true,false) );
+		storage.registerPredicate( new PredicateDeclaration("real",1,true,false) ); // real(a): the element a necessarily exists
+		storage.registerPredicate( new PredicateDeclaration("dreal",1,true,false) );
+		storage.registerPredicate( new PredicateDeclaration("name",1,true,false) ); // name(a): the element a is named
+		storage.registerPredicate( new PredicateDeclaration("dname",1,true,false) );
+		storage.registerPredicate( new PredicateDeclaration("rampant",1,true,false) ); // rampant(x): x needs contextualised derivations since it generates too many inferences
+		// inferred predicates with context parameter
+		storage.registerPredicate( new PredicateDeclaration("winst",3,true,false) ); // inst(a,C): C(a)
+		storage.registerPredicate( new PredicateDeclaration("wdinst",3,true,false) );
+		storage.registerPredicate( new PredicateDeclaration("wself",3,true,false) ); // self(a,R): ∃R.Self(a)
+		storage.registerPredicate( new PredicateDeclaration("wtriple",4,true,false) ); // triple(a,R,b): R(a,b)
+		storage.registerPredicate( new PredicateDeclaration("wdtriple",4,true,false) );
+		storage.registerPredicate( new PredicateDeclaration("wname",2,true,false) ); // name(a): the element a is named
+		storage.registerPredicate( new PredicateDeclaration("wdname",2,true,false) );
 		// auxiliary predicates
-		storage.registerPredicate( new PredicateDeclaration("name",1,false,false) ); // name(a): the element a is named
-		storage.registerPredicate( new PredicateDeclaration("dname",1,false,false) );
+		storage.registerPredicate( new PredicateDeclaration("unreal",1,false,false) ); // unreal(a): test element
 		// axiom predicates
 		/// TBox (classes)
 		storage.registerPredicate( new PredicateDeclaration("subc",2,false,false) ); // subc(A,C): A ⊑ C
