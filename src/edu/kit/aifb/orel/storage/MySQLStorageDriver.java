@@ -153,7 +153,7 @@ public class MySQLStorageDriver implements StorageDriver {
 		String sql, indexes, primkey, sep;
 		while (pit.hasNext()) {
 			pd = pit.next();
-			sql = "CREATE TABLE IF NOT EXISTS " + pd.getName() + " (";
+			sql = "CREATE TABLE IF NOT EXISTS " + addQuotes(pd.getName()) + " (";
 			indexes = "";
 			primkey = "";
 			for (int i=0; i<pd.getFieldCount(); i++) {
@@ -178,7 +178,7 @@ public class MySQLStorageDriver implements StorageDriver {
 		Statement stmt = con.createStatement();
 		Iterator<PredicateDeclaration> pit = predicates.values().iterator();
 		while (pit.hasNext()) {
-			stmt.execute("DROP TABLE IF EXISTS " + pit.next().getName());
+			stmt.execute("DROP TABLE IF EXISTS " + addQuotes(pit.next().getName()));
 		}
 		stmt.execute("DROP TABLE IF EXISTS ids");
 		resetCaches();
@@ -210,10 +210,10 @@ public class MySQLStorageDriver implements StorageDriver {
 		if (pd == null) return; // unknown predicate
 		if (onlyderived == true)  {
 			if ( pd.isInferred() ) {
-				stmt.execute("DELETE FROM " + pd.getName() + " WHERE step!=0");
+				stmt.execute("DELETE FROM " + addQuotes(pd.getName()) + " WHERE step!=0");
 			}
 		} else {
-			stmt.execute("TRUNCATE TABLE " + pd.getName());
+			stmt.execute("TRUNCATE TABLE " + addQuotes(pd.getName()));
 		}
 	}
 	
@@ -334,7 +334,7 @@ public class MySQLStorageDriver implements StorageDriver {
 		PredicateDeclaration pd;
 		while (pit.hasNext()) {
 			pd = pit.next();
-			stmt.execute("ALTER TABLE " + pd.getName() + action);
+			stmt.execute("ALTER TABLE " + addQuotes(pd.getName()) + action);
 		}
 	}
 	
@@ -368,7 +368,7 @@ public class MySQLStorageDriver implements StorageDriver {
 	protected PreparedStatement getPreparedInsertStatement(String tablename) throws SQLException {
 		if (predicates.containsKey(tablename)) {
 			PredicateDeclaration pd = predicates.get(tablename);
-			String sql = "INSERT IGNORE INTO " + tablename + " VALUES (?";
+			String sql = "INSERT IGNORE INTO " + addQuotes(tablename) + " VALUES (?";
 			for (int i=1; i<pd.getFieldCount(); i++) {
 				sql = sql.concat(",?");
 			}
@@ -411,7 +411,7 @@ public class MySQLStorageDriver implements StorageDriver {
 	protected PreparedStatement getPreparedCheckStatement(String tablename) {
 		if (predicates.containsKey(tablename)) {
 			PredicateDeclaration pd = predicates.get(tablename);
-			String sql = "SELECT * FROM " + tablename + " WHERE ";
+			String sql = "SELECT * FROM " + addQuotes(tablename) + " WHERE ";
 			for (int i=0; i<pd.getFieldCount(); i++) {
 				if (i>0) sql = sql + " AND ";
 				sql = sql + "f" + (i) + "=?";
@@ -431,7 +431,7 @@ public class MySQLStorageDriver implements StorageDriver {
 	public int changeStep(String predicate, int oldstep, int newstep) throws SQLException {
 		Statement stmt = con.createStatement();
 		//LogWriter.get().printlnDebug("Changestep: " + oldstep + " -> " + newstep + " on " + predicate); // debug
-		return stmt.executeUpdate("UPDATE " + predicate + " SET step=\"" + newstep + "\" WHERE step=\"" + oldstep + "\"");
+		return stmt.executeUpdate("UPDATE " + addQuotes(predicate) + " SET step=\"" + newstep + "\" WHERE step=\"" + oldstep + "\"");
 	}
 	
 	public int getMaxStep() {
@@ -444,7 +444,7 @@ public class MySQLStorageDriver implements StorageDriver {
 			while (pit.hasNext()) {
 				pd = pit.next();
 				if (pd.isInferred()) {
-					res = stmt.executeQuery("SELECT MAX(step) FROM " + pd.getName());
+					res = stmt.executeQuery("SELECT MAX(step) FROM " + addQuotes(pd.getName()));
 					if ( (res.next()) && (res.getInt(1)>result) ) {
 						result = res.getInt(1);
 					}
@@ -647,7 +647,7 @@ public class MySQLStorageDriver implements StorageDriver {
 			hasParameterConstants = true; // never make stepped statements for checks
 		} else { // INSERT SELECTed data
 			assert rd.getMode() == InferenceRuleDeclaration.MODE_INFER;
-			insert = "INSERT IGNORE INTO " + rd.getHead().getName() + " (";
+			insert = "INSERT IGNORE INTO " + addQuotes(rd.getHead().getName()) + " (";
 			PredicateDeclaration pd = predicates.get(rd.getHead().getName()); // use "pd == null" to indicate that rule is broken
 			for (int i=0; i<rd.getHead().getArguments().size(); i++) {
 				if (i>0) insert = insert + ",";
@@ -711,7 +711,7 @@ public class MySQLStorageDriver implements StorageDriver {
 		// make string for FROM part
 		String from = "";
 		for (int i=0; i<fromTables.size(); i++) {
-			from += ( (i==0) ? "" : " INNER JOIN " ) + fromTables.get(i);  
+			from += ( (i==0) ? "" : " INNER JOIN " ) + fromTables.get(i);
 		}
 		String onOperator = (fromTables.size()<2) ? " WHERE " : " ON ";
 	
@@ -802,7 +802,7 @@ public class MySQLStorageDriver implements StorageDriver {
 				}
 			}
 		}
-		return pa.getName() + " AS t" + (i);
+		return addQuotes(pa.getName()) + " AS t" + (i);
 	}
 
 	/* *** Id management *** */
@@ -900,7 +900,16 @@ public class MySQLStorageDriver implements StorageDriver {
 				.append(HEXES.charAt((b & 0x0F)));
 		}
 		return hex.toString();
-	  }
+	}
+	
+	/**
+	 * Put the given string into quotes as required to prevent wrong interpretations in SQL.
+	 * @param s
+	 * @return
+	 */
+	protected String addQuotes(String s) {
+		return "`" + s + "`";
+	}
 
 	
 }
