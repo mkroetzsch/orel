@@ -171,7 +171,7 @@ public class InstanceKBReasoner {
 		rules.put("(28d)", "dinst(y1,y2) :- dsupfunc(A,R,B), name(x), dname(y1), dname(y2), inst(x,A), dtriple(x,R,y1), dtriple(x,R,y2), dinst(y1,B), dinst(y2,B)");
 		// Support for top and bottom (datatype): (largely implemented via check rules)
 		rules.put("(B2d)", "inst(x," + bot + ") :- dtriple(x," + dbotprop + ",y)");
-		rules.put("dclash",  "dinst(x," + dbot + ") :- dname(x), dname(y), dinst(x,y), orel:distinct(x,y)");
+		rules.put("dclash",  "dinst(x," + dbot + ") :- dliteral(x), dliteral(y), dinst(x,y), orel:distinct(x,y)");
 		
 		// Rules for handling inferences that require assumptions of non-emptiness of some class:
 		rules.put("(20G)", "rampant(x) :- inst(x,y), name(y), unreal(x)");

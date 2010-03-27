@@ -203,7 +203,7 @@ public class InstanceKBManager extends KBManager {
 		storage.registerPredicate( new PredicateDeclaration("dreal",1,true,false) );
 		storage.registerPredicate( new PredicateDeclaration("name",1,true,false) ); // name(a): the element a is named
 		storage.registerPredicate( new PredicateDeclaration("dname",1,true,false) );
-		storage.registerPredicate( new PredicateDeclaration("rampant",1,true,false) ); // rampant(x): x needs contextualised derivations since it generates too many inferences
+		storage.registerPredicate( new PredicateDeclaration("rampant",1,true,false) ); // rampant(x): x needs contextualized derivations since it generates too many inferences
 		// inferred predicates with context parameter
 		storage.registerPredicate( new PredicateDeclaration("winst",3,true,false) ); // inst(a,C): C(a)
 		storage.registerPredicate( new PredicateDeclaration("wdinst",3,true,false) );
@@ -214,6 +214,7 @@ public class InstanceKBManager extends KBManager {
 		storage.registerPredicate( new PredicateDeclaration("wdname",2,true,false) );
 		// auxiliary predicates
 		storage.registerPredicate( new PredicateDeclaration("unreal",1,false,false) ); // unreal(a): test element
+		storage.registerPredicate( new PredicateDeclaration("dliteral",1,false,false) ); // literal(a): data literal, normalized by Orel (can be compared syntactically for finding clashes)
 		// axiom predicates
 		/// TBox (classes)
 		storage.registerPredicate( new PredicateDeclaration("subc",2,false,false) ); // subc(A,C): A ⊑ C
