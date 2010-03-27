@@ -258,18 +258,19 @@ public class InstanceExpressionVisitor implements
 	public String visit(OWLObjectMaxCardinality ce) {
 		if (action == Action.WRITEBODY) return null;
 		if (ce.getCardinality() > 1) return null;
-		String propkey = ce.getProperty().accept(this);
-		if (propkey == null) return null;
 		String fillkey;
+		String propkey;
 		if (action == Action.WRITEHEAD) {
 			action = Action.WRITEBODY;
 			fillkey = ce.getFiller().accept(this);
+			propkey = ce.getProperty().accept(this);
 			action = Action.WRITEHEAD;
 		} else {
 			assert action == Action.READ;
 			fillkey = ce.getFiller().accept(this);
+			propkey = ce.getProperty().accept(this);
 		}
-		if (fillkey == null) return null;
+		if ( (fillkey == null) || (propkey == null) ) return null;
 		String result = makeNAryExpressionKey(OP_OBJECT_MAX,new Integer(ce.getCardinality()).toString(),propkey,fillkey);
 		if (action == Action.WRITEHEAD) {
 			int rid = storage.getID(result);
@@ -408,18 +409,19 @@ public class InstanceExpressionVisitor implements
 	public String visit(OWLDataMaxCardinality ce) {
 		if (action == Action.WRITEBODY) return null;
 		if (ce.getCardinality() > 1) return null;
-		String propkey = ce.getProperty().accept(this);
-		if (propkey == null) return null;
 		String fillkey;
+		String propkey;
 		if (action == Action.WRITEHEAD) {
 			action = Action.WRITEBODY;
 			fillkey = ce.getFiller().accept(this);
+			propkey = ce.getProperty().accept(this);
 			action = Action.WRITEHEAD;
 		} else {
 			assert action == Action.READ;
 			fillkey = ce.getFiller().accept(this);
+			propkey = ce.getProperty().accept(this);
 		}
-		if (fillkey == null) return null;
+		if ( (fillkey == null) || (propkey == null) ) return null;
 		String result = makeNAryExpressionKey(OP_DATA_MAX,new Integer(ce.getCardinality()).toString(),propkey,fillkey);
 		if (action == Action.WRITEHEAD) {
 			int rid = storage.getID(result);
@@ -462,7 +464,11 @@ public class InstanceExpressionVisitor implements
 		if ( (action == Action.WRITEBODY) || (action == Action.WRITEHEAD) ) {
 			int pid = storage.getID(propkey);
 			int id = storage.getID(result);
-			storage.makePredicateAssertion("subinv",id,pid);
+			if (action == Action.WRITEBODY) {
+				storage.makePredicateAssertion("subinv",pid,id);
+			} else {
+				storage.makePredicateAssertion("subinv",id,pid);
+			}
 		}
 		return result;
 	}
@@ -590,11 +596,10 @@ public class InstanceExpressionVisitor implements
 	 * that are generated when normalizing the input.
 	 * @param id
 	 * @param storage
-	 * TODO Do we actually need these statements for auxiliary class expressions?
+	 * TODO Do we actually need all the statements for auxiliary class expressions?
 	 */
 	protected static void createAuxiliaryClassTautologies(int id, StorageDriver storage) {
-		storage.makePredicateAssertion("inst",id,id);
-		storage.makePredicateAssertion("inst",id,storage.getID(InstanceExpressionVisitor.OP_THING));
+		createClassTautologies(id, storage, false);
 	}
 
 	/**
@@ -614,7 +619,8 @@ public class InstanceExpressionVisitor implements
 		} else {
 			storage.makePredicateAssertion("unreal",id);
 		}
-		createAuxiliaryClassTautologies(id, storage);
+		storage.makePredicateAssertion("inst",id,id);
+		storage.makePredicateAssertion("inst",id,storage.getID(InstanceExpressionVisitor.OP_THING));
 	}
 
 	protected static void createDatarangeTautologies(int id, StorageDriver storage) {
