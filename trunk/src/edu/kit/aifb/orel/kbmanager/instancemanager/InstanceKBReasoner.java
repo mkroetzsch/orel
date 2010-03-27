@@ -81,8 +81,8 @@ public class InstanceKBReasoner {
 		// use them to document the incompleteness in materializing derived
 		// predicates.
 		int bot = storage.getID(InstanceExpressionVisitor.OP_NOTHING);
+		int dbot = storage.getID(Literals.BOTTOM_DATATYPE);
 		rules.put("inst-lbot",  "?inst(x,A) :- inst(x," + bot + ")");
-		rules.put("dinst-lbot", "?dinst(x,A) :- inst(x," + bot + ")");
 		rules.put("self-lbot",  "?self(x,R) :- inst(x," + bot + ")");
 		rules.put("triple-lbot", "?triple(x,R,y) :- inst(x," + bot + ")");
 		
@@ -91,13 +91,12 @@ public class InstanceKBReasoner {
 		rules.put("self-gbot",   "?self(x,R) :- real(z), inst(z," + bot + ")");
 		rules.put("triple-gbot", "?triple(x,R,y) :- real(z), inst(z," + bot + ")");
 		
-		rules.put("inst-lbotd", "?inst(x,A) :- inst(x," + bot + ")");
-		rules.put("self-lbotd", "?self(x,R) :- inst(x," + bot + ")");
-		rules.put("triple-lbotd", "?triple(x,R,y) :- inst(x," + bot + ")");
+		rules.put("dinst-lbot-d", "?dinst(x,A) :- dinst(x," + bot + ")");
 		
-		rules.put("inst-gbotd", "?inst(x,A) :- real(z), inst(z," + bot + ")");
-		rules.put("self-gbotd", "?self(x,R) :- real(z), inst(z," + bot + ")");
-		rules.put("triple-gbotd", "?triple(x,R,y) :- real(z), inst(z," + bot + ")");
+		rules.put("inst-gbot-d",   "?inst(x,A) :- dreal(z), dinst(z," + dbot + ")");
+		rules.put("dinst-gbot-d", "?dinst(x,A) :- dreal(z), dinst(z," + dbot + ")");
+		rules.put("self-gbot-d",   "?self(x,R) :- dreal(z), dinst(z," + dbot + ")");
+		rules.put("triple-gbot-d", "?triple(x,R,y) :- dreal(z), dinst(z," + dbot + ")");
 		
 		// Unsound test: if x has a p to something, then it has a p to itself
 		//storage.registerInferenceRule(InferenceRuleDeclaration.buildFromString("test","?sco(x,y) :- subself(p,y), sv(x,p,z)"));
@@ -171,7 +170,8 @@ public class InstanceKBReasoner {
 		rules.put("(27d)", "dinst(y,B) :- dsupall(A,R,B), name(x), dname(y), dtriple(x,R,y), inst(x,A)");
 		rules.put("(28d)", "dinst(y1,y2) :- dsupfunc(A,R,B), name(x), dname(y1), dname(y2), inst(x,A), dtriple(x,R,y1), dtriple(x,R,y2), dinst(y1,B), dinst(y2,B)");
 		// Support for top and bottom (datatype): (largely implemented via check rules)
-		rules.put("(B2d)", "dinst(x," + dbot + ") :- dtriple(x," + dbotprop + ",y)");
+		rules.put("(B2d)", "inst(x," + bot + ") :- dtriple(x," + dbotprop + ",y)");
+		rules.put("dclash",  "dinst(x," + dbot + ") :- dname(x), dname(y), dinst(x,y), orel:distinct(x,y)");
 		
 		// Rules for handling inferences that require assumptions of non-emptiness of some class:
 		rules.put("(20G)", "rampant(x) :- inst(x,y), name(y), unreal(x)");
@@ -209,13 +209,15 @@ public class InstanceKBReasoner {
 		rules.put("(27W)", "winst(y,B,w) :- supall(A,R,B), wname(x,w), wname(y,w), wtriple(x,R,y,w), winst(x,A,w)");
 		rules.put("(28W)", "winst(y1,y2,w) :- supfunc(A,R,B), wname(x,w), wname(y1,w), wname(y2,w), winst(x,A,w), wtriple(x,R,y1,w), wtriple(x,R,y2,w), winst(y1,B,w), winst(y2,B,w), orel:distinct(y1,y2)");
 		rules.put("(29W)", "wtriple(y,S,x,w) :- subinv(R,S), wname(x,w), wname(y,w), wtriple(x,R,y,w)");
-		// Support for top and bottom: (largely implemented via check rules)
-		rules.put("(B2W)", "winst(x," + bot + ",w) :- wtriple(x," + botprop + ",y,w)");
+		// Support for top and bottom: built into unG rules below
+		
+		// Pull back results for rampant individuals:
+		rules.put("(unG1)", "inst(x,A) :- winst(x,A,x)");
+		rules.put("(unG2)", "inst(w," + bot + ") :- winst(x," + bot + ",w)");
+		rules.put("(unG3)", "inst(w," + bot + ") :- wtriple(x," + botprop + ",y,w)");
 		
 		// TODO Code remaining rules for establishing completeness ...
-		
-
-		
+				
 		// now register those rules:
 		Iterator<String> nameit = rules.keySet().iterator();
 		String name;
