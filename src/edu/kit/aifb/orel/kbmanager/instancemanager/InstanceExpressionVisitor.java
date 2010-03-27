@@ -573,6 +573,7 @@ public class InstanceExpressionVisitor implements
 			int id = storage.getID(result);
 			storage.makePredicateAssertion("dname",id);
 			storage.makePredicateAssertion("dreal",id);
+			storage.makePredicateAssertion("dliteral",id);
 			createDatarangeTautologies(id,storage);
 			if (action == Action.WRITEHEAD) {
 				List<String> typeuris = Literals.getDatatypeURIs(sl);
