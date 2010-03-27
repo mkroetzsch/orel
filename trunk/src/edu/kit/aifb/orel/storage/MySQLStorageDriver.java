@@ -739,7 +739,7 @@ public class MySQLStorageDriver implements StorageDriver {
 					}
 					on_op = " AND ";
 				}
-				//LogWriter.get().printlnDebug(sql + stepCondition); // DEBUG
+				//if (rd.getName().equals("(unG1)")) LogWriter.get().printlnDebug(sql + stepCondition); // DEBUG
 				try {
 					result.add(con.prepareStatement("/*" + rd.getName() + "_" + i + "*/" + sql + stepCondition));
 				} catch (SQLException e) { // bug in the above code, just print it
